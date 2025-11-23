@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: twisterlab-config
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  DOMAIN: "twisterlab.local"
+  API_REPLICAS: "2"
+  VERSION: "latest"
+
+  # Database config
+  POSTGRES_DB: "twisterlab"
+  POSTGRES_USER: "twisterlab"
+
+  # Redis config
+  REDIS_DB: "0"
+
+  # API config
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  API_WORKERS: "4"
+
+  # Monitoring
+  PROMETHEUS_PORT: "9090"
+  GRAFANA_PORT: "3000"
+  TRAEFIK_PORT: "8080"

@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: twisterlab-api
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: twisterlab
+      component: api
+  template:
+    metadata:
+      labels:
+        app: twisterlab
+        component: api
+    spec:
+      containers:
+      - name: api
+        image: twisterlab-api:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: twisterlab-config
+              key: ENVIRONMENT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: twisterlab-config
+              key: LOG_LEVEL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: twisterlab-secrets
+              key: SECRET_KEY
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: twisterlab-secrets
+              key: JWT_SECRET_KEY
+        - name: POSTGRES_HOST
+          value: "postgres.twisterlab.svc.cluster.local"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: twisterlab-secrets
+              key: POSTGRES_PASSWORD
+        - name: REDIS_HOST
+          value: "redis.twisterlab.svc.cluster.local"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: twisterlab-secrets
+              key: REDIS_PASSWORD
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: twisterlab-api
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+spec:
+  selector:
+    app: twisterlab
+    component: api
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: http
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: twisterlab-api-hpa
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: twisterlab-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

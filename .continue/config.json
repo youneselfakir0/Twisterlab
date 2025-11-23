@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "twisterlab-mcp": {
+      "command": "C:\\Users\\Administrator\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+      "args": [
+        "c:\\TwisterLab\\src\\twisterlab\\agents\\mcp\\mcp_server_continue_sync.py"
+      ],
+      "env": {
+        "PYTHONPATH": "c:\\TwisterLab\\src",
+        "API_URL": "http://192.168.0.30:8000"
+      }
+    }
+  }
+}

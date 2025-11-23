@@ -1,0 +1,209 @@
+{
+  "version": "1.1",
+  "last_updated": 1762042115,
+  "vocabulary": {
+    "system_ok": {
+      "code": "SYS_OK",
+      "category": "status",
+      "priority": "low",
+      "aliases": [
+        "ok",
+        "success",
+        "complete",
+        "ready"
+      ],
+      "first_seen": 1730492321
+    },
+    "system_error": {
+      "code": "SYS_ERR",
+      "category": "status",
+      "priority": "high",
+      "aliases": [
+        "error",
+        "failed",
+        "failure",
+        "problem"
+      ],
+      "first_seen": 1730492321
+    },
+    "system_warning": {
+      "code": "SYS_WARN",
+      "category": "status",
+      "priority": "medium",
+      "aliases": [
+        "warning",
+        "alert",
+        "caution"
+      ],
+      "first_seen": 1730492321
+    },
+    "swarm_active": {
+      "code": "SWARM_OK",
+      "category": "swarm",
+      "priority": "low",
+      "aliases": [
+        "swarm running",
+        "swarm up",
+        "cluster active"
+      ],
+      "first_seen": 1730492321
+    },
+    "swarm_inactive": {
+      "code": "SWARM_DOWN",
+      "category": "swarm",
+      "priority": "high",
+      "aliases": [
+        "swarm down",
+        "cluster inactive",
+        "swarm failed"
+      ],
+      "first_seen": 1730492321
+    },
+    "swarm_migration_start": {
+      "code": "SWARM_MIG_START",
+      "category": "swarm",
+      "priority": "high",
+      "aliases": [
+        "migration start",
+        "swarm migration"
+      ],
+      "first_seen": 1730492321
+    },
+    "swarm_migration_complete": {
+      "code": "SWARM_MIG_OK",
+      "category": "swarm",
+      "priority": "medium",
+      "aliases": [
+        "migration complete",
+        "swarm migrated"
+      ],
+      "first_seen": 1730492321
+    },
+    "agent_ready": {
+      "code": "AGENT_RDY",
+      "category": "agent",
+      "priority": "low",
+      "aliases": [
+        "agent ready",
+        "agent available"
+      ],
+      "first_seen": 1730492321
+    },
+    "agent_busy": {
+      "code": "AGENT_BUSY",
+      "category": "agent",
+      "priority": "low",
+      "aliases": [
+        "agent busy",
+        "agent working"
+      ],
+      "first_seen": 1730492321
+    },
+    "agent_error": {
+      "code": "AGENT_ERR",
+      "category": "agent",
+      "priority": "high",
+      "aliases": [
+        "agent error",
+        "agent failed"
+      ],
+      "first_seen": 1730492321
+    },
+    "consensus_success": {
+      "code": "CONSENSUS_OK",
+      "category": "consensus",
+      "priority": "medium",
+      "aliases": [
+        "consensus reached",
+        "agreement"
+      ],
+      "first_seen": 1730492321
+    },
+    "consensus_failure": {
+      "code": "CONSENSUS_FAIL",
+      "category": "consensus",
+      "priority": "high",
+      "aliases": [
+        "consensus failed",
+        "no agreement"
+      ],
+      "first_seen": 1730492321
+    },
+    "security_scan_start": {
+      "code": "SEC_SCAN_START",
+      "category": "security",
+      "priority": "medium",
+      "aliases": [
+        "security scan",
+        "scan start"
+      ],
+      "first_seen": 1730492321
+    },
+    "security_scan_complete": {
+      "code": "SEC_SCAN_OK",
+      "category": "security",
+      "priority": "low",
+      "aliases": [
+        "scan complete",
+        "security ok"
+      ],
+      "first_seen": 1730492321
+    },
+    "security_alert": {
+      "code": "SEC_ALERT",
+      "category": "security",
+      "priority": "critical",
+      "aliases": [
+        "security breach",
+        "security issue"
+      ],
+      "first_seen": 1730492321
+    },
+    "monitoring_ok": {
+      "code": "MON_OK",
+      "category": "monitoring",
+      "priority": "low",
+      "aliases": [
+        "monitoring ok",
+        "monitoring active"
+      ],
+      "first_seen": 1730492321
+    },
+    "monitoring_alert": {
+      "code": "MON_ALERT",
+      "category": "monitoring",
+      "priority": "high",
+      "aliases": [
+        "monitoring alert",
+        "monitoring issue"
+      ],
+      "first_seen": 1730492321
+    },
+    "grafana_up": {
+      "code": "GRAFANA_UP",
+      "category": "monitoring",
+      "priority": "low",
+      "aliases": [
+        "grafana running",
+        "grafana active"
+      ],
+      "first_seen": 1730492321
+    },
+    "prometheus_up": {
+      "code": "PROMETHEUS_UP",
+      "category": "monitoring",
+      "priority": "low",
+      "aliases": [
+        "prometheus running",
+        "prometheus active"
+      ],
+      "first_seen": 1730492321
+    },
+    "test_entry": {
+      "code": "TEST_001",
+      "category": "test",
+      "priority": "low",
+      "first_seen": 1762042115
+    }
+  }
+}
