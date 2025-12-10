@@ -29,7 +29,10 @@ class TicketRepository:
     ) -> Ticket:
         """Create a new ticket"""
         ticket = Ticket(
-            description=description, priority=priority, category=category, status=TicketStatus.NEW
+            description=description,
+            priority=priority,
+            category=category,
+            status=TicketStatus.NEW,
         )
         self.session.add(ticket)
         await self.session.flush()  # Get ID without committing
@@ -40,7 +43,9 @@ class TicketRepository:
 
     async def get(self, ticket_id: int) -> Optional[Ticket]:
         """Get ticket by ID"""
-        result = await self.session.execute(select(Ticket).where(Ticket.id == ticket_id))
+        result = await self.session.execute(
+            select(Ticket).where(Ticket.id == ticket_id)
+        )
         return result.scalars().first()
 
     async def list_all(self, limit: int = 100) -> List[Ticket]:
@@ -50,7 +55,9 @@ class TicketRepository:
         )
         return list(result.scalars().all())
 
-    async def list_by_status(self, status: TicketStatus, limit: int = 100) -> List[Ticket]:
+    async def list_by_status(
+        self, status: TicketStatus, limit: int = 100
+    ) -> List[Ticket]:
         """List tickets by status"""
         result = await self.session.execute(
             select(Ticket)
@@ -72,7 +79,10 @@ class TicketRepository:
         return ticket
 
     async def update_status(
-        self, ticket_id: int, status: TicketStatus, agent_response: Optional[Dict[str, Any]] = None
+        self,
+        ticket_id: int,
+        status: TicketStatus,
+        agent_response: Optional[Dict[str, Any]] = None,
     ) -> Optional[Ticket]:
         """Update ticket status and optionally store agent response"""
         ticket = await self.get(ticket_id)
@@ -176,7 +186,9 @@ class SystemMetricsRepository:
         )
         self.session.add(metrics)
         await self.session.flush()
-        logger.debug(f"Recorded metrics: CPU={cpu_usage}%, MEM={memory_usage}%, DISK={disk_usage}%")
+        logger.debug(
+            f"Recorded metrics: CPU={cpu_usage}%, MEM={memory_usage}%, DISK={disk_usage}%"
+        )
         return metrics
 
     async def get_latest(self) -> Optional[SystemMetrics]:

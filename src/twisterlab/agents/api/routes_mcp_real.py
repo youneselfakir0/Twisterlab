@@ -15,7 +15,7 @@ async def mcp_health():
     return {
         "status": "healthy",
         "service": "mcp",
-        "message": "MCP service is operational"
+        "message": "MCP service is operational",
     }
 
 
@@ -30,7 +30,7 @@ async def list_tools():
             {
                 "name": "agent_registry",
                 "description": "Accès au registre des agents TwisterLab",
-                "version": "1.0.0"
+                "version": "1.0.0",
             }
-        ]
+        ],
     }

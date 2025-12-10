@@ -156,25 +156,33 @@ class MonitoringAgent(TwisterAgent):
             # Collect system metrics
             system_metrics = await self._collect_system_metrics()
             for metric_name, value in system_metrics.items():
-                self.metrics[metric_name].append({"timestamp": timestamp, "value": value})
+                self.metrics[metric_name].append(
+                    {"timestamp": timestamp, "value": value}
+                )
                 metrics_collected += 1
 
             # Collect agent metrics
             agent_metrics = await self._collect_agent_metrics()
             for metric_name, value in agent_metrics.items():
-                self.metrics[metric_name].append({"timestamp": timestamp, "value": value})
+                self.metrics[metric_name].append(
+                    {"timestamp": timestamp, "value": value}
+                )
                 metrics_collected += 1
 
             # Collect database metrics
             db_metrics = await self._collect_database_metrics()
             for metric_name, value in db_metrics.items():
-                self.metrics[metric_name].append({"timestamp": timestamp, "value": value})
+                self.metrics[metric_name].append(
+                    {"timestamp": timestamp, "value": value}
+                )
                 metrics_collected += 1
 
             # Collect API metrics
             api_metrics = await self._collect_api_metrics()
             for metric_name, value in api_metrics.items():
-                self.metrics[metric_name].append({"timestamp": timestamp, "value": value})
+                self.metrics[metric_name].append(
+                    {"timestamp": timestamp, "value": value}
+                )
                 metrics_collected += 1
 
             # Check thresholds and create alerts
@@ -302,14 +310,22 @@ class MonitoringAgent(TwisterAgent):
             mem_usage = latest_metrics.get("system_memory_usage_percent", 0)
             if mem_usage > self.thresholds["memory_usage"]:
                 mem_threshold = self.thresholds["memory_usage"]
-                msg = f"Memory usage is {mem_usage:.1f}% " f"(threshold: {mem_threshold}%)"
-                await self._create_alert("High Memory Usage", msg, AlertSeverity.WARNING)
+                msg = (
+                    f"Memory usage is {mem_usage:.1f}% "
+                    f"(threshold: {mem_threshold}%)"
+                )
+                await self._create_alert(
+                    "High Memory Usage", msg, AlertSeverity.WARNING
+                )
 
             # Check Disk
             disk_usage = latest_metrics.get("system_disk_usage_percent", 0)
             if disk_usage > self.thresholds["disk_usage"]:
                 disk_threshold = self.thresholds["disk_usage"]
-                msg = f"Disk usage is {disk_usage:.1f}% " f"(threshold: {disk_threshold}%)"
+                msg = (
+                    f"Disk usage is {disk_usage:.1f}% "
+                    f"(threshold: {disk_threshold}%)"
+                )
                 await self._create_alert("High Disk Usage", msg, AlertSeverity.CRITICAL)
 
             # Check API response time
@@ -321,7 +337,9 @@ class MonitoringAgent(TwisterAgent):
                     f"API response time is {api_response_time:.2f}s "
                     f"(threshold: {api_threshold}s)"
                 )
-                await self._create_alert("Slow API Response", msg, AlertSeverity.WARNING)
+                await self._create_alert(
+                    "Slow API Response", msg, AlertSeverity.WARNING
+                )
 
             # Check agent response times
             for agent_name in self.monitored_agents:
@@ -389,7 +407,10 @@ class MonitoringAgent(TwisterAgent):
                         "count": len(self.metrics[metric_name]),
                     }
                 else:
-                    return {"status": "error", "error": f"Metric '{metric_name}' not found"}
+                    return {
+                        "status": "error",
+                        "error": f"Metric '{metric_name}' not found",
+                    }
             else:
                 # Get all metrics summary
                 return {
@@ -453,7 +474,9 @@ class MonitoringAgent(TwisterAgent):
         """Get active alerts"""
         try:
             # Filter unacknowledged alerts
-            active_alerts = [alert for alert in self.alerts if not alert.get("acknowledged", False)]
+            active_alerts = [
+                alert for alert in self.alerts if not alert.get("acknowledged", False)
+            ]
 
             return {
                 "status": "success",
@@ -499,7 +522,9 @@ class MonitoringAgent(TwisterAgent):
                     latest_metrics[metric_name] = data_points[-1]["value"]
 
             # Get active alerts
-            active_alerts = [alert for alert in self.alerts if not alert.get("acknowledged", False)]
+            active_alerts = [
+                alert for alert in self.alerts if not alert.get("acknowledged", False)
+            ]
 
             return {
                 "metrics": latest_metrics,

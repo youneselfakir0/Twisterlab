@@ -14,6 +14,7 @@ except Exception:  # pragma: no cover - optional dependency
 
 from .routes import agents, browser, mcp, system
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create DB tables if they are not present.
@@ -65,7 +66,9 @@ async def lifespan(app: FastAPI):
         from prometheus_client import CONTENT_TYPE_LATEST  # type: ignore
         from prometheus_client import generate_latest
 
-        if not any(getattr(route, "path", None) == "/metrics" for route in app.router.routes):
+        if not any(
+            getattr(route, "path", None) == "/metrics" for route in app.router.routes
+        ):
 
             def _metrics_view():
                 payload = generate_latest()

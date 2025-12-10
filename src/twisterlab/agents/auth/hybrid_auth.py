@@ -2,6 +2,7 @@
 HybridAuth stub - picks between LocalAuth and AzureADAuth depending on
 configuration. Keep this minimal and test-friendly.
 """
+
 from __future__ import annotations
 
 import os
@@ -18,7 +19,9 @@ class HybridAuth:
 
     def __init__(self, force_local: Optional[bool] = None):
         self.force_local = (
-            force_local if force_local is not None else os.getenv("TWISTERLAB_AUTH_LOCAL") == "true"
+            force_local
+            if force_local is not None
+            else os.getenv("TWISTERLAB_AUTH_LOCAL") == "true"
         )
         self.local = LocalAuth()
         self.azure = AzureADAuth()

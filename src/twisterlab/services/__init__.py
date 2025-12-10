@@ -11,7 +11,7 @@ This module provides the service interfaces (ports) and concrete implementations
 
 Usage:
     from twisterlab.services import ServiceRegistry, get_service_registry
-    
+
     registry = get_service_registry()
     llm = registry.get_llm()
     cache = registry.get_cache()

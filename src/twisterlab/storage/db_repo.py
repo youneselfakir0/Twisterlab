@@ -27,9 +27,15 @@ class DatabaseAgentRepo:
             name = agent.get("name")
             description = agent.get("description")
             created = await crud_agents.create_agent(db, name, description)
-            return {"id": str(created.id), "name": created.name, "description": created.description}
+            return {
+                "id": str(created.id),
+                "name": created.name,
+                "description": created.description,
+            }
 
-    async def get_agent(self, agent_id: str, partition_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    async def get_agent(
+        self, agent_id: str, partition_key: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
         try:
             aid = int(agent_id)
         except Exception:
@@ -38,9 +44,18 @@ class DatabaseAgentRepo:
             agent = await crud_agents.get_agent(db, aid)
             if not agent:
                 return None
-            return {"id": str(agent.id), "name": agent.name, "description": agent.description}
+            return {
+                "id": str(agent.id),
+                "name": agent.name,
+                "description": agent.description,
+            }
 
-    async def update_agent(self, agent_id: str, partition_key: Optional[str] = None, patch: Dict[str, Any] | None = None) -> Optional[Dict[str, Any]]:
+    async def update_agent(
+        self,
+        agent_id: str,
+        partition_key: Optional[str] = None,
+        patch: Dict[str, Any] | None = None,
+    ) -> Optional[Dict[str, Any]]:
         try:
             aid = int(agent_id)
         except Exception:
@@ -48,12 +63,20 @@ class DatabaseAgentRepo:
         async with self._session_maker() as db:
             name = patch.get("name") if patch else None
             description = patch.get("description") if patch else None
-            agent = await crud_agents.update_agent(db, aid, name=name, description=description)
+            agent = await crud_agents.update_agent(
+                db, aid, name=name, description=description
+            )
             if not agent:
                 return None
-            return {"id": str(agent.id), "name": agent.name, "description": agent.description}
+            return {
+                "id": str(agent.id),
+                "name": agent.name,
+                "description": agent.description,
+            }
 
-    async def delete_agent(self, agent_id: str, partition_key: Optional[str] = None) -> bool:
+    async def delete_agent(
+        self, agent_id: str, partition_key: Optional[str] = None
+    ) -> bool:
         try:
             aid = int(agent_id)
         except Exception:
@@ -61,10 +84,15 @@ class DatabaseAgentRepo:
         async with self._session_maker() as db:
             return await crud_agents.delete_agent(db, aid)
 
-    async def list_agents(self, partition_key: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def list_agents(
+        self, partition_key: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         async with self._session_maker() as db:
             agents = await crud_agents.get_agents(db)
-            return [{"id": str(a.id), "name": a.name, "description": a.description} for a in agents]
+            return [
+                {"id": str(a.id), "name": a.name, "description": a.description}
+                for a in agents
+            ]
 
 
 __all__ = ["DatabaseAgentRepo"]

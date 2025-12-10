@@ -11,20 +11,26 @@ class AgentRepo(Protocol):
     when available.
     """
 
-    async def create_agent(self, agent: Dict[str, Any]) -> Dict[str, Any]:
-        ...
+    async def create_agent(self, agent: Dict[str, Any]) -> Dict[str, Any]: ...
 
-    async def get_agent(self, agent_id: str, partition_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        ...
+    async def get_agent(
+        self, agent_id: str, partition_key: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]: ...
 
-    async def update_agent(self, agent_id: str, partition_key: Optional[str] = None, patch: Dict[str, Any] | None = None) -> Optional[Dict[str, Any]]:
-        ...
+    async def update_agent(
+        self,
+        agent_id: str,
+        partition_key: Optional[str] = None,
+        patch: Dict[str, Any] | None = None,
+    ) -> Optional[Dict[str, Any]]: ...
 
-    async def delete_agent(self, agent_id: str, partition_key: Optional[str] = None) -> bool:
-        ...
+    async def delete_agent(
+        self, agent_id: str, partition_key: Optional[str] = None
+    ) -> bool: ...
 
-    async def list_agents(self, partition_key: Optional[str] = None) -> List[Dict[str, Any]]:
-        ...
+    async def list_agents(
+        self, partition_key: Optional[str] = None
+    ) -> List[Dict[str, Any]]: ...
 
 
 __all__ = ["AgentRepo"]

@@ -5,6 +5,7 @@ This provides ResolutionStatus, ResolutionStrategy and a simple ResolverAgent
 class used for unit and integration tests that do not rely on full resolver
 implementation.
 """
+
 from __future__ import annotations
 
 from enum import Enum

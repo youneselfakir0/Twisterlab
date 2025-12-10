@@ -4,6 +4,7 @@ TwisterLab Settings Module.
 Loads configuration from environment variables with sensible defaults.
 Supports multiple environments: development, staging, production.
 """
+
 from __future__ import annotations
 
 import os
@@ -114,7 +115,7 @@ def get_settings() -> Settings:
 def load_environment_config(env: str = None) -> None:
     """
     Load environment-specific configuration file.
-    
+
     Args:
         env: Environment name (development, staging, production).
              Defaults to ENVIRONMENT env var or 'development'.
@@ -127,6 +128,7 @@ def load_environment_config(env: str = None) -> None:
 
     if env_file.exists():
         from dotenv import load_dotenv
+
         load_dotenv(env_file)
 
 

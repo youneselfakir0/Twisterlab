@@ -163,8 +163,11 @@ async def get_me(request: Request, user: Dict = auth_dep):
             return {
                 "user_id": user_claims.get("sub") or user_claims.get("username"),
                 "username": user_claims.get("username") or user_claims.get("sub"),
-                "email": user_claims.get("email") or user_claims.get("preferred_username"),
-                "display_name": user_claims.get("display_name", user_claims.get("username", "")),
+                "email": user_claims.get("email")
+                or user_claims.get("preferred_username"),
+                "display_name": user_claims.get(
+                    "display_name", user_claims.get("username", "")
+                ),
                 "roles": user_claims.get("roles", []),
             }
         except Exception:
@@ -183,7 +186,9 @@ async def get_me(request: Request, user: Dict = auth_dep):
 
 
 @router.get("/verify")
-async def verify_token(authorization: str = Header(None), required_role: str | None = None):
+async def verify_token(
+    authorization: str = Header(None), required_role: str | None = None
+):
     """
     Verify JWT token for Traefik ForwardAuth middleware
 
@@ -210,7 +215,9 @@ async def verify_token(authorization: str = Header(None), required_role: str | N
         }
 
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid authorization header"
+        )
 
     token = authorization.replace("Bearer ", "")
     user_info = sso_manager.validate_token(token)
@@ -303,4 +310,6 @@ async def revoke_session(
     if sso_manager.logout(username):
         return {"message": f"Session revoked for {username}"}
     else:
-        raise HTTPException(status_code=404, detail=f"No active session found for {username}")
+        raise HTTPException(
+            status_code=404, detail=f"No active session found for {username}"
+        )

@@ -5,6 +5,7 @@ class for compatibility with older imports and tests.
 This module delegates to the implementation in `twisterlab.agents.base` where
 the `DesktopCommanderAgent` now lives.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,5 +28,6 @@ class DesktopCommanderAgent(BaseDesktopCommanderAgent):
     """
 
     pass
+
 
 __all__ = ["DesktopCommanderAgent", "CommandStatus"]

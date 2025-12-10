@@ -25,22 +25,22 @@ logger = logging.getLogger(__name__)
 class MonitoringAgent(TwisterAgent):
     """
     Agent for monitoring TwisterLab infrastructure.
-    
+
     Provides capabilities for:
     - Service health checks
     - Container monitoring
     - System metrics
     - Log viewing
     """
-    
+
     @property
     def name(self) -> str:
         return "monitoring"
-    
+
     @property
     def description(self) -> str:
         return "Infrastructure monitoring and health checks"
-    
+
     def get_capabilities(self) -> List[AgentCapability]:
         return [
             # Health & Status
@@ -58,7 +58,6 @@ class MonitoringAgent(TwisterAgent):
                 capability_type=CapabilityType.QUERY,
                 tags=["metrics", "system"],
             ),
-            
             # Containers
             AgentCapability(
                 name="list_containers",
@@ -97,7 +96,6 @@ class MonitoringAgent(TwisterAgent):
                 ],
                 tags=["docker", "logs"],
             ),
-            
             # Cache
             AgentCapability(
                 name="get_cache_stats",
@@ -106,7 +104,6 @@ class MonitoringAgent(TwisterAgent):
                 capability_type=CapabilityType.QUERY,
                 tags=["cache", "redis"],
             ),
-            
             # LLM
             AgentCapability(
                 name="get_llm_status",
@@ -123,16 +120,16 @@ class MonitoringAgent(TwisterAgent):
                 tags=["llm", "models"],
             ),
         ]
-    
+
     # =========================================================================
     # Handler Methods
     # =========================================================================
-    
+
     async def handle_health_check(self) -> AgentResponse:
         """Check health of all services."""
         try:
             health = await self.registry.health_check_all()
-            
+
             # Convert to serializable format
             results = {}
             for name, h in health.items():
@@ -142,30 +139,27 @@ class MonitoringAgent(TwisterAgent):
                     "message": h.message,
                     "metadata": h.metadata,
                 }
-            
+
             # Determine overall status
-            all_connected = all(
-                h.status.value == "connected"
-                for h in health.values()
-            )
-            
+            all_connected = all(h.status.value == "connected" for h in health.values())
+
             return AgentResponse(
                 success=True,
                 data={
                     "overall": "healthy" if all_connected else "degraded",
                     "services": results,
-                }
+                },
             )
         except Exception as e:
             logger.exception("Health check failed")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_get_system_metrics(self) -> AgentResponse:
         """Get system metrics."""
         try:
             system = self.registry.get_system()
             metrics = await system.get_metrics()
-            
+
             return AgentResponse(
                 success=True,
                 data={
@@ -177,21 +171,18 @@ class MonitoringAgent(TwisterAgent):
                     "disk_used_gb": metrics.disk_used_gb,
                     "disk_total_gb": metrics.disk_total_gb,
                     "container_count": metrics.container_count,
-                }
+                },
             )
         except Exception as e:
             logger.exception("Failed to get system metrics")
             return AgentResponse(success=False, error=str(e))
-    
-    async def handle_list_containers(
-        self,
-        all: bool = False
-    ) -> AgentResponse:
+
+    async def handle_list_containers(self, all: bool = False) -> AgentResponse:
         """List Docker containers."""
         try:
             system = self.registry.get_system()
             containers = await system.list_containers(all_containers=all)
-            
+
             return AgentResponse(
                 success=True,
                 data=[
@@ -203,40 +194,38 @@ class MonitoringAgent(TwisterAgent):
                         "ports": c.ports,
                     }
                     for c in containers
-                ]
+                ],
             )
         except Exception as e:
             logger.exception("Failed to list containers")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_get_container_logs(
-        self,
-        container_id: str,
-        tail: int = 100
+        self, container_id: str, tail: int = 100
     ) -> AgentResponse:
         """Get container logs."""
         try:
             system = self.registry.get_system()
             logs = await system.container_logs(container_id, tail=tail)
-            
+
             return AgentResponse(
                 success=True,
                 data={
                     "container": container_id,
                     "lines": tail,
                     "logs": logs,
-                }
+                },
             )
         except Exception as e:
             logger.exception(f"Failed to get logs for {container_id}")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_get_cache_stats(self) -> AgentResponse:
         """Get Redis cache statistics."""
         try:
             cache = self.registry.get_cache()
             stats = await cache.get_stats()
-            
+
             return AgentResponse(
                 success=True,
                 data={
@@ -246,18 +235,18 @@ class MonitoringAgent(TwisterAgent):
                     "hits": stats.hits,
                     "misses": stats.misses,
                     "hit_rate": f"{stats.hit_rate:.1f}%",
-                }
+                },
             )
         except Exception as e:
             logger.exception("Failed to get cache stats")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_get_llm_status(self) -> AgentResponse:
         """Check LLM server status."""
         try:
             llm = self.registry.get_llm()
             health = await llm.health_check()
-            
+
             return AgentResponse(
                 success=True,
                 data={
@@ -266,24 +255,24 @@ class MonitoringAgent(TwisterAgent):
                     "latency_ms": health.latency_ms,
                     "message": health.message,
                     "metadata": health.metadata,
-                }
+                },
             )
         except Exception as e:
             logger.exception("Failed to check LLM status")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_list_models(self) -> AgentResponse:
         """List available LLM models."""
         try:
             llm = self.registry.get_llm()
             models = await llm.list_models()
-            
+
             return AgentResponse(
                 success=True,
                 data={
                     "models": models,
                     "count": len(models),
-                }
+                },
             )
         except Exception as e:
             logger.exception("Failed to list models")

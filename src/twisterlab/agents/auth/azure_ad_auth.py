@@ -3,6 +3,7 @@ Minimal Azure AD authentication stub used in tests and as a placeholder in the
 project during development. This is intentionally simple and not production
 ready. Replace with a full implementation (MSAL or similar) when needed.
 """
+
 from __future__ import annotations
 
 import os
@@ -18,7 +19,9 @@ class AzureADAuth:
       - acquire_token_by_code(code: str) -> dict
     """
 
-    def __init__(self, tenant_id: Optional[str] = None, client_id: Optional[str] = None):
+    def __init__(
+        self, tenant_id: Optional[str] = None, client_id: Optional[str] = None
+    ):
         self.tenant_id = tenant_id or os.getenv("AZURE_TENANT_ID", "demo-tenant")
         self.client_id = client_id or os.getenv("AZURE_CLIENT_ID", "demo-client")
 

@@ -15,7 +15,7 @@ async def sops_health():
     return {
         "status": "healthy",
         "service": "sops",
-        "message": "SOPs service is operational"
+        "message": "SOPs service is operational",
     }
 
 
@@ -27,5 +27,5 @@ async def list_sops():
     return {
         "status": "success",
         "sops": [],
-        "message": "SOPs listing not yet implemented"
+        "message": "SOPs listing not yet implemented",
     }

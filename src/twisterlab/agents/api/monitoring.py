@@ -6,7 +6,6 @@ import logging
 import time
 from typing import Callable
 
-from fastapi import Request, Response
 from fastapi.responses import PlainTextResponse
 
 
@@ -30,8 +29,8 @@ class MetricsMiddleware:
         await self.app(scope, receive, send)
 
         # Calculer le temps de traitement
-        process_time = time.time() - start_time
-        self.logger.info(".4f")
+        final_process_time = time.time() - start_time
+        self.logger.info(f"Request processed in {final_process_time:.4f}s")
 
 
 def setup_logging(log_level: str = "INFO", log_file: str = None):
@@ -40,11 +39,11 @@ def setup_logging(log_level: str = "INFO", log_file: str = None):
     """
     logging.basicConfig(
         level=getattr(logging, log_level.upper()),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(),
-            *(logging.FileHandler(log_file) for _ in [log_file] if log_file)
-        ]
+            *(logging.FileHandler(log_file) for _ in [log_file] if log_file),
+        ],
     )
     return logging.getLogger(__name__)
 

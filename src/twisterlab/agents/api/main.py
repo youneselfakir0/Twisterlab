@@ -61,9 +61,13 @@ app.include_router(agents_router, prefix="/api/v1/agents", tags=["agents"])
 logger.info("Agents router included")
 app.include_router(sops_router, prefix="/api/v1/sops", tags=["sops"])
 logger.info("SOPs router included")
-app.include_router(orchestrator_router, prefix="/api/v1/orchestrator", tags=["orchestrator"])
+app.include_router(
+    orchestrator_router, prefix="/api/v1/orchestrator", tags=["orchestrator"]
+)
 logger.info("Orchestrator router included")
-app.include_router(mcp_real_router)  # MCP tools router (already has /v1/mcp/tools prefix)
+app.include_router(
+    mcp_real_router
+)  # MCP tools router (already has /v1/mcp/tools prefix)
 logger.info("MCP tools router included")
 
 
@@ -108,10 +112,14 @@ async def login(credentials: UserCredentials):
         access_token = create_access_token(data=token_data)
         logger.info(f"Login successful for user: {credentials.username}")
 
-        return TokenResponse(access_token=access_token, expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+        return TokenResponse(
+            access_token=access_token, expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
     else:
         logger.warning(f"Login failed for user: {credentials.username}")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
+        )
 
 
 logger.info("Routes registered successfully")
@@ -134,4 +142,10 @@ if __name__ == "__main__":
     logger.info("Starting server with uvicorn...")
     import uvicorn
 
-    uvicorn.run("twisterlab.agents.api.main:app", host="0.0.0.0", port=8000, reload=False, log_level="info")
+    uvicorn.run(
+        "twisterlab.agents.api.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,
+        log_level="info",
+    )

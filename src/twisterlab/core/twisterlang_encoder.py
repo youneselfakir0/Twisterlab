@@ -34,7 +34,11 @@ class TwisterLangEncoder:
 
     def save_vocab(self) -> None:
         """Save vocabulary to file"""
-        data = {"version": self.version, "last_updated": int(time.time()), "vocabulary": self.vocab}
+        data = {
+            "version": self.version,
+            "last_updated": int(time.time()),
+            "vocabulary": self.vocab,
+        }
         with open(self.vocab_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -43,11 +47,27 @@ class TwisterLangEncoder:
         self.vocab = {
             # System status codes
             "system_ok": {"code": "SYS_OK", "category": "status", "priority": "low"},
-            "system_error": {"code": "SYS_ERR", "category": "status", "priority": "high"},
-            "system_warning": {"code": "SYS_WARN", "category": "status", "priority": "medium"},
+            "system_error": {
+                "code": "SYS_ERR",
+                "category": "status",
+                "priority": "high",
+            },
+            "system_warning": {
+                "code": "SYS_WARN",
+                "category": "status",
+                "priority": "medium",
+            },
             # Swarm operations
-            "swarm_active": {"code": "SWARM_OK", "category": "swarm", "priority": "low"},
-            "swarm_inactive": {"code": "SWARM_DOWN", "category": "swarm", "priority": "high"},
+            "swarm_active": {
+                "code": "SWARM_OK",
+                "category": "swarm",
+                "priority": "low",
+            },
+            "swarm_inactive": {
+                "code": "SWARM_DOWN",
+                "category": "swarm",
+                "priority": "high",
+            },
             "swarm_migration_start": {
                 "code": "SWARM_MIG_START",
                 "category": "swarm",
@@ -59,9 +79,21 @@ class TwisterLangEncoder:
                 "priority": "medium",
             },
             # Agent operations
-            "agent_ready": {"code": "AGENT_RDY", "category": "agent", "priority": "low"},
-            "agent_busy": {"code": "AGENT_BUSY", "category": "agent", "priority": "low"},
-            "agent_error": {"code": "AGENT_ERR", "category": "agent", "priority": "high"},
+            "agent_ready": {
+                "code": "AGENT_RDY",
+                "category": "agent",
+                "priority": "low",
+            },
+            "agent_busy": {
+                "code": "AGENT_BUSY",
+                "category": "agent",
+                "priority": "low",
+            },
+            "agent_error": {
+                "code": "AGENT_ERR",
+                "category": "agent",
+                "priority": "high",
+            },
             "consensus_success": {
                 "code": "CONSENSUS_OK",
                 "category": "consensus",
@@ -83,12 +115,32 @@ class TwisterLangEncoder:
                 "category": "security",
                 "priority": "low",
             },
-            "security_alert": {"code": "SEC_ALERT", "category": "security", "priority": "critical"},
+            "security_alert": {
+                "code": "SEC_ALERT",
+                "category": "security",
+                "priority": "critical",
+            },
             # Monitoring
-            "monitoring_ok": {"code": "MON_OK", "category": "monitoring", "priority": "low"},
-            "monitoring_alert": {"code": "MON_ALERT", "category": "monitoring", "priority": "high"},
-            "grafana_up": {"code": "GRAFANA_UP", "category": "monitoring", "priority": "low"},
-            "prometheus_up": {"code": "PROMETHEUS_UP", "category": "monitoring", "priority": "low"},
+            "monitoring_ok": {
+                "code": "MON_OK",
+                "category": "monitoring",
+                "priority": "low",
+            },
+            "monitoring_alert": {
+                "code": "MON_ALERT",
+                "category": "monitoring",
+                "priority": "high",
+            },
+            "grafana_up": {
+                "code": "GRAFANA_UP",
+                "category": "monitoring",
+                "priority": "low",
+            },
+            "prometheus_up": {
+                "code": "PROMETHEUS_UP",
+                "category": "monitoring",
+                "priority": "low",
+            },
         }
 
     def encode_message(self, message: str, context: Optional[Dict] = None) -> str:

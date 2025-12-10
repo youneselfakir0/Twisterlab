@@ -9,13 +9,14 @@ from twisterlab.agents.metrics import (
     ollama_request_duration_seconds,
     ollama_failover_total,
     ollama_tokens_generated_total,
-    ollama_errors_total,
     ollama_source_active,
 )
 
 from prometheus_client import Info
 
-ollama_current_endpoint = Info("ollama_current_endpoint", "Currently active Ollama endpoint")
+ollama_current_endpoint = Info(
+    "ollama_current_endpoint", "Currently active Ollama endpoint"
+)
 
 ollama_success_rate = ollama_source_active  # reuse existing gauge where appropriate
 
@@ -25,7 +26,9 @@ ollama_success_rate = ollama_source_active  # reuse existing gauge where appropr
 # ============================================================================
 
 
-def record_request(endpoint: str, model: str, duration_seconds: float, tokens: int, status: str):
+def record_request(
+    endpoint: str, model: str, duration_seconds: float, tokens: int, status: str
+):
     """
     Record métriques pour une requête Ollama.
 
@@ -45,10 +48,14 @@ def record_request(endpoint: str, model: str, duration_seconds: float, tokens: i
         ).inc()
     except Exception:
         # Fallback: try older label names
-        ollama_requests_total.labels(endpoint=endpoint, model=model, status=status).inc()
+        ollama_requests_total.labels(
+            endpoint=endpoint, model=model, status=status
+        ).inc()
 
     # Histogramme latence
-    ollama_request_duration_seconds.labels(endpoint=endpoint, model=model).observe(duration_seconds)
+    ollama_request_duration_seconds.labels(endpoint=endpoint, model=model).observe(
+        duration_seconds
+    )
 
     # Histogramme tokens
     if tokens > 0:
@@ -57,7 +64,9 @@ def record_request(endpoint: str, model: str, duration_seconds: float, tokens: i
                 source=endpoint, agent_type="ollama", model=model
             ).observe(tokens)
         except Exception:
-            ollama_tokens_generated_total.labels(endpoint=endpoint, model=model).observe(tokens)
+            ollama_tokens_generated_total.labels(
+                endpoint=endpoint, model=model
+            ).observe(tokens)
 
 
 def record_failover():

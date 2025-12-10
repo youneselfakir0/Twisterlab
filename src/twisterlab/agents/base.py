@@ -117,7 +117,9 @@ class TwisterAgent(ABC):
             "id": self.name,
             "object": "agent",
             "created_at": int(
-                datetime.fromisoformat(self.created_at.replace("Z", "+00:00")).timestamp()
+                datetime.fromisoformat(
+                    self.created_at.replace("Z", "+00:00")
+                ).timestamp()
             ),
             "name": self.display_name,
             "description": self.description,
@@ -143,7 +145,9 @@ class TwisterAgent(ABC):
         return {
             "name": self.name,
             "display_name": self.display_name,
-            "tools": [tool.get("function", {}).get("name", "unknown") for tool in self.tools],
+            "tools": [
+                tool.get("function", {}).get("name", "unknown") for tool in self.tools
+            ],
             "model": self.model,
         }
 
@@ -184,7 +188,9 @@ class TwisterAgent(ABC):
             "name": self.name,
             "description": self.description,
             "llm": {"model_name": self.model, "temperature": self.temperature},
-            "tools": [tool.get("function", {}).get("name", "unknown") for tool in self.tools],
+            "tools": [
+                tool.get("function", {}).get("name", "unknown") for tool in self.tools
+            ],
             "agent_type": "zero-shot-react-description",
             "memory": None,
             "metadata": self.metadata,
@@ -219,7 +225,11 @@ class TwisterAgent(ABC):
                 }
                 for tool in self.tools
             ],
-            "settings": {"model": self.model, "temperature": self.temperature, "role": self.role},
+            "settings": {
+                "model": self.model,
+                "temperature": self.temperature,
+                "role": self.role,
+            },
             "metadata": self.metadata,
         }
 
@@ -250,7 +260,9 @@ class TwisterAgent(ABC):
             "id": f"asst_{self.name}",
             "object": "assistant",
             "created_at": int(
-                datetime.fromisoformat(self.created_at.replace("Z", "+00:00")).timestamp()
+                datetime.fromisoformat(
+                    self.created_at.replace("Z", "+00:00")
+                ).timestamp()
             ),
             "name": self.display_name,
             "description": self.description,
@@ -302,7 +314,8 @@ class TwisterAgent(ABC):
                             "name": tool["function"]["name"],
                             "description": tool["function"].get("description", ""),
                             "parameters": tool["function"].get(
-                                "parameters", {"type": "object", "properties": {}, "required": []}
+                                "parameters",
+                                {"type": "object", "properties": {}, "required": []},
                             ),
                         },
                     }
@@ -428,7 +441,11 @@ class HelpdeskAgent(TwisterAgent):
             ],
             model="llama-3.2",
             temperature=0.3,  # Low temperature for consistent IT operations
-            metadata={"department": "IT", "sla_target": "2 minutes", "automation_rate": "60-70%"},
+            metadata={
+                "department": "IT",
+                "sla_target": "2 minutes",
+                "automation_rate": "60-70%",
+            },
         )
 
     async def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> Any:
@@ -444,7 +461,8 @@ class HelpdeskAgent(TwisterAgent):
                 name="classifier",
                 display_name="Ticket Classifier",
                 description=(
-                    "Classifies incoming helpdesk tickets by category, " "priority, and complexity"
+                    "Classifies incoming helpdesk tickets by category, "
+                    "priority, and complexity"
                 ),
                 role="classifier",
                 instructions=(
@@ -469,7 +487,10 @@ class HelpdeskAgent(TwisterAgent):
                                         "type": "string",
                                         "description": "Ticket identifier",
                                     },
-                                    "subject": {"type": "string", "description": "Ticket subject"},
+                                    "subject": {
+                                        "type": "string",
+                                        "description": "Ticket subject",
+                                    },
                                     "description": {
                                         "type": "string",
                                         "description": "Ticket description",
@@ -482,10 +503,16 @@ class HelpdeskAgent(TwisterAgent):
                 ],
                 model="deepseek-r1",  # Using DeepSeek-R1 for classification
                 temperature=0.2,  # Very low for consistent classification
-                metadata={"department": "IT", "accuracy_target": "95%", "avg_time": "<5 seconds"},
+                metadata={
+                    "department": "IT",
+                    "accuracy_target": "95%",
+                    "avg_time": "<5 seconds",
+                },
             )
 
-        async def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> Any:
+        async def execute(
+            self, task: str, context: Optional[Dict[str, Any]] = None
+        ) -> Any:
             """Execute classification task."""
             return {"status": "success", "task": task}
 
@@ -572,7 +599,12 @@ class HelpdeskAgent(TwisterAgent):
                                     },
                                     "info_type": {
                                         "type": "string",
-                                        "enum": ["hardware", "software", "network", "all"],
+                                        "enum": [
+                                            "hardware",
+                                            "software",
+                                            "network",
+                                            "all",
+                                        ],
                                         "description": "Type of information to gather",
                                     },
                                 },
@@ -590,6 +622,8 @@ class HelpdeskAgent(TwisterAgent):
                 },
             )
 
-        async def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> Any:
+        async def execute(
+            self, task: str, context: Optional[Dict[str, Any]] = None
+        ) -> Any:
             """Execute desktop commander task."""
             return {"status": "success", "task": task}
