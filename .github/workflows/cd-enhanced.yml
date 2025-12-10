@@ -1,0 +1,354 @@
+name: CD - Continuous Deployment
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Version to deploy (e.g., v1.2.3 or latest)'
+        required: false
+        default: 'latest'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ============================================
+  # Stage 1: Build & Push Images
+  # ============================================
+  build-and-push:
+    name: 🚀 Build & Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        component: [api, mcp, mcp-unified]
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.component }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.${{ matrix.component }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ github.ref_name }}
+
+      - name: Image security scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.component }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.component }}.sarif'
+        continue-on-error: true
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-${{ matrix.component }}.sarif'
+        continue-on-error: true
+
+  # ============================================
+  # Stage 2: Deploy to Staging
+  # ============================================
+  deploy-staging:
+    name: 📦 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment:
+      name: staging
+      url: https://staging.twisterlab.local
+    if: github.ref == 'refs/heads/develop' || github.event.inputs.environment == 'staging'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.29.0'
+
+      - name: Configure kubectl context
+        run: |
+          # Configure kubectl to connect to staging cluster
+          # This assumes you have cluster credentials in secrets
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Update Kubernetes secrets
+        run: |
+          kubectl create secret generic twisterlab-secrets \
+            --from-literal=DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" \
+            --from-literal=REDIS_URL="${{ secrets.STAGING_REDIS_URL }}" \
+            --namespace=twisterlab \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to staging
+        run: |
+          # Update image tags in deployments
+          kubectl set image deployment/twisterlab-api \
+            twisterlab-api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ github.sha }} \
+            -n twisterlab
+          
+          kubectl set image deployment/mcp-unified \
+            mcp-unified=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/mcp-unified:${{ github.sha }} \
+            -n twisterlab
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/twisterlab-api -n twisterlab --timeout=5m
+          kubectl rollout status deployment/mcp-unified -n twisterlab --timeout=5m
+
+      - name: Run smoke tests
+        run: |
+          sleep 30
+          curl --fail https://staging.twisterlab.local/health || exit 1
+
+      - name: Notify deployment status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}' === 'success' ? '✅' : '❌';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: '${{ job.status }}',
+              description: `${status} Staging deployment`,
+              context: 'deployment/staging'
+            });
+
+  # ============================================
+  # Stage 3: Deploy to Production
+  # ============================================
+  deploy-production:
+    name: 🎯 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-staging]
+    environment:
+      name: production
+      url: https://twisterlab.local
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.environment == 'production'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.29.0'
+
+      - name: Configure kubectl context
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Backup database before deployment
+        run: |
+          kubectl exec deployment/postgres -n twisterlab -- \
+            pg_dump -U twisterlab twisterlab > backup_pre_deploy_$(date +%Y%m%d_%H%M%S).sql
+
+      - name: Upload backup to S3
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Copy backup to S3
+        run: |
+          aws s3 cp backup_pre_deploy_*.sql s3://twisterlab-backups/
+
+      - name: Blue-Green Deployment - Create new deployment
+        run: |
+          # Deploy new version as "green"
+          kubectl apply -f k8s/deployments/twisterlab-api-green.yaml
+          
+          # Wait for green deployment to be ready
+          kubectl wait --for=condition=available deployment/twisterlab-api-green -n twisterlab --timeout=5m
+
+      - name: Run production smoke tests
+        run: |
+          # Test green deployment on internal endpoint
+          kubectl port-forward deployment/twisterlab-api-green 8080:8000 -n twisterlab &
+          sleep 10
+          curl --fail http://localhost:8080/health || exit 1
+
+      - name: Switch traffic to new version
+        run: |
+          # Update service to point to green deployment
+          kubectl patch svc twisterlab-api -n twisterlab \
+            -p '{"spec":{"selector":{"version":"green"}}}'
+
+      - name: Monitor for issues (5 minutes)
+        run: |
+          sleep 300
+          # Check error rate
+          ERRORS=$(kubectl logs deployment/twisterlab-api-green -n twisterlab --since=5m | grep -c ERROR || echo 0)
+          if [ $ERRORS -gt 10 ]; then
+            echo "High error rate detected, rolling back..."
+            exit 1
+          fi
+
+      - name: Cleanup old blue deployment
+        if: success()
+        run: |
+          kubectl delete deployment/twisterlab-api-blue -n twisterlab || echo "No blue deployment to delete"
+          kubectl label deployment/twisterlab-api-green version=blue -n twisterlab
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, rolling back to blue..."
+          kubectl patch svc twisterlab-api -n twisterlab \
+            -p '{"spec":{"selector":{"version":"blue"}}}'
+          kubectl delete deployment/twisterlab-api-green -n twisterlab
+
+      - name: Create GitHub Release
+        if: success() && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          files: |
+            CHANGELOG.md
+            RELEASE_NOTES.md
+
+      - name: Notify deployment status
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && '✅' || '❌' }} Production Deployment",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*TwisterLab Production Deployment*\n*Status:* ${{ job.status }}\n*Version:* ${{ github.ref_name }}\n*Deployed by:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+
+  # ============================================
+  # Stage 4: Post-Deployment Validation
+  # ============================================
+  validate-deployment:
+    name: ✅ Validate Deployment
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install testing tools
+        run: |
+          pip install pytest httpx
+
+      - name: Run production smoke tests
+        run: |
+          pytest tests/smoke/ -v --env=production
+
+      - name: Check API health
+        run: |
+          curl --fail https://twisterlab.local/health
+
+      - name: Check MCP tools
+        run: |
+          curl -X POST https://twisterlab.local/mcp/list_autonomous_agents \
+            -H "Content-Type: application/json"
+
+      - name: Run load test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: tests/load/production-smoke.js
+          cloud: false
+
+      - name: Update status page
+        run: |
+          curl -X POST https://status.twisterlab.local/api/incidents/resolve \
+            -H "Authorization: Bearer ${{ secrets.STATUS_PAGE_TOKEN }}" \
+            -d '{"message": "Deployment completed successfully"}'
+
+  # ============================================
+  # Stage 5: Cleanup & Reporting
+  # ============================================
+  cleanup:
+    name: 🧹 Cleanup & Report
+    runs-on: ubuntu-latest
+    needs: [deploy-production, validate-deployment]
+    if: always()
+    steps:
+      - name: Clean up old Docker images
+        run: |
+          # Delete old images from registry (keep last 10)
+          # This would use GitHub API to clean up packages
+
+      - name: Generate deployment report
+        run: |
+          echo "## Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ needs.deploy-production.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Archive deployment logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-logs
+          path: |
+            *.sql
+            *.log
+          retention-days: 90

@@ -1,0 +1,384 @@
+name: Release Management
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.2.3)'
+        required: true
+        type: string
+      release_type:
+        description: 'Type of release'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+          - hotfix
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+jobs:
+  # ============================================
+  # Stage 1: Prepare Release
+  # ============================================
+  prepare-release:
+    name: 📝 Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for changelog
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Generate changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configuration: ".github/release-config.json"
+          toTag: ${{ steps.version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update CHANGELOG.md
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DATE=$(date +%Y-%m-%d)
+          
+          # Create new changelog entry
+          cat > changelog_entry.md <<EOF
+          ## [$VERSION] - $DATE
+          
+          ${{ steps.changelog.outputs.changelog }}
+          EOF
+          
+          # Prepend to existing CHANGELOG.md
+          if [ -f CHANGELOG.md ]; then
+            cat CHANGELOG.md >> changelog_entry.md
+            mv changelog_entry.md CHANGELOG.md
+          else
+            mv changelog_entry.md CHANGELOG.md
+          fi
+
+      - name: Update version in files
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Update pyproject.toml
+          sed -i "s/^version = .*/version = \"${VERSION#v}\"/" pyproject.toml
+          
+          # Update __init__.py
+          sed -i "s/__version__ = .*/__version__ = \"${VERSION#v}\"/" src/twisterlab/__init__.py
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md pyproject.toml src/twisterlab/__init__.py
+          git commit -m "chore(release): bump version to ${{ steps.version.outputs.version }}"
+          git push origin HEAD:main
+
+  # ============================================
+  # Stage 2: Build Release Artifacts
+  # ============================================
+  build-artifacts:
+    name: 🏗️ Build Release Artifacts
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build tools
+        run: |
+          pip install build wheel setuptools
+
+      - name: Build Python package
+        run: |
+          python -m build
+
+      - name: Create source tarball
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          tar -czf twisterlab-${{ needs.prepare-release.outputs.version }}-src.tar.gz \
+            --exclude='.git' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.venv' \
+            src/ requirements.txt README.md LICENSE
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ matrix.platform }}
+          path: |
+            dist/*
+            *.tar.gz
+          retention-days: 30
+
+  # ============================================
+  # Stage 3: Create GitHub Release
+  # ============================================
+  create-release:
+    name: 🚀 Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [prepare-release, build-artifacts]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          
+          cat > RELEASE_NOTES.md <<EOF
+          # TwisterLab $VERSION
+          
+          ## 🎉 What's New
+          
+          ${{ needs.prepare-release.outputs.changelog }}
+          
+          ## 📦 Installation
+          
+          ### Docker (Recommended)
+          \`\`\`bash
+          docker pull ghcr.io/youneselfakir0/twisterlab/api:$VERSION
+          docker pull ghcr.io/youneselfakir0/twisterlab/mcp:$VERSION
+          \`\`\`
+          
+          ### Kubernetes
+          \`\`\`bash
+          kubectl set image deployment/twisterlab-api twisterlab-api=ghcr.io/youneselfakir0/twisterlab/api:$VERSION -n twisterlab
+          \`\`\`
+          
+          ### Python Package
+          \`\`\`bash
+          pip install twisterlab==${VERSION#v}
+          \`\`\`
+          
+          ## 🔧 Upgrade Instructions
+          
+          See [UPGRADE_GUIDE.md](docs/OPERATIONS/UPGRADE_GUIDE.md) for detailed upgrade instructions.
+          
+          ## 📚 Documentation
+          
+          - [API Documentation](docs/API.md)
+          - [Operations Runbook](docs/OPERATIONS/RUNBOOK.md)
+          - [Performance Guide](docs/OPERATIONS/PERFORMANCE_GUIDE.md)
+          
+          ## 🐛 Known Issues
+          
+          - None reported for this release
+          
+          ## 💬 Support
+          
+          - GitHub Issues: https://github.com/youneselfakir0/twisterlab/issues
+          - Discussions: https://github.com/youneselfakir0/twisterlab/discussions
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.version }}
+          name: Release ${{ needs.prepare-release.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(needs.prepare-release.outputs.version, 'rc') || contains(needs.prepare-release.outputs.version, 'beta') }}
+          files: |
+            artifacts/**/*
+            CHANGELOG.md
+            RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # Stage 4: Publish to PyPI
+  # ============================================
+  publish-pypi:
+    name: 📦 Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [prepare-release, build-artifacts, create-release]
+    if: "!contains(needs.prepare-release.outputs.version, 'rc') && !contains(needs.prepare-release.outputs.version, 'beta')"
+    environment:
+      name: pypi
+      url: https://pypi.org/project/twisterlab/
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts-linux
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: dist/
+          skip-existing: true
+
+  # ============================================
+  # Stage 5: Update Documentation
+  # ============================================
+  update-docs:
+    name: 📚 Update Documentation
+    runs-on: ubuntu-latest
+    needs: create-release
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Update version badge
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          sed -i "s/version-[^-]*-blue/version-${VERSION#v}-blue/" README.md
+
+      - name: Generate API docs
+        run: |
+          pip install pdoc3
+          pdoc --html --output-dir docs/api src/twisterlab
+
+      - name: Commit documentation updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/
+          git commit -m "docs: update documentation for ${{ needs.prepare-release.outputs.version }}" || echo "No docs to commit"
+          git push origin main
+
+  # ============================================
+  # Stage 6: Notify Stakeholders
+  # ============================================
+  notify:
+    name: 📢 Notify Stakeholders
+    runs-on: ubuntu-latest
+    needs: [create-release, publish-pypi]
+    if: always()
+    steps:
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "🚀 New TwisterLab Release!",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚀 TwisterLab ${{ needs.prepare-release.outputs.version }} Released!"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Version:*\n${{ needs.prepare-release.outputs.version }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Released by:*\n${{ github.actor }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "View release notes: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare-release.outputs.version }}"
+                  }
+                }
+              ]
+            }
+
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "TwisterLab ${{ needs.prepare-release.outputs.version }} Released"
+          to: team@twisterlab.local
+          from: GitHub Actions
+          body: |
+            A new version of TwisterLab has been released!
+            
+            Version: ${{ needs.prepare-release.outputs.version }}
+            Release Notes: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare-release.outputs.version }}
+            
+            Please update your deployments accordingly.
+
+  # ============================================
+  # Stage 7: Post-Release Validation
+  # ============================================
+  validate-release:
+    name: ✅ Validate Release
+    runs-on: ubuntu-latest
+    needs: create-release
+    steps:
+      - name: Check Docker images
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          docker pull ghcr.io/youneselfakir0/twisterlab/api:$VERSION
+          docker pull ghcr.io/youneselfakir0/twisterlab/mcp:$VERSION
+
+      - name: Test PyPI package
+        if: "!contains(needs.prepare-release.outputs.version, 'rc')"
+        run: |
+          pip install twisterlab==${{ needs.prepare-release.outputs.version #v}}
+          python -c "import twisterlab; print(twisterlab.__version__)"
+
+      - name: Verify release artifacts
+        run: |
+          curl -f https://github.com/${{ github.repository }}/releases/download/${{ needs.prepare-release.outputs.version }}/twisterlab-${{ needs.prepare-release.outputs.version }}-src.tar.gz
+
+      - name: Final status report
+        run: |
+          echo "## ✅ Release Validation Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker images: Published" >> $GITHUB_STEP_SUMMARY
+          echo "- PyPI package: Published" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub Release: Created" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation: Updated" >> $GITHUB_STEP_SUMMARY

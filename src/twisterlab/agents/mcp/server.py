@@ -128,6 +128,10 @@ class UnifiedMCPServer:
             elif method == "resources/list":
                 result = {"resources": []}
                 
+            elif method == "resources/templates/list":
+                # MCP spec: resource templates for dynamic resources
+                result = {"resourceTemplates": []}
+                
             elif method == "prompts/list":
                 result = {"prompts": []}
                 

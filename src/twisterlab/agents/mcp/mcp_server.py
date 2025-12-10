@@ -137,7 +137,7 @@ class MCPServerContinue:
             {"name": "list_available_models", "description": "List all available LLM models on Cortex", "inputSchema": {"type": "object", "properties": {}}},
             
             # Database Operations
-            {"name": "query_database", "description": "Execute a read-only SQL query on the database", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "params": {"type": "array"}}, "required": ["query"]}},
+            {"name": "query_database", "description": "Execute a read-only SQL query on the database", "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}, "params": {"type": "array", "items": {"type": "string"}, "description": "Query parameters"}}, "required": ["query"]}},
             {"name": "get_database_stats", "description": "Get database statistics and connection info", "inputSchema": {"type": "object", "properties": {}}},
             
             # Cache Operations
