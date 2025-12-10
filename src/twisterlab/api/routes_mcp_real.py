@@ -19,7 +19,6 @@ from twisterlab.agents.core.database import get_db_session
 from twisterlab.agents.core.models import TicketPriority
 from twisterlab.agents.core.repository import (
     AgentLogRepository,
-    SystemMetricsRepository,
     TicketRepository,
 )
 from twisterlab.agents.real.real_backup_agent import RealBackupAgent
@@ -594,7 +593,7 @@ async def monitor_system_health(
         start_time = time.time()
 
         # Initialize repositories
-        metrics_repo = SystemMetricsRepository(session)
+        # metrics_repo reserved for future metrics collection
         log_repo = AgentLogRepository(session)
 
         # Initialize agent

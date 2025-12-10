@@ -51,23 +51,6 @@ tickets_processed_total = _create_metric(
     "Total tickets processed by agents",
     ["agent_name", "status"],
 )
-"""Prometheus metrics for TwisterLab.
-
-This module centralizes metric definitions and provides a safe helper
-to create metrics that tolerates duplicate registration attempts (e.g.
-during repeated test collection/imports) by returning a no-op fallback
-object when a duplicate timeseries is attempted to be registered.
-
-Note: This is intentionally defensive — in production you should register
-metrics once at app startup (and not during test imports), but for the
-tests in CI this reduces failures caused by re-imports across test sessions.
-"""
-
-import logging
-
-from prometheus_client import Counter, Histogram
-
-logger = logging.getLogger(__name__)
 
 
 def _create_metric(metric_cls, *args, **kwargs):

@@ -6,13 +6,13 @@ Provides authentication endpoints for Continue IDE and all TwisterLab modules
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 # Import SSO manager (will create if not exists)
 try:
     from api.auth.sso_ldap import (
-        get_current_user as sso_get_current_user,
+        get_current_user,
         login_endpoint,
         logout_endpoint,
         me_endpoint,
@@ -23,6 +23,11 @@ try:
     SSO_AVAILABLE = True
 except ImportError:
     SSO_AVAILABLE = False
+
+    # Provide dummy function when SSO is not available
+    async def get_current_user():
+        return {}
+
     logging.warning("SSO/LDAP module not available")
 
 logger = logging.getLogger(__name__)
