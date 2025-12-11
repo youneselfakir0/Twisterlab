@@ -9,14 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial public release preparation
+- Automated GitHub Secrets configuration script (`quick-setup-secrets.ps1`)
+- Comprehensive GitHub Secrets documentation (`docs/GITHUB_SECRETS_GUIDE.md`)
+- Security audit report (`rapport_audit_twisterlab.md`)
 
 ### Changed
 
+- **BREAKING**: Replaced `psycopg2` with `psycopg2-binary` to eliminate C build dependencies
+- Updated Dockerfile.api ENV declarations to modern syntax (`KEY=value`)
+- Migrated Poetry commands to 2.x compatible syntax
 - Repository reorganization for better maintainability
 
 ### Fixed
 
+- **CI/CD Pipeline**: Resolved 5 critical Docker build issues:
+  1. Poetry 2.x syntax compatibility (`--no-dev` → `--only main`)
+  2. Dockerfile syntax error (RUN command with inline comment)
+  3. Missing dependency group handling in pyproject.toml
+  4. Outdated poetry.lock synchronization
+  5. PostgreSQL driver compilation failures (psycopg2 → psycopg2-binary)
+- CD workflow now successfully builds all 3 Docker images (api, mcp, mcp-unified)
 - Various bug fixes and improvements
 
 ## [1.1.0] - 2025-11-22
