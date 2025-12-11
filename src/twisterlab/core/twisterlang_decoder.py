@@ -62,7 +62,10 @@ class TwisterLangDecoder:
                         if fallback_hash == message_hash:
                             return fallback, True, None
 
-                    error_msg = f"Hash mismatch: expected {expected_hash}, " f"got {message_hash}"
+                    error_msg = (
+                        f"Hash mismatch: expected {expected_hash}, "
+                        f"got {message_hash}"
+                    )
                     return decoded_message, False, error_msg
 
             # Verify timestamp (not too old, not in future)
@@ -143,8 +146,12 @@ class TwisterLangDecoder:
                             cat = info.get("category", "unknown")
                             pri = info.get("priority", "medium")
 
-                            results["categories"][cat] = results["categories"].get(cat, 0) + 1
-                            results["priorities"][pri] = results["priorities"].get(pri, 0) + 1
+                            results["categories"][cat] = (
+                                results["categories"].get(cat, 0) + 1
+                            )
+                            results["priorities"][pri] = (
+                                results["priorities"].get(pri, 0) + 1
+                            )
             else:
                 results["invalid_messages"] += 1
                 results["errors"].append(
@@ -153,7 +160,9 @@ class TwisterLangDecoder:
 
         return results
 
-    def get_compression_stats(self, original_messages: list, encoded_messages: list) -> Dict:
+    def get_compression_stats(
+        self, original_messages: list, encoded_messages: list
+    ) -> Dict:
         """Calculate compression statistics"""
         if len(original_messages) != len(encoded_messages):
             return {"error": "Message lists must have same length"}
@@ -166,7 +175,9 @@ class TwisterLangDecoder:
             "original_chars": total_original_chars,
             "encoded_chars": total_encoded_chars,
             "compression_ratio": (
-                total_encoded_chars / total_original_chars if total_original_chars > 0 else 0
+                total_encoded_chars / total_original_chars
+                if total_original_chars > 0
+                else 0
             ),
             "space_saved_percent": (
                 (1 - total_encoded_chars / total_original_chars) * 100
@@ -174,7 +185,9 @@ class TwisterLangDecoder:
                 else 0
             ),
             "avg_original_length": (
-                total_original_chars / len(original_messages) if original_messages else 0
+                total_original_chars / len(original_messages)
+                if original_messages
+                else 0
             ),
             "avg_encoded_length": (
                 total_encoded_chars / len(encoded_messages) if encoded_messages else 0

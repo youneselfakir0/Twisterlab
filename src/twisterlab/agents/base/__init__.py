@@ -1,9 +1,7 @@
 ﻿"""TwisterLab Base Agent Module."""
 
 from .base_agent import BaseAgent, accepts_context_or_task
-from types import SimpleNamespace
 from datetime import datetime, timezone
-import uuid
 
 
 class TwisterAgent(BaseAgent):
@@ -30,7 +28,9 @@ class TwisterAgent(BaseAgent):
         self.model = model
         self.temperature = temperature
         self.metadata = metadata or {}
-        self.instructions = instructions or f"You are {self.display_name}, {self.description}"
+        self.instructions = (
+            instructions or f"You are {self.display_name}, {self.description}"
+        )
         self.created_at = datetime.now(timezone.utc).isoformat() + "Z"
 
     async def _process(self, context):

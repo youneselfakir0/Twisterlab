@@ -73,7 +73,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         now = datetime.now()
         cutoff = now - timedelta(minutes=1)
         if client_ip in self.requests:
-            self.requests[client_ip] = [ts for ts in self.requests[client_ip] if ts > cutoff]
+            self.requests[client_ip] = [
+                ts for ts in self.requests[client_ip] if ts > cutoff
+            ]
 
         # Check rate limit
         if client_ip not in self.requests:
@@ -82,7 +84,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if len(self.requests[client_ip]) >= self.requests_per_minute:
             logger.warning(f"Rate limit exceeded for IP: {client_ip}")
             raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many requests"
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many requests",
             )
 
         # Add current request
@@ -102,7 +105,9 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+) -> str:
     """Create JWT access token"""
     to_encode = data.copy()
 
@@ -116,10 +121,14 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     return encoded_jwt
 
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> TokenData:
+def verify_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> TokenData:
     """Verify JWT token and return token data"""
     try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM]
+        )
         token_data = TokenData(**payload)
         return token_data
     except JWTError as e:
@@ -142,7 +151,8 @@ def require_role(required_role: str):
     def role_checker(token_data: TokenData = Depends(verify_token)):
         if required_role not in token_data.roles:
             logger.warning(
-                f"Access denied. Required role: {required_role}, " f"user roles: {token_data.roles}"
+                f"Access denied. Required role: {required_role}, "
+                f"user roles: {token_data.roles}"
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

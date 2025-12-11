@@ -45,11 +45,15 @@ class Ticket(Base):
 
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     description: str = Column(Text, nullable=False)
-    category: str = Column(String(100), nullable=True)  # Network, Software, Hardware, Account
+    category: str = Column(
+        String(100), nullable=True
+    )  # Network, Software, Hardware, Account
     priority: TicketPriority = Column(
         SQLEnum(TicketPriority), nullable=False, default=TicketPriority.MEDIUM
     )
-    status: TicketStatus = Column(SQLEnum(TicketStatus), nullable=False, default=TicketStatus.NEW)
+    status: TicketStatus = Column(
+        SQLEnum(TicketStatus), nullable=False, default=TicketStatus.NEW
+    )
     created_at: datetime = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
@@ -59,7 +63,9 @@ class Ticket(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
     resolved_at: datetime = Column(DateTime(timezone=True), nullable=True)
-    agent_response: dict = Column(JSON, nullable=True)  # Stores classifier/resolver output
+    agent_response: dict = Column(
+        JSON, nullable=True
+    )  # Stores classifier/resolver output
 
     def __repr__(self) -> str:
         return f"<Ticket id={self.id} category={self.category} priority={self.priority.value} status={self.status.value}>"
@@ -83,7 +89,9 @@ class AgentLog(Base):
     action: str = Column(String(200), nullable=False)
     result: dict = Column(JSON, nullable=True)
     error: str = Column(Text, nullable=True)
-    execution_time_ms: int = Column(Integer, nullable=True)  # Execution duration in milliseconds
+    execution_time_ms: int = Column(
+        Integer, nullable=True
+    )  # Execution duration in milliseconds
     timestamp: datetime = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
@@ -106,7 +114,9 @@ class SystemMetrics(Base):
     cpu_usage: float = Column(Float, nullable=False)
     memory_usage: float = Column(Float, nullable=False)
     disk_usage: float = Column(Float, nullable=False)
-    docker_status: str = Column(String(50), nullable=True)  # healthy, degraded, unavailable
+    docker_status: str = Column(
+        String(50), nullable=True
+    )  # healthy, degraded, unavailable
     timestamp: datetime = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )

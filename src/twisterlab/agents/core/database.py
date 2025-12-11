@@ -55,7 +55,8 @@ DB_NAME = os.getenv("POSTGRES_DB", "twisterlab_prod")
 if all([DB_USER, DB_HOST, DB_PORT, DB_NAME]):
     if DB_PASSWORD:
         DATABASE_URL = (
-            "postgresql+asyncpg://" f"{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+            "postgresql+asyncpg://"
+            f"{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
         )
     else:
         DATABASE_URL = f"postgresql+asyncpg://{DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

@@ -19,7 +19,7 @@ Usage:
 
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 import redis.asyncio as aioredis
@@ -104,7 +104,8 @@ async def verify_jwt_token(token: str) -> Dict[str, Any]:
         # 3. Validate issuer, audience, expiration
 
         # For now, basic validation (MUST enhance for production)
-        tenant_id = os.getenv("AZURE_TENANT_ID")
+        # tenant_id is available for future use but not currently needed
+        _ = os.getenv("AZURE_TENANT_ID")  # noqa: F841
         client_id = os.getenv("AZURE_CLIENT_ID")
 
         if not unverified_claims.get("aud") == client_id:
@@ -229,7 +230,8 @@ async def callback(request: Request):
         error_desc = request.query_params.get("error_description", "Unknown error")
         logger.error(f"Azure AD auth error: {error} - {error_desc}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Authentication failed: {error_desc}"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Authentication failed: {error_desc}",
         )
 
     # Get authorization code

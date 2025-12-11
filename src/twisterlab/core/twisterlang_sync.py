@@ -74,7 +74,9 @@ class TwisterLangSync:
             "version": version,
             "last_update": last_update,
             "vocab_size": vocab_size,
-            "file_size": self.vocab_file.stat().st_size if self.vocab_file.exists() else 0,
+            "file_size": (
+                self.vocab_file.stat().st_size if self.vocab_file.exists() else 0
+            ),
         }
 
     def compare_vocabularies(self, remote_metadata: Dict) -> Dict:
@@ -305,7 +307,9 @@ class TwisterLangSync:
 
         # Calculate sync statistics
         total_syncs = len(self.sync_history)
-        successful_syncs = len([s for s in self.sync_history if s.get("status") == "success"])
+        successful_syncs = len(
+            [s for s in self.sync_history if s.get("status") == "success"]
+        )
         failed_syncs = len([s for s in self.sync_history if s.get("status") == "error"])
 
         return {
@@ -314,7 +318,9 @@ class TwisterLangSync:
                 "total_operations": total_syncs,
                 "successful": successful_syncs,
                 "failed": failed_syncs,
-                "success_rate": successful_syncs / total_syncs if total_syncs > 0 else 0,
+                "success_rate": (
+                    successful_syncs / total_syncs if total_syncs > 0 else 0
+                ),
             },
             "recent_operations": recent_syncs,
             "last_sync": recent_syncs[-1] if recent_syncs else None,
@@ -372,7 +378,11 @@ def sync_vocabularies(agent_list: List[str]) -> Dict:
             "status": "simulated",
         }
 
-    return {"sync_results": results, "local_metadata": local_meta, "total_agents": len(agent_list)}
+    return {
+        "sync_results": results,
+        "local_metadata": local_meta,
+        "total_agents": len(agent_list),
+    }
 
 
 # Example usage and testing

@@ -4,6 +4,7 @@ Local JWT authentication stub used for development and testing.
 This class provides a minimal interface for LocalAuth so HybridAuth can pick
 it during tests that prefer local mode.
 """
+
 from __future__ import annotations
 
 from typing import Optional

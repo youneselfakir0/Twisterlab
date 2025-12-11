@@ -25,21 +25,21 @@ logger = logging.getLogger(__name__)
 class CacheAgent(TwisterAgent):
     """
     Agent for Redis cache operations.
-    
+
     Provides capabilities for:
     - Getting/setting cache values
     - Listing keys
     - Cache statistics
     """
-    
+
     @property
     def name(self) -> str:
         return "cache"
-    
+
     @property
     def description(self) -> str:
         return "Redis cache operations and management"
-    
+
     def get_capabilities(self) -> List[AgentCapability]:
         return [
             AgentCapability(
@@ -119,17 +119,17 @@ class CacheAgent(TwisterAgent):
                 tags=["cache", "stats"],
             ),
         ]
-    
+
     # =========================================================================
     # Handler Methods
     # =========================================================================
-    
+
     async def handle_cache_get(self, key: str) -> AgentResponse:
         """Get a value from cache."""
         try:
             cache = self.registry.get_cache()
             value = await cache.get(key)
-            
+
             if value is None:
                 return AgentResponse(
                     success=True,
@@ -137,88 +137,82 @@ class CacheAgent(TwisterAgent):
                         "key": key,
                         "found": False,
                         "value": None,
-                    }
+                    },
                 )
-            
+
             return AgentResponse(
                 success=True,
                 data={
                     "key": key,
                     "found": True,
                     "value": value,
-                }
+                },
             )
         except Exception as e:
             logger.exception(f"Cache get failed for key {key}")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_cache_set(
-        self,
-        key: str,
-        value: str,
-        ttl: int = None
+        self, key: str, value: str, ttl: int = None
     ) -> AgentResponse:
         """Set a value in cache."""
         try:
             cache = self.registry.get_cache()
             success = await cache.set(key, value, ttl=ttl)
-            
+
             return AgentResponse(
                 success=success,
                 data={
                     "key": key,
                     "stored": success,
                     "ttl": ttl,
-                }
+                },
             )
         except Exception as e:
             logger.exception(f"Cache set failed for key {key}")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_cache_delete(self, key: str) -> AgentResponse:
         """Delete a key from cache."""
         try:
             cache = self.registry.get_cache()
             deleted = await cache.delete(key)
-            
+
             return AgentResponse(
                 success=True,
                 data={
                     "key": key,
                     "deleted": deleted,
-                }
+                },
             )
         except Exception as e:
             logger.exception(f"Cache delete failed for key {key}")
             return AgentResponse(success=False, error=str(e))
-    
-    async def handle_cache_keys(
-        self,
-        pattern: str = "*"
-    ) -> AgentResponse:
+
+    async def handle_cache_keys(self, pattern: str = "*") -> AgentResponse:
         """List cache keys."""
         try:
             cache = self.registry.get_cache()
             keys = await cache.keys(pattern)
-            
+
             return AgentResponse(
                 success=True,
                 data={
                     "pattern": pattern,
                     "keys": keys,
                     "count": len(keys),
-                }
+                },
             )
         except Exception as e:
             logger.exception(f"Cache keys failed for pattern {pattern}")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_cache_stats(self) -> AgentResponse:
         """Get cache statistics."""
         try:
             cache = self.registry.get_cache()
             stats = await cache.get_stats()
-            
+
             return AgentResponse(
                 success=True,
                 data={
@@ -228,7 +222,7 @@ class CacheAgent(TwisterAgent):
                     "hits": stats.hits,
                     "misses": stats.misses,
                     "hit_rate": f"{stats.hit_rate:.1f}%",
-                }
+                },
             )
         except Exception as e:
             logger.exception("Cache stats failed")

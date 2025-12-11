@@ -56,7 +56,9 @@ class RealDesktopCommanderAgent(TwisterAgent):
     async def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> Any:
         # Simulate a safe command execution – do not execute arbitrary shell
         # commands in tests. Return a CommandStatus-like dict for compatibility.
-        status = CommandStatus(status="completed", exit_code=0, output=f"Executed: {task}")
+        status = CommandStatus(
+            status="completed", exit_code=0, output=f"Executed: {task}"
+        )
         return asdict(status)
 
 

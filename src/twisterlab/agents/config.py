@@ -12,7 +12,9 @@ import os
 # Ollama URL - PRIMARY (Corertx RTX 3060 12GB)
 # For local testing: export OLLAMA_URL=http://localhost:11434
 # For production: uses corertx (192.168.0.20:11434) with GPU acceleration
-OLLAMA_URL = os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_URL", "http://192.168.0.20:11434")
+OLLAMA_URL = os.getenv("OLLAMA_BASE_URL") or os.getenv(
+    "OLLAMA_URL", "http://192.168.0.20:11434"
+)
 
 # Ollama FALLBACK - BACKUP (Edgeserver GTX 1050 2GB)
 # If PRIMARY fails, automatically failover to BACKUP for continuity

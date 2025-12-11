@@ -25,21 +25,21 @@ logger = logging.getLogger(__name__)
 class MaestroAgent(TwisterAgent):
     """
     Orchestration agent for TwisterLab.
-    
+
     Provides capabilities for:
     - LLM chat and generation
     - Agent coordination
     - TwisterLang parsing
     """
-    
+
     @property
     def name(self) -> str:
         return "maestro"
-    
+
     @property
     def description(self) -> str:
         return "Orchestration agent with LLM-powered reasoning"
-    
+
     def get_capabilities(self) -> List[AgentCapability]:
         return [
             # LLM Operations
@@ -91,7 +91,6 @@ class MaestroAgent(TwisterAgent):
                 ],
                 tags=["llm", "generate"],
             ),
-            
             # Orchestration
             AgentCapability(
                 name="orchestrate",
@@ -114,7 +113,6 @@ class MaestroAgent(TwisterAgent):
                 capability_type=CapabilityType.QUERY,
                 tags=["agents", "discovery"],
             ),
-            
             # Analysis
             AgentCapability(
                 name="analyze",
@@ -139,92 +137,79 @@ class MaestroAgent(TwisterAgent):
                 tags=["llm", "analysis"],
             ),
         ]
-    
+
     # =========================================================================
     # Handler Methods
     # =========================================================================
-    
+
     async def handle_chat(
-        self,
-        message: str,
-        model: str = "qwen3:8b",
-        system_prompt: str = None
+        self, message: str, model: str = "qwen3:8b", system_prompt: str = None
     ) -> AgentResponse:
         """Send a chat message to the LLM."""
         try:
             llm = self.registry.get_llm()
-            
+
             messages = []
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": message})
-            
+
             response = await llm.chat(messages, model=model)
-            
+
             return AgentResponse(
                 success=True,
                 data={
                     "model": model,
                     "response": response.content,
                     "tokens": response.total_tokens,
-                }
+                },
             )
         except Exception as e:
             logger.exception("Chat failed")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_generate(
-        self,
-        prompt: str,
-        model: str = "qwen3:8b"
+        self, prompt: str, model: str = "qwen3:8b"
     ) -> AgentResponse:
         """Generate text from prompt."""
         try:
             llm = self.registry.get_llm()
             response = await llm.generate(prompt, model=model)
-            
+
             return AgentResponse(
                 success=True,
                 data={
                     "model": model,
                     "response": response.content,
                     "tokens": response.total_tokens,
-                }
+                },
             )
         except Exception as e:
             logger.exception("Generation failed")
             return AgentResponse(success=False, error=str(e))
-    
-    async def handle_orchestrate(
-        self,
-        command: str
-    ) -> AgentResponse:
+
+    async def handle_orchestrate(self, command: str) -> AgentResponse:
         """Parse and execute a TwisterLang command."""
         try:
             # Parse TwisterLang command
             # Format: @agent.capability(param1=value1, param2=value2)
             # Example: @monitoring.health_check()
             # Example: @database.execute_query(sql="SELECT * FROM users")
-            
+
             import re
-            
+
             # Parse command
-            match = re.match(
-                r"@(\w+)\.(\w+)\((.*)\)",
-                command.strip(),
-                re.DOTALL
-            )
-            
+            match = re.match(r"@(\w+)\.(\w+)\((.*)\)", command.strip(), re.DOTALL)
+
             if not match:
                 return AgentResponse(
-                    success=False,
-                    error=f"Invalid TwisterLang command: {command}"
+                    success=False, error=f"Invalid TwisterLang command: {command}"
                 )
-            
+
             agent_name = match.group(1)
             capability_name = match.group(2)
             params_str = match.group(3)
-            
+
             # Parse parameters
             params = {}
             if params_str.strip():
@@ -233,9 +218,9 @@ class MaestroAgent(TwisterAgent):
                     if "=" in part:
                         key, value = part.split("=", 1)
                         key = key.strip()
-                        value = value.strip().strip('"\'')
+                        value = value.strip().strip("\"'")
                         params[key] = value
-            
+
             return AgentResponse(
                 success=True,
                 data={
@@ -243,13 +228,13 @@ class MaestroAgent(TwisterAgent):
                     "agent": agent_name,
                     "capability": capability_name,
                     "params": params,
-                    "note": "Route to agent registry for execution"
-                }
+                    "note": "Route to agent registry for execution",
+                },
             )
         except Exception as e:
             logger.exception("Orchestration failed")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_list_agents(self) -> AgentResponse:
         """List available agents."""
         try:
@@ -258,45 +243,60 @@ class MaestroAgent(TwisterAgent):
                 {
                     "name": "maestro",
                     "description": "Orchestration agent",
-                    "capabilities": ["chat", "generate", "orchestrate", "list_agents", "analyze"]
+                    "capabilities": [
+                        "chat",
+                        "generate",
+                        "orchestrate",
+                        "list_agents",
+                        "analyze",
+                    ],
                 },
                 {
                     "name": "monitoring",
                     "description": "Infrastructure monitoring",
-                    "capabilities": ["health_check", "get_system_metrics", "list_containers", "get_container_logs"]
+                    "capabilities": [
+                        "health_check",
+                        "get_system_metrics",
+                        "list_containers",
+                        "get_container_logs",
+                    ],
                 },
                 {
                     "name": "database",
                     "description": "Database operations",
-                    "capabilities": ["execute_query", "list_tables", "describe_table"]
+                    "capabilities": ["execute_query", "list_tables", "describe_table"],
                 },
                 {
                     "name": "cache",
                     "description": "Cache operations",
-                    "capabilities": ["cache_get", "cache_set", "cache_delete", "cache_keys", "cache_stats"]
+                    "capabilities": [
+                        "cache_get",
+                        "cache_set",
+                        "cache_delete",
+                        "cache_keys",
+                        "cache_stats",
+                    ],
                 },
             ]
-            
+
             return AgentResponse(
                 success=True,
                 data={
                     "agents": agents,
                     "count": len(agents),
-                }
+                },
             )
         except Exception as e:
             logger.exception("List agents failed")
             return AgentResponse(success=False, error=str(e))
-    
+
     async def handle_analyze(
-        self,
-        content: str,
-        analysis_type: str = "general"
+        self, content: str, analysis_type: str = "general"
     ) -> AgentResponse:
         """Analyze content using LLM."""
         try:
             llm = self.registry.get_llm()
-            
+
             prompts = {
                 "general": "Analyze the following content and provide insights:",
                 "code": "Analyze the following code for issues, improvements, and best practices:",
@@ -304,23 +304,23 @@ class MaestroAgent(TwisterAgent):
                 "logs": "Analyze the following logs for errors, warnings, and issues:",
                 "security": "Analyze the following for security vulnerabilities and risks:",
             }
-            
+
             system_prompt = prompts.get(analysis_type, prompts["general"])
-            
+
             response = await llm.chat(
                 [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": content}
+                    {"role": "user", "content": content},
                 ],
-                model="qwen3:8b"
+                model="qwen3:8b",
             )
-            
+
             return AgentResponse(
                 success=True,
                 data={
                     "analysis_type": analysis_type,
                     "analysis": response.content,
-                }
+                },
             )
         except Exception as e:
             logger.exception("Analysis failed")

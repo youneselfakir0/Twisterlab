@@ -11,12 +11,12 @@ from twisterlab.agents.mcp.mcp_server import MCPServerContinue
 # (tests insert 'src' into sys.path), keep the wrapper simple and import
 # the canonical package implementation above.
 
-from twisterlab.agents.mcp.mcp_server import MCPServerContinue
 
 # Minimal CLI entrypoint to keep old invocation semantics
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Keep a minimal CLI entrypoint to support older invocation semantics
     import json
+
     server = MCPServerContinue()
     for raw in sys.stdin:
         raw = raw.strip()

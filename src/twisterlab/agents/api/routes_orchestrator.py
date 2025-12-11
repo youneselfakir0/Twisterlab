@@ -15,7 +15,7 @@ async def orchestrator_health():
     return {
         "status": "healthy",
         "service": "orchestrator",
-        "message": "Orchestrator service is operational"
+        "message": "Orchestrator service is operational",
     }
 
 
@@ -27,5 +27,5 @@ async def create_workflow():
     return {
         "status": "success",
         "message": "Workflow creation not yet implemented",
-        "workflow_id": None
+        "workflow_id": None,
     }

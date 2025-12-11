@@ -6,6 +6,7 @@ interface expected by the AgentRegistry. These are intentionally small and
 simplified – they can be extended later with real logic (SOPs, tool calls,
 and integrations).
 """
+
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
@@ -33,8 +34,12 @@ class RealResolverAgent(TwisterAgent):
                     "function": {
                         "name": "resolve_ticket",
                         "description": "Execute SOP step to resolve ticket",
-                        "parameters": {"type": "object", "properties": {}, "required": []},
-                    }
+                        "parameters": {
+                            "type": "object",
+                            "properties": {},
+                            "required": [],
+                        },
+                    },
                 }
             ],
             model="deepseek-r1",

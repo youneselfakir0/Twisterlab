@@ -51,23 +51,6 @@ tickets_processed_total = _create_metric(
     "Total tickets processed by agents",
     ["agent_name", "status"],
 )
-"""Prometheus metrics for TwisterLab.
-
-This module centralizes metric definitions and provides a safe helper
-to create metrics that tolerates duplicate registration attempts (e.g.
-during repeated test collection/imports) by returning a no-op fallback
-object when a duplicate timeseries is attempted to be registered.
-
-Note: This is intentionally defensive — in production you should register
-metrics once at app startup (and not during test imports), but for the
-tests in CI this reduces failures caused by re-imports across test sessions.
-"""
-
-import logging
-
-from prometheus_client import Counter, Histogram
-
-logger = logging.getLogger(__name__)
 
 
 def _create_metric(metric_cls, *args, **kwargs):
@@ -435,7 +418,9 @@ ticket_failure = _create_metric(
 # -------------------------------
 # LLM model info
 # -------------------------------
-llm_model_info = _create_metric(Info, "llm_model_info", "Information about LLM models in use")
+llm_model_info = _create_metric(
+    Info, "llm_model_info", "Information about LLM models in use"
+)
 if hasattr(llm_model_info, "info"):
     try:
         llm_model_info.info(
@@ -455,7 +440,9 @@ if hasattr(llm_model_info, "info"):
 # -------------------------------
 # Helper functions
 # -------------------------------
-def record_classifier_llm(duration: float, category: str, confidence: float, tokens: int):
+def record_classifier_llm(
+    duration: float, category: str, confidence: float, tokens: int
+):
     classifier_llm_duration.observe(duration)
     classifier_llm_success.inc()
     classifier_confidence.labels(category=category).set(confidence)
@@ -470,7 +457,9 @@ def record_classifier_fallback(duration: float, category: str, confidence: float
     classifier_category_count.labels(category=category).inc()
 
 
-def record_resolver_llm(duration: float, steps_count: int, tokens: int, avg_step_length: float):
+def record_resolver_llm(
+    duration: float, steps_count: int, tokens: int, avg_step_length: float
+):
     resolver_llm_duration.observe(duration)
     resolver_llm_success.inc()
     resolver_sop_steps.labels(sop_type="llm").set(steps_count)
@@ -512,7 +501,9 @@ def record_ollama_health(is_up: bool):
     ollama_health.set(1 if is_up else 0)
 
 
-def record_ticket_processing(duration: float, success: bool, failure_reason: str = None):
+def record_ticket_processing(
+    duration: float, success: bool, failure_reason: str = None
+):
     ticket_processing_duration.observe(duration)
     if success:
         ticket_success.inc()

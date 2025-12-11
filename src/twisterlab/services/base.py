@@ -14,6 +14,7 @@ from datetime import datetime
 
 class ServiceStatus(Enum):
     """Status of a service connection."""
+
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
     DEGRADED = "degraded"
@@ -23,6 +24,7 @@ class ServiceStatus(Enum):
 @dataclass
 class ServiceHealth:
     """Health status of a service."""
+
     name: str
     status: ServiceStatus
     latency_ms: Optional[float] = None
@@ -38,9 +40,11 @@ class ServiceHealth:
 # LLM Client Interface
 # =============================================================================
 
+
 @dataclass
 class LLMResponse:
     """Response from an LLM query."""
+
     text: str
     model: str
     prompt_tokens: int = 0
@@ -53,6 +57,7 @@ class LLMResponse:
 @dataclass
 class LLMMessage:
     """Chat message for LLM."""
+
     role: str  # "system", "user", "assistant"
     content: str
 
@@ -60,16 +65,16 @@ class LLMMessage:
 class LLMClient(ABC):
     """
     Abstract interface for LLM services.
-    
+
     Implementations: CortexClient (Ollama), OpenAIClient, etc.
     """
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Service name identifier."""
         pass
-    
+
     @abstractmethod
     async def generate(
         self,
@@ -81,7 +86,7 @@ class LLMClient(ABC):
     ) -> LLMResponse:
         """Generate completion from a prompt."""
         pass
-    
+
     @abstractmethod
     async def chat(
         self,
@@ -92,22 +97,19 @@ class LLMClient(ABC):
     ) -> LLMResponse:
         """Chat completion with message history."""
         pass
-    
+
     @abstractmethod
     async def stream(
-        self,
-        prompt: str,
-        model: Optional[str] = None,
-        **kwargs
+        self, prompt: str, model: Optional[str] = None, **kwargs
     ) -> AsyncIterator[str]:
         """Stream completion tokens."""
         pass
-    
+
     @abstractmethod
     async def list_models(self) -> List[Dict[str, Any]]:
         """List available models."""
         pass
-    
+
     @abstractmethod
     async def health_check(self) -> ServiceHealth:
         """Check service health."""
@@ -118,9 +120,11 @@ class LLMClient(ABC):
 # Cache Client Interface
 # =============================================================================
 
+
 @dataclass
 class CacheStats:
     """Cache statistics."""
+
     connected_clients: int = 0
     used_memory: str = "0B"
     total_keys: int = 0
@@ -132,51 +136,46 @@ class CacheStats:
 class CacheClient(ABC):
     """
     Abstract interface for cache services.
-    
+
     Implementations: RedisClient, MemcachedClient, etc.
     """
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Service name identifier."""
         pass
-    
+
     @abstractmethod
     async def get(self, key: str) -> Optional[str]:
         """Get value by key."""
         pass
-    
+
     @abstractmethod
-    async def set(
-        self,
-        key: str,
-        value: str,
-        ttl: Optional[int] = None
-    ) -> bool:
+    async def set(self, key: str, value: str, ttl: Optional[int] = None) -> bool:
         """Set value with optional TTL in seconds."""
         pass
-    
+
     @abstractmethod
     async def delete(self, key: str) -> bool:
         """Delete a key."""
         pass
-    
+
     @abstractmethod
     async def exists(self, key: str) -> bool:
         """Check if key exists."""
         pass
-    
+
     @abstractmethod
     async def keys(self, pattern: str = "*") -> List[str]:
         """List keys matching pattern."""
         pass
-    
+
     @abstractmethod
     async def get_stats(self) -> CacheStats:
         """Get cache statistics."""
         pass
-    
+
     @abstractmethod
     async def health_check(self) -> ServiceHealth:
         """Check service health."""
@@ -187,9 +186,11 @@ class CacheClient(ABC):
 # Database Client Interface
 # =============================================================================
 
+
 @dataclass
 class QueryResult:
     """Result of a database query."""
+
     rows: List[Dict[str, Any]]
     row_count: int
     columns: List[str]
@@ -200,6 +201,7 @@ class QueryResult:
 @dataclass
 class DBStats:
     """Database statistics."""
+
     active_connections: int = 0
     total_connections: int = 0
     database_size: str = "0B"
@@ -210,50 +212,43 @@ class DBStats:
 class DBClient(ABC):
     """
     Abstract interface for database services.
-    
+
     Implementations: PostgresClient, MySQLClient, etc.
     """
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Service name identifier."""
         pass
-    
+
     @abstractmethod
     async def query(
-        self,
-        sql: str,
-        params: Optional[List[Any]] = None,
-        read_only: bool = True
+        self, sql: str, params: Optional[List[Any]] = None, read_only: bool = True
     ) -> QueryResult:
         """Execute a SQL query."""
         pass
-    
+
     @abstractmethod
-    async def execute(
-        self,
-        sql: str,
-        params: Optional[List[Any]] = None
-    ) -> int:
+    async def execute(self, sql: str, params: Optional[List[Any]] = None) -> int:
         """Execute a SQL statement, return affected rows."""
         pass
-    
+
     @abstractmethod
     async def get_tables(self) -> List[str]:
         """List all tables."""
         pass
-    
+
     @abstractmethod
     async def get_table_schema(self, table: str) -> Dict[str, Any]:
         """Get schema for a table."""
         pass
-    
+
     @abstractmethod
     async def get_stats(self) -> DBStats:
         """Get database statistics."""
         pass
-    
+
     @abstractmethod
     async def health_check(self) -> ServiceHealth:
         """Check service health."""
@@ -264,8 +259,10 @@ class DBClient(ABC):
 # System Client Interface (for Docker, Host metrics, etc.)
 # =============================================================================
 
+
 class ContainerState(Enum):
     """State of a container."""
+
     RUNNING = "running"
     STOPPED = "stopped"
     PAUSED = "paused"
@@ -276,6 +273,7 @@ class ContainerState(Enum):
 @dataclass
 class ContainerInfo:
     """Docker container information."""
+
     id: str
     name: str
     image: str
@@ -288,6 +286,7 @@ class ContainerInfo:
 @dataclass
 class ServiceInfo:
     """Service information."""
+
     name: str
     status: str
     replicas: int = 1
@@ -297,6 +296,7 @@ class ServiceInfo:
 @dataclass
 class SystemMetrics:
     """System metrics."""
+
     cpu_percent: float = 0.0
     memory_used_gb: float = 0.0
     memory_total_gb: float = 0.0
@@ -311,35 +311,31 @@ class SystemMetrics:
 class SystemClient(ABC):
     """
     Abstract interface for system/infrastructure services.
-    
+
     Implementations: DockerClient, SSHClient, etc.
     """
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Service name identifier."""
         pass
-    
+
     @abstractmethod
     async def get_containers(self) -> List[ContainerInfo]:
         """List Docker containers."""
         pass
-    
+
     @abstractmethod
-    async def get_container_logs(
-        self,
-        container: str,
-        lines: int = 100
-    ) -> List[str]:
+    async def get_container_logs(self, container: str, lines: int = 100) -> List[str]:
         """Get container logs."""
         pass
-    
+
     @abstractmethod
     async def get_metrics(self) -> SystemMetrics:
         """Get system metrics."""
         pass
-    
+
     @abstractmethod
     async def health_check(self) -> ServiceHealth:
         """Check service health."""

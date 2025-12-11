@@ -202,7 +202,10 @@ class SyncAgent(TwisterAgent):
 
             # Ensure Redis connection
             if not await self._ensure_redis_connection():
-                return {"status": SyncStatus.FAILED, "error": "Redis connection unavailable"}
+                return {
+                    "status": SyncStatus.FAILED,
+                    "error": "Redis connection unavailable",
+                }
 
             # Parse operation
             context = context or {}
@@ -223,7 +226,10 @@ class SyncAgent(TwisterAgent):
             elif operation == "verify_consistency":
                 result = await self._verify_consistency()
             else:
-                result = {"status": SyncStatus.FAILED, "error": f"Unknown operation: {operation}"}
+                result = {
+                    "status": SyncStatus.FAILED,
+                    "error": f"Unknown operation: {operation}",
+                }
 
             # Update statistics
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()
@@ -323,7 +329,9 @@ class SyncAgent(TwisterAgent):
             # Cache each SOP
             for sop in mock_sops:
                 cache_key = f"sop:{sop['id']}"
-                await self.redis_client.setex(cache_key, 3600, json.dumps(sop))  # 1 hour TTL
+                await self.redis_client.setex(
+                    cache_key, 3600, json.dumps(sop)
+                )  # 1 hour TTL
                 synced_count += 1
 
             # Build and cache category index
@@ -334,7 +342,9 @@ class SyncAgent(TwisterAgent):
                     categories[category] = []
                 categories[category].append(sop["id"])
 
-            await self.redis_client.setex("sops:categories", 3600, json.dumps(categories))
+            await self.redis_client.setex(
+                "sops:categories", 3600, json.dumps(categories)
+            )
 
             # Update sync state
             self.sync_state["sops_last_sync"] = datetime.now(timezone.utc).isoformat()
@@ -390,11 +400,15 @@ class SyncAgent(TwisterAgent):
 
             for device in mock_devices:
                 cache_key = f"device:{device['device_id']}"
-                await self.redis_client.setex(cache_key, 600, json.dumps(device))  # 10 minutes TTL
+                await self.redis_client.setex(
+                    cache_key, 600, json.dumps(device)
+                )  # 10 minutes TTL
                 synced_count += 1
 
             # Update sync state
-            self.sync_state["devices_last_sync"] = datetime.now(timezone.utc).isoformat()
+            self.sync_state["devices_last_sync"] = datetime.now(
+                timezone.utc
+            ).isoformat()
 
             logger.info(f"Synced {synced_count} devices to cache")
 
@@ -446,7 +460,9 @@ class SyncAgent(TwisterAgent):
             )
 
             # Update sync state
-            self.sync_state["agent_state_last_sync"] = datetime.now(timezone.utc).isoformat()
+            self.sync_state["agent_state_last_sync"] = datetime.now(
+                timezone.utc
+            ).isoformat()
 
             logger.info(f"Synced state for {len(agent_states)} agents")
 
@@ -516,7 +532,9 @@ class SyncAgent(TwisterAgent):
                 cached_data = await self.redis_client.get(cache_key)
 
                 if not cached_data:
-                    inconsistencies.append({"type": "missing_cache", "entity": "sop", "id": sop_id})
+                    inconsistencies.append(
+                        {"type": "missing_cache", "entity": "sop", "id": sop_id}
+                    )
 
             # Verify devices (mock check)
             device_ids = ["DESKTOP-001", "DESKTOP-002", "SERVER-001"]
@@ -625,7 +643,9 @@ if __name__ == "__main__":
 
         # Test consistency verification
         print("\n=== Consistency Verification ===")
-        result = await sync_agent.execute("Verify consistency", {"operation": "verify_consistency"})
+        result = await sync_agent.execute(
+            "Verify consistency", {"operation": "verify_consistency"}
+        )
         print(json.dumps(result, indent=2))
 
         # Get stats

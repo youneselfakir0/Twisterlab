@@ -15,7 +15,7 @@ from .metrics import (
 
 __all__ = [
     "AGENT_EXECUTIONS",
-    "AGENT_EXECUTION_DURATION", 
+    "AGENT_EXECUTION_DURATION",
     "AGENT_ERRORS",
     "AGENT_COUNT",
     "HTTP_REQUESTS",

@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Dict
 
 from twisterlab.agents.base.unified_agent import UnifiedAgentBase
 from twisterlab.agents.real.browser_agent import BrowserAgent  # Nouvelle importation

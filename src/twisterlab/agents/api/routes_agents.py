@@ -17,13 +17,12 @@ async def list_agents() -> Dict[str, Any]:
     """
     try:
         agents = agent_registry.list_agents()
-        return {
-            "status": "success",
-            "agents": agents,
-            "count": len(agents)
-        }
+        return {"status": "success", "agents": agents, "count": len(agents)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des agents: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la récupération des agents: {str(e)}",
+        )
 
 
 @router.get("/{agent_name}")
@@ -34,7 +33,9 @@ async def get_agent(agent_name: str) -> Dict[str, Any]:
     try:
         agent = agent_registry.get_agent(agent_name)
         if not agent:
-            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' non trouvé")
+            raise HTTPException(
+                status_code=404, detail=f"Agent '{agent_name}' non trouvé"
+            )
 
         return {
             "status": "success",
@@ -44,23 +45,30 @@ async def get_agent(agent_name: str) -> Dict[str, Any]:
                 "version": agent.version,
                 "description": agent.description,
                 "status": agent.status.value,
-            }
+            },
         }
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération de l'agent: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erreur lors de la récupération de l'agent: {str(e)}",
+        )
 
 
 @router.post("/{agent_name}/execute")
-async def execute_agent(agent_name: str, payload: Dict[str, Any] = None) -> Dict[str, Any]:
+async def execute_agent(
+    agent_name: str, payload: Dict[str, Any] = None
+) -> Dict[str, Any]:
     """
     Exécute un agent avec les paramètres fournis
     """
     try:
         agent = agent_registry.get_agent(agent_name)
         if not agent:
-            raise HTTPException(status_code=404, detail=f"Agent '{agent_name}' non trouvé")
+            raise HTTPException(
+                status_code=404, detail=f"Agent '{agent_name}' non trouvé"
+            )
 
         # Pour l'instant, on simule l'exécution
         # TODO: Implémenter l'exécution réelle des agents
@@ -68,17 +76,16 @@ async def execute_agent(agent_name: str, payload: Dict[str, Any] = None) -> Dict
             "agent_name": agent.name,
             "status": "executed",
             "message": f"Agent {agent.name} exécuté avec succès",
-            "payload": payload
+            "payload": payload,
         }
 
-        return {
-            "status": "success",
-            "result": result
-        }
+        return {"status": "success", "result": result}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur lors de l'exécution de l'agent: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de l'exécution de l'agent: {str(e)}"
+        )
 
 
 @router.get("/health")
@@ -94,11 +101,7 @@ async def agents_health() -> Dict[str, Any]:
             "status": "healthy" if healthy_count > 0 else "degraded",
             "total_agents": len(agents),
             "active_agents": healthy_count,
-            "registry_status": "operational"
+            "registry_status": "operational",
         }
     except Exception as e:
-        return {
-            "status": "unhealthy",
-            "error": str(e),
-            "registry_status": "failed"
-        }
+        return {"status": "unhealthy", "error": str(e), "registry_status": "failed"}

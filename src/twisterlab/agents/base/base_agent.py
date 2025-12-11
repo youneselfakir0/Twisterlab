@@ -6,7 +6,7 @@ Provides the foundational BaseAgent class and utilities.
 
 from abc import ABC, abstractmethod
 from types import SimpleNamespace
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 import uuid
 
 

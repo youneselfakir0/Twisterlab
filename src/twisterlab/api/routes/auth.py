@@ -6,13 +6,13 @@ Provides authentication endpoints for Continue IDE and all TwisterLab modules
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 # Import SSO manager (will create if not exists)
 try:
     from api.auth.sso_ldap import (
-        get_current_user as sso_get_current_user,
+        get_current_user,
         login_endpoint,
         logout_endpoint,
         me_endpoint,
@@ -23,6 +23,11 @@ try:
     SSO_AVAILABLE = True
 except ImportError:
     SSO_AVAILABLE = False
+
+    # Provide dummy function when SSO is not available
+    async def get_current_user():
+        return {}
+
     logging.warning("SSO/LDAP module not available")
 
 logger = logging.getLogger(__name__)
@@ -163,8 +168,11 @@ async def get_me(request: Request, user: Dict = auth_dep):
             return {
                 "user_id": user_claims.get("sub") or user_claims.get("username"),
                 "username": user_claims.get("username") or user_claims.get("sub"),
-                "email": user_claims.get("email") or user_claims.get("preferred_username"),
-                "display_name": user_claims.get("display_name", user_claims.get("username", "")),
+                "email": user_claims.get("email")
+                or user_claims.get("preferred_username"),
+                "display_name": user_claims.get(
+                    "display_name", user_claims.get("username", "")
+                ),
                 "roles": user_claims.get("roles", []),
             }
         except Exception:
@@ -183,7 +191,9 @@ async def get_me(request: Request, user: Dict = auth_dep):
 
 
 @router.get("/verify")
-async def verify_token(authorization: str = Header(None), required_role: str | None = None):
+async def verify_token(
+    authorization: str = Header(None), required_role: str | None = None
+):
     """
     Verify JWT token for Traefik ForwardAuth middleware
 
@@ -210,7 +220,9 @@ async def verify_token(authorization: str = Header(None), required_role: str | N
         }
 
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+        raise HTTPException(
+            status_code=401, detail="Missing or invalid authorization header"
+        )
 
     token = authorization.replace("Bearer ", "")
     user_info = sso_manager.validate_token(token)
@@ -303,4 +315,6 @@ async def revoke_session(
     if sso_manager.logout(username):
         return {"message": f"Session revoked for {username}"}
     else:
-        raise HTTPException(status_code=404, detail=f"No active session found for {username}")
+        raise HTTPException(
+            status_code=404, detail=f"No active session found for {username}"
+        )

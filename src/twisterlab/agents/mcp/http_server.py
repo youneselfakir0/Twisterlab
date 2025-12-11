@@ -33,7 +33,9 @@ mcp_server: UnifiedMCPServer = None
 async def startup():
     global mcp_server
     mcp_server = UnifiedMCPServer()
-    logger.info(f"MCP Server started with {len(mcp_server._tool_router.list_tools())} tools")
+    logger.info(
+        f"MCP Server started with {len(mcp_server._tool_router.list_tools())} tools"
+    )
 
 
 @app.get("/health")
@@ -66,19 +68,21 @@ async def call_tool(tool_name: str, request: Request):
     """Execute an MCP tool via HTTP."""
     if not mcp_server:
         raise HTTPException(500, "Server not initialized")
-    
+
     try:
         body = await request.json()
     except Exception:
         body = {}
-    
+
     arguments = body.get("arguments", body)
-    
+
     result = await mcp_server._tool_router.execute_tool(tool_name, arguments)
-    
+
     if result.get("isError"):
-        raise HTTPException(400, result.get("content", [{"text": "Unknown error"}])[0].get("text"))
-    
+        raise HTTPException(
+            400, result.get("content", [{"text": "Unknown error"}])[0].get("text")
+        )
+
     return result
 
 
@@ -86,23 +90,19 @@ async def call_tool(tool_name: str, request: Request):
 async def mcp_endpoint(request: Request):
     """
     JSON-RPC endpoint for MCP protocol.
-    
+
     Allows MCP clients to communicate via HTTP instead of stdio.
     """
     if not mcp_server:
         raise HTTPException(500, "Server not initialized")
-    
+
     try:
         rpc_request = await request.json()
         response = await mcp_server.handle_request(rpc_request)
         return response or {"jsonrpc": "2.0", "result": {}}
     except Exception as e:
         logger.exception("MCP request failed")
-        return {
-            "jsonrpc": "2.0",
-            "id": 0,
-            "error": {"code": -32603, "message": str(e)}
-        }
+        return {"jsonrpc": "2.0", "id": 0, "error": {"code": -32603, "message": str(e)}}
 
 
 @app.get("/agents")
@@ -110,9 +110,7 @@ async def list_agents():
     """List all registered agents."""
     if not mcp_server:
         raise HTTPException(500, "Server not initialized")
-    return {
-        "agents": mcp_server._agent_registry.list_all()
-    }
+    return {"agents": mcp_server._agent_registry.list_all()}
 
 
 @app.get("/stats")

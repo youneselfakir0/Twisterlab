@@ -15,7 +15,7 @@ async def tickets_health():
     return {
         "status": "healthy",
         "service": "tickets",
-        "message": "Tickets service is operational"
+        "message": "Tickets service is operational",
     }
 
 
@@ -27,7 +27,7 @@ async def list_tickets():
     return {
         "status": "success",
         "tickets": [],
-        "message": "Tickets listing not yet implemented"
+        "message": "Tickets listing not yet implemented",
     }
 
 
@@ -39,5 +39,5 @@ async def create_ticket():
     return {
         "status": "success",
         "message": "Ticket creation not yet implemented",
-        "ticket_id": None
+        "ticket_id": None,
     }

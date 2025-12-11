@@ -17,10 +17,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # Import real agents
 from twisterlab.agents.core.database import get_db_session
 from twisterlab.agents.core.models import TicketPriority
-from twisterlab.agents.core.repository import AgentLogRepository, SystemMetricsRepository, TicketRepository
+from twisterlab.agents.core.repository import (
+    AgentLogRepository,
+    TicketRepository,
+)
 from twisterlab.agents.real.real_backup_agent import RealBackupAgent
 from twisterlab.agents.real.real_classifier_agent import RealClassifierAgent
-from twisterlab.agents.real.real_desktop_commander_agent import RealDesktopCommanderAgent
+from twisterlab.agents.real.real_desktop_commander_agent import (
+    RealDesktopCommanderAgent,
+)
 from twisterlab.agents.real.real_monitoring_agent import RealMonitoringAgent
 from twisterlab.agents.real.real_resolver_agent import RealResolverAgent
 from twisterlab.agents.real.real_sync_agent import RealSyncAgent
@@ -43,7 +48,9 @@ class MCPResponse(BaseModel):
     status: str = Field(..., pattern="^(ok|error)$")
     data: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
 
 # ============================================================================
@@ -100,7 +107,11 @@ async def list_autonomous_agents() -> MCPResponse:
                     "file": "src/twisterlab/agents/real/real_sync_agent.py",
                     "mcp_tool": "sync_cache_db",
                     "description": "Cache/Database synchronization (Redis ↔ PostgreSQL)",
-                    "capabilities": ["redis_sync", "postgres_sync", "conflict_resolution"],
+                    "capabilities": [
+                        "redis_sync",
+                        "postgres_sync",
+                        "conflict_resolution",
+                    ],
                     "status": "operational",
                 },
                 {
@@ -114,7 +125,13 @@ async def list_autonomous_agents() -> MCPResponse:
                         "confidence_scoring",
                         "priority_assignment",
                     ],
-                    "categories": ["network", "hardware", "software", "account", "email"],
+                    "categories": [
+                        "network",
+                        "hardware",
+                        "software",
+                        "account",
+                        "email",
+                    ],
                     "status": "operational",
                 },
                 {
@@ -123,7 +140,11 @@ async def list_autonomous_agents() -> MCPResponse:
                     "file": "src/twisterlab/agents/real/real_resolver_agent.py",
                     "mcp_tool": "resolve_ticket",
                     "description": "SOP-based ticket resolution (network, hardware, software, account, email)",
-                    "capabilities": ["sop_execution", "troubleshooting", "guided_resolution"],
+                    "capabilities": [
+                        "sop_execution",
+                        "troubleshooting",
+                        "guided_resolution",
+                    ],
                     "status": "operational",
                 },
                 {
@@ -184,7 +205,10 @@ class ClassifyTicketRequest(BaseModel):
     """Input model for classify_ticket endpoint."""
 
     description: str = Field(
-        ..., min_length=10, max_length=5000, description="Ticket description (min 10 chars)"
+        ...,
+        min_length=10,
+        max_length=5000,
+        description="Ticket description (min 10 chars)",
     )
     priority: Optional[str] = Field(
         None,
@@ -238,7 +262,9 @@ class SyncCacheDBRequest(BaseModel):
         pattern="^(sync_all|verify_consistency|clear_stale|warm_cache)$",
         description="Sync operation to perform",
     )
-    force: Optional[bool] = Field(False, description="Force sync even if cache is fresh")
+    force: Optional[bool] = Field(
+        False, description="Force sync even if cache is fresh"
+    )
 
 
 class ExecuteCommandRequest(BaseModel):
@@ -250,7 +276,9 @@ class ExecuteCommandRequest(BaseModel):
         description="Safe whitelisted command to execute",
     )
     args: Optional[List[str]] = Field(None, description="Optional command arguments")
-    target: Optional[str] = Field(None, description="Target for network commands (IP/hostname)")
+    target: Optional[str] = Field(
+        None, description="Target for network commands (IP/hostname)"
+    )
 
 
 # ============================================================================
@@ -261,7 +289,8 @@ class ExecuteCommandRequest(BaseModel):
 @router.post("/classify_ticket", response_model=MCPResponse)
 @router.post("/twisterlab_mcp_classify_ticket", response_model=MCPResponse)
 async def classify_ticket(
-    request: ClassifyTicketRequest, session: Optional[AsyncSession] = Depends(get_db_session)
+    request: ClassifyTicketRequest,
+    session: Optional[AsyncSession] = Depends(get_db_session),
 ) -> MCPResponse:
     """
     Classify a helpdesk ticket using RealClassifierAgent.
@@ -315,7 +344,9 @@ async def classify_ticket(
 
                 # Create ticket in database
                 priority_enum = (
-                    TicketPriority(request.priority) if request.priority else TicketPriority.MEDIUM
+                    TicketPriority(request.priority)
+                    if request.priority
+                    else TicketPriority.MEDIUM
                 )
                 ticket_db = await ticket_repo.create(
                     description=request.description, priority=priority_enum
@@ -328,7 +359,9 @@ async def classify_ticket(
                 )
                 session = None  # Disable DB for rest of request
         else:
-            logger.warning("⚠️ Database session not available, classification will not be persisted")
+            logger.warning(
+                "⚠️ Database session not available, classification will not be persisted"
+            )
 
         # 2. Initialize agent
         agent = RealClassifierAgent()
@@ -470,7 +503,9 @@ async def resolve_ticket(request: ResolveTicketRequest) -> MCPResponse:
     ```
     """
     try:
-        logger.info(f"🔧 Resolving ticket (category: {request.category}, ID: {request.ticket_id})")
+        logger.info(
+            f"🔧 Resolving ticket (category: {request.category}, ID: {request.ticket_id})"
+        )
 
         # Initialize agent
         agent = RealResolverAgent()
@@ -558,14 +593,16 @@ async def monitor_system_health(
         start_time = time.time()
 
         # Initialize repositories
-        metrics_repo = SystemMetricsRepository(session)
+        # metrics_repo reserved for future metrics collection
         log_repo = AgentLogRepository(session)
 
         # Initialize agent
         agent = RealMonitoringAgent()
 
         # Execute health check
-        result = await agent.execute({"operation": "health_check", "detailed": request.detailed})
+        result = await agent.execute(
+            {"operation": "health_check", "detailed": request.detailed}
+        )
 
         # Check if health check succeeded
         if result.get("status") != "success":
@@ -740,13 +777,17 @@ async def sync_cache_db(request: SyncCacheDBRequest) -> MCPResponse:
     ```
     """
     try:
-        logger.info(f"🔄 Syncing cache/DB (operation: {request.operation}, force: {request.force})")
+        logger.info(
+            f"🔄 Syncing cache/DB (operation: {request.operation}, force: {request.force})"
+        )
 
         # Initialize agent
         agent = RealSyncAgent()
 
         # Execute sync
-        result = await agent.execute({"operation": request.operation, "force": request.force})
+        result = await agent.execute(
+            {"operation": request.operation, "force": request.force}
+        )
 
         # Check if sync succeeded
         if result.get("status") not in ["success", "completed"]:
