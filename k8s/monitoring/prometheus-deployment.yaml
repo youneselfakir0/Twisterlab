@@ -59,7 +59,7 @@ data:
             target_label: pod
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
-        metrics_path: /metrics
+    metrics_path: /metrics
 
       # Prometheus self-monitoring
       - job_name: 'prometheus'
@@ -236,10 +236,11 @@ spec:
               mountPath: /etc/prometheus/rules
             - name: storage
               mountPath: /prometheus
+          # Resources optimized for single-node cluster
           resources:
             requests:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 250m
+              memory: 512Mi
             limits:
               cpu: 1000m
               memory: 2Gi
