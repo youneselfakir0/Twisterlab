@@ -74,7 +74,7 @@ data:
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
@@ -113,7 +113,7 @@ data:
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
@@ -133,7 +133,7 @@ data:
           },
           "targets": [
             {
-              "expr": "mcp_tools_total",
+              "expr": "sum(sentiment_analysis_total)",
               "legendFormat": "Tools",
               "refId": "A"
             }
@@ -142,7 +142,7 @@ data:
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
@@ -160,7 +160,7 @@ data:
           },
           "targets": [
             {
-              "expr": "mcp_agents_registered",
+              "expr": "agent_count_total",
               "legendFormat": "Agents",
               "refId": "A"
             }
@@ -169,7 +169,7 @@ data:
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
@@ -211,7 +211,7 @@ data:
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
@@ -226,7 +226,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum by (tool) (rate(mcp_tool_executions_total[5m]))",
+              "expr": "sum by (tool) (rate(agent_requests_total[5m]))",
               "legendFormat": "{{tool}}",
               "refId": "A"
             }
@@ -235,7 +235,7 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
@@ -250,7 +250,7 @@ data:
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum by (tool, le) (rate(mcp_tool_duration_seconds_bucket[5m]))) * 1000",
+              "expr": "histogram_quantile(0.95, sum by (tool, le) (rate(agent_execution_time_seconds_bucket[5m]))) * 1000",
               "legendFormat": "{{tool}}",
               "refId": "A"
             }
@@ -266,7 +266,7 @@ data:
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
@@ -282,7 +282,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum by (agent) (mcp_agent_tools)",
+              "expr": "sum by (agent) (sentiment_analysis_total)",
               "legendFormat": "{{agent}}",
               "refId": "A"
             }
@@ -291,7 +291,7 @@ data:
           "type": "piechart"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
@@ -305,7 +305,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum by (agent) (rate(mcp_agent_calls_total[5m]))",
+              "expr": "sum by (agent) (rate(agent_requests_total[5m]))",
               "legendFormat": "{{agent}}",
               "refId": "A"
             }
@@ -314,7 +314,7 @@ data:
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
@@ -328,7 +328,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum by (agent) (rate(mcp_agent_errors_total[5m])) / sum by (agent) (rate(mcp_agent_calls_total[5m]))",
+              "expr": "sum by (agent) (rate(agent_errors_total[5m])) / sum by (agent) (rate(agent_requests_total[5m]))",
               "legendFormat": "{{agent}}",
               "refId": "A"
             }
@@ -344,7 +344,7 @@ data:
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
@@ -373,7 +373,7 @@ data:
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
@@ -402,7 +402,7 @@ data:
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
@@ -431,7 +431,7 @@ data:
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "thresholds" },
