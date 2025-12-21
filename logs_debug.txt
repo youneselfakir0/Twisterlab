@@ -1,0 +1,64 @@
+﻿httpx not available - LLM client will use fallback mode
+asyncpg not available - DB client will use fallback mode
+docker SDK not available - system client will use fallback mode
+psutil not available - limited system metrics
+/usr/local/lib/python3.11/site-packages/opentelemetry/instrumentation/dependencies.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import (
+/app/src/twisterlab/agents/mcp/http_server.py:45: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+2025-12-20 19:17:13,624 - twisterlab.services.registry - INFO - ServiceRegistry initialized
+2025-12-20 19:17:13,625 - twisterlab.agents.mcp.router - INFO - AgentRegistry initialized
+2025-12-20 19:17:13,625 - twisterlab.agents.core.base - INFO - Agent initialized: monitoring
+2025-12-20 19:17:13,625 - twisterlab.agents.mcp.router - INFO - Registered agent: monitoring with 7 capabilities
+2025-12-20 19:17:13,625 - twisterlab.agents.core.base - INFO - Agent initialized: maestro
+2025-12-20 19:17:13,625 - twisterlab.agents.mcp.router - INFO - Registered agent: maestro with 5 capabilities
+2025-12-20 19:17:13,626 - twisterlab.agents.core.base - INFO - Agent initialized: database
+2025-12-20 19:17:13,626 - twisterlab.agents.mcp.router - INFO - Registered agent: database with 4 capabilities
+2025-12-20 19:17:13,626 - twisterlab.agents.core.base - INFO - Agent initialized: cache
+2025-12-20 19:17:13,626 - twisterlab.agents.mcp.router - INFO - Registered agent: cache with 5 capabilities
+2025-12-20 19:17:13,626 - twisterlab.agents.core.base - INFO - Agent initialized: sentiment-analyzer
+2025-12-20 19:17:13,629 - twisterlab.agents.mcp.router - INFO - Registered agent: sentiment-analyzer with 1 capabilities
+2025-12-20 19:17:13,629 - twisterlab.agents.core.base - INFO - Agent initialized: real-classifier
+2025-12-20 19:17:13,629 - twisterlab.agents.mcp.router - INFO - Registered agent: real-classifier with 1 capabilities
+2025-12-20 19:17:13,629 - twisterlab.agents.core.base - INFO - Agent initialized: real-resolver
+2025-12-20 19:17:13,629 - twisterlab.agents.mcp.router - INFO - Registered agent: real-resolver with 1 capabilities
+2025-12-20 19:17:13,629 - twisterlab.agents.core.base - INFO - Agent initialized: real-backup
+2025-12-20 19:17:13,629 - twisterlab.agents.mcp.router - INFO - Registered agent: real-backup with 1 capabilities
+2025-12-20 19:17:13,630 - twisterlab.agents.mcp.server - INFO - Registered 8 agents with 25 tools
+2025-12-20 19:17:13,630 - __main__ - INFO - MCP Server started with 25 tools
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     10.42.0.1:4981 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     10.42.0.1:4501 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     10.42.0.1:38966 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     10.42.0.1:42457 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     10.42.0.1:37554 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     10.42.0.1:20398 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     10.42.0.1:38298 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     10.42.0.1:3087 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     10.42.0.1:17363 - "POST /tools/real-backup_perform_backup HTTP/1.1" 401 Unauthorized
+2025-12-20 19:19:15,529 - twisterlab.api.auth - WARNING - Failed to cache user in Redis: invalid literal for int() with base 10: 'tcp://10.43.91.24:6379'
+2025-12-20 19:19:15,529 - __main__ - INFO - RBAC Check: User=admin-user Roles=['Admin', 'Operator'] Tool=real-backup_perform_backup
+2025-12-20 19:19:15,529 - __main__ - INFO - MATCH: Tool 'real-backup_perform_backup' matches prefix 'real-backup'. Required: ['Admin']
+2025-12-20 19:19:15,529 - __main__ - INFO - Access GRANTED.
+INFO:     10.42.0.1:47819 - "POST /tools/real-backup_perform_backup HTTP/1.1" 400 Bad Request
+2025-12-20 19:19:15,545 - twisterlab.api.auth - WARNING - Failed to cache user in Redis: invalid literal for int() with base 10: 'tcp://10.43.91.24:6379'
+2025-12-20 19:19:15,545 - __main__ - INFO - RBAC Check: User=normal-user Roles=['Viewer'] Tool=real-backup_perform_backup
+2025-12-20 19:19:15,545 - __main__ - INFO - MATCH: Tool 'real-backup_perform_backup' matches prefix 'real-backup'. Required: ['Admin']
+2025-12-20 19:19:15,545 - __main__ - WARNING - Access Denied: User normal-user (['Viewer']) tried to access real-backup_perform_backup. Required: ['Admin']
+INFO:     10.42.0.1:7155 - "POST /tools/real-backup_perform_backup HTTP/1.1" 403 Forbidden
+2025-12-20 19:19:15,553 - twisterlab.api.auth - WARNING - Failed to cache user in Redis: invalid literal for int() with base 10: 'tcp://10.43.91.24:6379'
+2025-12-20 19:19:15,554 - __main__ - INFO - RBAC Check: User=normal-user Roles=['Viewer'] Tool=sentiment-analyzer_analyze_sentiment
+2025-12-20 19:19:15,554 - __main__ - INFO - MATCH: Tool 'sentiment-analyzer_analyze_sentiment' matches prefix 'sentiment-analyzer'. Required: ['Viewer', 'Support', 'Admin']
+2025-12-20 19:19:15,554 - __main__ - INFO - Access GRANTED.
+2025-12-20 19:19:15,555 - twisterlab.agents.mcp.router - INFO - Tool sentiment-analyzer_analyze_sentiment executed in 0.0006s (Error: False)
+INFO:     10.42.0.1:8559 - "POST /tools/sentiment-analyzer_analyze_sentiment HTTP/1.1" 200 OK
+INFO:     10.42.0.1:18460 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     10.42.0.1:57800 - "GET /metrics HTTP/1.1" 200 OK

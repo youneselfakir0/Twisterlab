@@ -19,6 +19,11 @@ from twisterlab.agents.core import (
     DatabaseAgent,
     CacheAgent,
 )
+from twisterlab.agents.real.real_sentiment_analyzer_agent import SentimentAnalyzerAgent
+from twisterlab.agents.real.real_classifier_agent import RealClassifierAgent
+from twisterlab.agents.real.real_resolver_agent import RealResolverAgent
+from twisterlab.agents.real.real_backup_agent import RealBackupAgent
+from twisterlab.agents.real.real_code_review_agent import RealCodeReviewAgent
 from .router import AgentRegistry, ToolRouter
 
 logger = logging.getLogger(__name__)
@@ -62,6 +67,13 @@ class UnifiedMCPServer:
         self._agent_registry.register(MaestroAgent)
         self._agent_registry.register(DatabaseAgent)
         self._agent_registry.register(CacheAgent)
+        
+        # New Real Agents
+        self._agent_registry.register(SentimentAnalyzerAgent)
+        self._agent_registry.register(RealClassifierAgent)
+        self._agent_registry.register(RealResolverAgent)
+        self._agent_registry.register(RealBackupAgent)
+        self._agent_registry.register(RealCodeReviewAgent)
 
         # Build tool router
         self._tool_router = ToolRouter(self._agent_registry)

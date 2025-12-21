@@ -7,9 +7,11 @@ Manages all agents and routes MCP tool calls to the correct agent.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Dict, List, Optional, Type
 
 from twisterlab.agents.core.base import TwisterAgent
+from twisterlab.agents.metrics import mcp_tool_executions_total, mcp_tool_duration_seconds
 from twisterlab.services import ServiceRegistry, get_service_registry
 from .adapter import MCPAdapter
 
@@ -104,11 +106,14 @@ class ToolRouter:
     def __init__(self, registry: AgentRegistry = None):
         self._registry = registry or AgentRegistry()
         self._tool_to_adapter: Dict[str, MCPAdapter] = {}
+        self._cached_tools: Optional[List[Dict[str, Any]]] = None
+        self._execution_history: List[Dict[str, Any]] = []
         self._rebuild_tool_map()
 
     def _rebuild_tool_map(self) -> None:
         """Rebuild mapping from tool names to adapters."""
         self._tool_to_adapter.clear()
+        self._cached_tools = None  # Invalidate cache
 
         for agent_name in self._registry.list_agents():
             adapter = self._registry.get_adapter(agent_name)
@@ -122,18 +127,21 @@ class ToolRouter:
 
     def list_tools(self) -> List[Dict[str, Any]]:
         """
-        Get all MCP tools from all agents.
+        Get all MCP tools from all agents (Cached).
 
         Returns:
             Combined list of all MCP tool definitions
         """
-        tools = []
+        if self._cached_tools is not None:
+            return self._cached_tools
 
+        tools = []
         for agent_name in self._registry.list_agents():
             adapter = self._registry.get_adapter(agent_name)
             if adapter:
                 tools.extend(adapter.list_tools())
 
+        self._cached_tools = tools
         return tools
 
     def get_tool(self, tool_name: str) -> Optional[Dict[str, Any]]:
@@ -155,7 +163,7 @@ class ToolRouter:
         self, tool_name: str, arguments: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Execute a tool by routing to the correct agent.
+        Execute a tool by routing to the correct agent with latency tracing.
 
         Args:
             tool_name: Name of the tool to execute
@@ -172,13 +180,65 @@ class ToolRouter:
                 "content": [{"type": "text", "text": f"Unknown tool: {tool_name}"}],
             }
 
-        return await adapter.execute_tool(tool_name, arguments)
+        start_time = time.time()
+        try:
+            response = await adapter.execute_tool(tool_name, arguments)
+            duration = time.time() - start_time
+            
+            # Record metrics
+            self._record_execution(tool_name, duration, response.get("isError", False))
+            
+            logger.info(f"Tool {tool_name} executed in {duration:.4f}s (Error: {response.get('isError')})")
+            return response
+        except Exception as e:
+            duration = time.time() - start_time
+            self._record_execution(tool_name, duration, True)
+            logger.exception(f"Critical error executing tool {tool_name}")
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": f"Router Error: {str(e)}"}],
+            }
+
+    def _record_execution(self, tool_name: str, duration: float, is_error: bool) -> None:
+        """Internal helper to record execution history and Prometheus metrics."""
+        # Local history for quick stats
+        self._execution_history.append({
+            "tool": tool_name,
+            "duration": duration,
+            "is_error": is_error,
+            "timestamp": time.time()
+        })
+        if len(self._execution_history) > 100:
+            self._execution_history.pop(0)
+
+        # Prometheus metrics
+        adapter = self._tool_to_adapter.get(tool_name)
+        agent_name = adapter.agent.name if adapter else "unknown"
+        status = "error" if is_error else "success"
+        
+        mcp_tool_executions_total.labels(
+            tool_name=tool_name, 
+            agent_name=agent_name, 
+            status=status
+        ).inc()
+        
+        mcp_tool_duration_seconds.labels(
+            tool_name=tool_name, 
+            agent_name=agent_name
+        ).observe(duration)
 
     def get_stats(self) -> Dict[str, Any]:
-        """Get router statistics."""
+        """Get enhanced router statistics including latency."""
+        avg_latency = 0
+        if self._execution_history:
+            avg_latency = sum(e["duration"] for e in self._execution_history) / len(self._execution_history)
+
         return {
             "total_agents": len(self._registry.list_agents()),
             "total_tools": len(self._tool_to_adapter),
+            "avg_latency_seconds": round(avg_latency, 4),
+            "recent_executions": len(self._execution_history),
+            "error_count_recent": sum(1 for e in self._execution_history if e["is_error"]),
             "agents": [
                 {
                     "name": name,

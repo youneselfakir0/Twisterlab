@@ -1,315 +1,84 @@
 ﻿"""
-SentimentAnalyzerAgent - Analyzes text sentiment (positive/negative/neutral).
+Sentiment Analyzer Agent (Modernized)
 
-Part of TwisterLab autonomous agent system.
+Uses NLP to determine text sentiment (Positive, Negative, Neutral).
 """
 
-import time
 from typing import Any, Dict, List, Optional
-from twisterlab.agents.base import TwisterAgent
+import time
 
-# Import Prometheus metrics
-try:
-    from twisterlab.agents.metrics import (
-        sentiment_analysis_total,
-        sentiment_confidence_score,
-        sentiment_keyword_matches,
-        sentiment_text_length,
-        sentiment_analysis_errors,
-        agent_requests_total,
-        agent_execution_time_seconds,
-    )
-    METRICS_AVAILABLE = True
-except ImportError:
-    METRICS_AVAILABLE = False
-
+from twisterlab.agents.core.base import (
+    TwisterAgent, 
+    AgentCapability, 
+    CapabilityParam, 
+    ParamType, 
+    AgentResponse,
+    CapabilityType
+)
 
 class SentimentAnalyzerAgent(TwisterAgent):
     """
-    Agent specialized in sentiment analysis of text content.
-    
-    Capabilities:
-    - Detects positive, negative, or neutral sentiment
-    - Provides confidence scores
-    - Supports multi-language text (English, French, etc.)
-    - Can analyze individual texts or batches
+    Agent specializing in sentiment analysis.
+    Uses the modern TwisterAgent base class for optimal MCP integration.
     """
 
-    def __init__(self):
-        super().__init__(
-            name="sentiment-analyzer",
-            display_name="Sentiment Analyzer",
-            description="Analyzes text sentiment and returns positive/negative/neutral classification with confidence scores",
-            role="analyst",
-            instructions="""You are a sentiment analysis expert. Analyze the given text and classify it as:
-- POSITIVE: Expresses happiness, satisfaction, approval, or optimism
-- NEGATIVE: Expresses sadness, dissatisfaction, criticism, or pessimism
-- NEUTRAL: Factual statements without emotional tone
+    @property
+    def name(self) -> str:
+        return "sentiment-analyzer"
 
-Provide a confidence score (0.0-1.0) for your classification.""",
-            model="llama-3.2",
-            temperature=0.3,  # Lower temperature for consistent analysis
-            metadata={
-                "version": "1.0.0",
-                "supported_languages": ["en", "fr", "es", "de"],
-                "categories": ["positive", "negative", "neutral"]
-            }
-        )
-        
-        # Sentiment keywords for simple rule-based fallback
-        self.positive_keywords = {
-            "excellent", "great", "amazing", "wonderful", "fantastic",
-            "love", "happy", "good", "best", "awesome", "perfect",
-            "g├⌐nial", "super", "excellent", "formidable", "merveilleux"
-        }
-        
-        self.negative_keywords = {
-            "terrible", "awful", "bad", "worst", "hate", "horrible",
-            "poor", "disappointing", "frustrating", "angry", "sad",
-            "mauvais", "horrible", "nul", "catastrophique", "d├⌐├ºu"
-        }
+    @property
+    def description(self) -> str:
+        return "Analyzes text sentiment and returns positive/negative/neutral classification."
 
-    async def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Execute sentiment analysis on the given text.
-
-        Args:
-            task: Text to analyze
-            context: Optional context with:
-                - language: Target language (default: auto-detect)
-                - threshold: Confidence threshold (default: 0.6)
-                - detailed: Return detailed scores (default: False)
-
-        Returns:
-            Dict containing:
-                - sentiment: "positive", "negative", or "neutral"
-                - confidence: float (0.0-1.0)
-                - details: optional detailed analysis
-                - analyzed_text: original text
-        """
-        context = context or {}
-        start_time = time.time()
-        language = context.get("language", "auto")
-        
-        try:
-            # Track request
-            if METRICS_AVAILABLE:
-                agent_requests_total.labels(agent_name="sentiment-analyzer", status="started").inc()
-            
-            # Extract parameters
-            text = task.strip()
-            detailed = context.get("detailed", False)
-            
-            if not text:
-                if METRICS_AVAILABLE:
-                    agent_requests_total.labels(agent_name="sentiment-analyzer", status="error").inc()
-                    sentiment_analysis_errors.labels(error_type="empty_text").inc()
-                return {
-                    "error": "No text provided for analysis",
-                    "sentiment": "neutral",
-                    "confidence": 0.0
-                }
-            
-            # Track text length
-            if METRICS_AVAILABLE:
-                sentiment_text_length.observe(len(text))
-            
-            # Perform simple rule-based analysis
-            # In production, this would call an LLM or ML model
-            sentiment, confidence, scores = self._analyze_simple(text)
-            
-            # Track metrics
-            if METRICS_AVAILABLE:
-                # Count by sentiment type and language
-                sentiment_analysis_total.labels(sentiment=sentiment, language=language).inc()
-                
-                # Track confidence distribution
-                sentiment_confidence_score.labels(sentiment=sentiment).observe(confidence)
-                
-                # Success request
-                agent_requests_total.labels(agent_name="sentiment-analyzer", status="success").inc()
-            
-            result = {
-                "sentiment": sentiment,
-                "confidence": round(confidence, 3),
-                "analyzed_text": text[:100] + "..." if len(text) > 100 else text,
-                "method": "rule-based",  # Would be "llm" in production
-                "timestamp": self._get_timestamp()
-            }
-            
-            if detailed:
-                detected_keywords = self._get_detected_keywords(text)
-                
-                # Track keyword matches
-                if METRICS_AVAILABLE:
-                    sentiment_keyword_matches.labels(sentiment=sentiment).observe(len(detected_keywords))
-                
-                result["details"] = {
-                    "positive_score": round(scores["positive"], 3),
-                    "negative_score": round(scores["negative"], 3),
-                    "neutral_score": round(scores["neutral"], 3),
-                    "word_count": len(text.split()),
-                    "detected_keywords": detected_keywords
-                }
-            
-            return result
-            
-        except Exception as e:
-            if METRICS_AVAILABLE:
-                agent_requests_total.labels(agent_name="sentiment-analyzer", status="error").inc()
-                sentiment_analysis_errors.labels(error_type="exception").inc()
-            
-            return {
-                "error": f"Sentiment analysis failed: {str(e)}",
-                "sentiment": "neutral",
-                "confidence": 0.0
-            }
-        finally:
-            # Track execution time
-            if METRICS_AVAILABLE:
-                duration = time.time() - start_time
-                agent_execution_time_seconds.labels(agent_name="sentiment-analyzer").observe(duration)
-
-    def _analyze_simple(self, text: str) -> tuple:
-        """
-        Simple rule-based sentiment analysis.
-        
-        Returns:
-            (sentiment, confidence, scores_dict)
-        """
-        text_lower = text.lower()
-        words = set(text_lower.split())
-        
-        # Count positive/negative matches
-        positive_count = sum(1 for word in self.positive_keywords if word in text_lower)
-        negative_count = sum(1 for word in self.negative_keywords if word in text_lower)
-        
-        # Calculate scores
-        total_words = len(words)
-        if total_words == 0:
-            return ("neutral", 0.5, {"positive": 0.33, "negative": 0.33, "neutral": 0.34})
-        
-        positive_score = min(positive_count / max(total_words / 10, 1), 1.0)
-        negative_score = min(negative_count / max(total_words / 10, 1), 1.0)
-        neutral_score = 1.0 - max(positive_score, negative_score)
-        
-        # Normalize scores
-        total_score = positive_score + negative_score + neutral_score
-        if total_score > 0:
-            positive_score /= total_score
-            negative_score /= total_score
-            neutral_score /= total_score
-        
-        # Determine sentiment
-        if positive_score > negative_score and positive_score > neutral_score:
-            sentiment = "positive"
-            confidence = positive_score
-        elif negative_score > positive_score and negative_score > neutral_score:
-            sentiment = "negative"
-            confidence = negative_score
-        else:
-            sentiment = "neutral"
-            confidence = neutral_score
-        
-        return (
-            sentiment,
-            confidence,
-            {
-                "positive": positive_score,
-                "negative": negative_score,
-                "neutral": neutral_score
-            }
-        )
-
-    def _get_detected_keywords(self, text: str) -> Dict[str, List[str]]:
-        """Extract detected positive/negative keywords."""
-        text_lower = text.lower()
-        
-        detected_positive = [kw for kw in self.positive_keywords if kw in text_lower]
-        detected_negative = [kw for kw in self.negative_keywords if kw in text_lower]
-        
-        return {
-            "positive": detected_positive[:5],  # Top 5
-            "negative": detected_negative[:5]
-        }
-
-    def _get_timestamp(self) -> str:
-        """Get ISO format timestamp."""
-        from datetime import datetime, timezone
-        return datetime.now(timezone.utc).isoformat()
-
-    def get_capabilities(self) -> List[str]:
-        """Return list of agent capabilities."""
+    def get_capabilities(self) -> List[AgentCapability]:
         return [
-            "sentiment_analysis",
-            "text_classification",
-            "emotion_detection",
-            "confidence_scoring",
-            "multilingual_support"
+            AgentCapability(
+                name="analyze_sentiment",
+                description="Determine the sentiment of a given text.",
+                handler="handle_analyze_sentiment",
+                capability_type=CapabilityType.QUERY,
+                params=[
+                    CapabilityParam("text", ParamType.STRING, "The text to analyze", required=True),
+                    CapabilityParam("detailed", ParamType.BOOLEAN, "Whether to include keywords", required=False, default=False)
+                ]
+            )
         ]
 
-    def to_schema(self, format: str = "microsoft") -> Dict[str, Any]:
-        """
-        Export agent schema in specified format.
+    async def handle_analyze_sentiment(self, text: str, detailed: bool = False) -> AgentResponse:
+        """Handler for sentiment analysis logic."""
+        # Simulated logic (real NLP could be added here)
+        text_lower = text.lower()
         
-        Supports: microsoft, langchain, semantic_kernel, openai
-        """
-        base_schema = {
-            "name": self.name,
-            "description": "Text sentiment analysis with multilingual support",
-            "version": self.version,
-            "model": self.model,
-            "temperature": self.temperature,
-            "capabilities": self.get_capabilities(),
-            "supported_languages": ["en", "fr", "es", "de"],
+        positive_words = ["good", "great", "excellent", "amazing", "love", "fantastic"]
+        negative_words = ["bad", "hate", "terrible", "catastrophic", "frustrated", "down"]
+        
+        pos_count = sum(1 for word in positive_words if word in text_lower)
+        neg_count = sum(1 for word in negative_words if word in text_lower)
+        
+        if pos_count > neg_count:
+            sentiment = "positive"
+            confidence = min(0.5 + (pos_count * 0.1), 0.99)
+        elif neg_count > pos_count:
+            sentiment = "negative"
+            confidence = min(0.5 + (neg_count * 0.1), 0.99)
+        else:
+            sentiment = "neutral"
+            confidence = 0.5
+
+        result = {
+            "sentiment": sentiment,
+            "confidence": confidence,
+            "text_length": len(text)
         }
         
-        if format == "microsoft":
-            return {
-                "agent_type": "SentimentAnalyzer",
-                "metadata": base_schema,
-                "input_schema": {
-                    "text": "string (required)",
-                    "detailed": "boolean (optional)"
-                },
-                "output_schema": {
-                    "sentiment": "string (positive/negative/neutral)",
-                    "confidence": "float (0.0-1.0)",
-                    "keywords": "list[string] (if detailed=true)"
-                }
-            }
-        elif format == "langchain":
-            return {
-                "name": self.name,
-                "description": base_schema["description"],
-                "parameters": {
-                    "text": {"type": "string", "required": True},
-                    "detailed": {"type": "boolean", "default": False}
-                }
-            }
-        elif format == "semantic_kernel":
-            return {
-                "name": self.name.replace("-", "_"),
-                "description": base_schema["description"],
-                "input_variables": ["text", "detailed"],
-                "output_variable": "sentiment_result"
-            }
-        elif format == "openai":
-            return {
-                "type": "function",
-                "function": {
-                    "name": self.name.replace("-", "_"),
-                    "description": base_schema["description"],
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "text": {"type": "string", "description": "Text to analyze"},
-                            "detailed": {"type": "boolean", "description": "Return detailed analysis"}
-                        },
-                        "required": ["text"]
-                    }
-                }
-            }
-        else:
-            return base_schema
+        if detailed:
+            result["keywords"] = [w for w in positive_words + negative_words if w in text_lower]
 
+        # Record metrics would happen here via router wrapping
+        return AgentResponse(success=True, data=result)
+
+    async def execute_legacy(self, task: str, context: Optional[Dict[str, Any]] = None) -> Any:
+        """Keep compatibility with old API calls if needed."""
+        detailed = context.get("detailed", False) if context else False
+        res = await self.handle_analyze_sentiment(text=task, detailed=detailed)
+        return res.data

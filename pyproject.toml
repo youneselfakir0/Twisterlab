@@ -21,6 +21,8 @@ opentelemetry-sdk = "^1.26.0"
 opentelemetry-instrumentation = "^0.47b0"
 opentelemetry-instrumentation-fastapi = "^0.47b0"
 opentelemetry-exporter-jaeger = "^1.15.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+cryptography = "^42.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

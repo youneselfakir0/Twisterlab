@@ -88,7 +88,8 @@ cd TwisterLab
 
 - **Browser** - Web automation & scrapingSecurity scan (detect-secrets + gitleaks):
 
-- **Desktop** - Local system integration1) Activate venv: `& C:/TwisterLab/venv/Scripts/Activate.ps1`
+- **Desktop** - Local system integration
+- **CodeReview** - Automated analysis & security scanning1) Activate venv: `& C:/TwisterLab/venv/Scripts/Activate.ps1`
 
 2) Run the helper: `python scripts/scan_secrets.py`
 
@@ -156,7 +157,8 @@ cd TwisterLab
 
 - Multi-tenant architecturepython -m playwright install --with-deps chromium
 
-- Horizontal auto-scaling```
+- Horizontal auto-scaling (HPA)
+- E2E Testing Pipeline (Pytest + Playwright)```
 
 
 
@@ -370,6 +372,10 @@ TwisterLab provides **39 MCP tools** for seamless IDE integration:
 ```bash
 # Run all tests
 pytest
+
+# Run E2E Tests (Requires Platform Running)
+export MCP_API_URL="http://192.168.0.30:30001"
+pytest tests/e2e/
 
 # With coverage
 pytest --cov=src/twisterlab --cov-report=html

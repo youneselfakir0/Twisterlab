@@ -1,54 +1,39 @@
 """
-Minimal RealResolverAgent implementation for the TwisterLab 'real' agent pack.
-
-This file provides a small, test-friendly class that implements the
-interface expected by the AgentRegistry. These are intentionally small and
-simplified – they can be extended later with real logic (SOPs, tool calls,
-and integrations).
+Modernized RealResolverAgent
 """
 
-from __future__ import annotations
-
-from typing import Any, Dict, Optional
-
-from twisterlab.agents.base import TwisterAgent
-
+from typing import Any, Dict, List, Optional
+from twisterlab.agents.core.base import (
+    TwisterAgent, 
+    AgentCapability, 
+    CapabilityParam, 
+    ParamType, 
+    AgentResponse,
+    CapabilityType
+)
 
 class RealResolverAgent(TwisterAgent):
-    """Simple resolver agent used for demos and tests.
+    @property
+    def name(self) -> str:
+        return "real-resolver"
 
-    It implements the TwisterAgent.execute contract and returns a predictable
-    response that makes automated tests deterministic.
-    """
+    @property
+    def description(self) -> str:
+        return "Resolves system or database issues automatically."
 
-    def __init__(self) -> None:
-        super().__init__(
-            name="real-resolver",
-            display_name="Real Resolver Agent",
-            description="Resolves tickets using predefined SOPs",
-            role="resolver",
-            instructions="Resolve helpdesk tickets by following SOPs",
-            tools=[
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "resolve_ticket",
-                        "description": "Execute SOP step to resolve ticket",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {},
-                            "required": [],
-                        },
-                    },
-                }
-            ],
-            model="deepseek-r1",
-            temperature=0.2,
-        )
+    def get_capabilities(self) -> List[AgentCapability]:
+        return [
+            AgentCapability(
+                name="resolve_ticket",
+                description="Resolve a support ticket.",
+                handler="handle_resolve",
+                capability_type=CapabilityType.ACTION,
+                params=[
+                    CapabilityParam("ticket_id", ParamType.STRING, "ID of the ticket to resolve"),
+                    CapabilityParam("resolution_note", ParamType.STRING, "Resolution details")
+                ]
+            )
+        ]
 
-    async def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> Any:
-        # Simulate basic ticket processing
-        return {"status": "resolved", "task": task, "detail": "Simulated resolution"}
-
-
-__all__ = ["RealResolverAgent"]
+    async def handle_resolve(self, ticket_id: str, resolution_note: str) -> AgentResponse:
+        return AgentResponse(success=True, data={"ticket_id": ticket_id, "status": "RESOLVED"})

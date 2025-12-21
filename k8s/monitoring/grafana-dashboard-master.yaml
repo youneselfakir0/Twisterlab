@@ -1,0 +1,208 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-master
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  twisterlab-master.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+          "id": 100,
+          "title": "--- PHYSICAL INFRASTRUCTURE (MATERIAL) ---",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "max": 100,
+              "min": 0,
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] },
+              "unit": "percent"
+            }
+          },
+          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 1 },
+          "id": 1,
+          "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] }, "showThresholdLabels": false, "showThresholdMarkers": true },
+          "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "refId": "A" }],
+          "title": "CPU PHYSICAL (Host)",
+          "type": "gauge"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "max": 100,
+              "min": 0,
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 80 }, { "color": "red", "value": 95 }] },
+              "unit": "percent"
+            }
+          },
+          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 1 },
+          "id": 2,
+          "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "refId": "A" }],
+          "title": "RAM PHYSICAL (Host)",
+          "type": "gauge"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "max": 100,
+              "min": 0,
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 85 }, { "color": "red", "value": 95 }] },
+              "unit": "percent"
+            }
+          },
+          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 1 },
+          "id": 3,
+          "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "expr": "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100", "refId": "A" }],
+          "title": "DISK PHYSICAL (Host)",
+          "type": "gauge"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+          "id": 101,
+          "title": "--- AGENTIC INTELLIGENCE (ROI & PERFORMANCE) ---",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" } },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+          "id": 10,
+          "options": { "colorMode": "value", "graphMode": "area" },
+          "targets": [{ "expr": "agent_count_total", "refId": "A" }],
+          "title": "ACTIVE AGENTS",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" } },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+          "id": 11,
+          "options": { "colorMode": "value", "graphMode": "area" },
+          "targets": [{ "expr": "sum(agent_requests_total)", "refId": "A" }],
+          "title": "TOTAL AGENT CALLS",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }, "unit": "percentunit" } },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+          "id": 12,
+          "options": { "colorMode": "value", "graphMode": "area" },
+          "targets": [{ "expr": "sum(rate(agent_errors_total[5m])) / sum(rate(agent_requests_total[5m]))", "refId": "A" }],
+          "title": "GLOBAL ERROR RATE",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "ms" } },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+          "id": 13,
+          "options": { "colorMode": "value", "graphMode": "area" },
+          "targets": [{ "expr": "histogram_quantile(0.95, sum by (le) (rate(agent_execution_time_seconds_bucket[5m]))) * 1000", "refId": "A" }],
+          "title": "AGENT LATENCY (p95)",
+          "type": "stat"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 12 },
+          "id": 102,
+          "title": "--- NVIDIA GPU ACCELERATION (PLACEHOLDER) ---",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "max": 100, "min": 0, "unit": "percent" } },
+          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 13 },
+          "id": 20,
+          "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "expr": "nvidia_gpu_utilization or vector(0)", "refId": "A" }],
+          "title": "GPU UTILIZATION (%)",
+          "type": "gauge"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "max": 100, "min": 0, "unit": "celsius" } },
+          "gridPos": { "h": 6, "w": 12, "x": 12, "y": 13 },
+          "id": 21,
+          "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "expr": "nvidia_gpu_temperature_celsius or vector(0)", "refId": "A" }],
+          "title": "GPU TEMPERATURE (°C)",
+          "type": "gauge"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+          "id": 103,
+          "title": "--- KUBERNETES CONTAINER HEALTH ---",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 20 },
+          "id": 30,
+          "options": { "colorMode": "background", "graphMode": "none", "textMode": "auto" },
+          "targets": [{ "expr": "up{job=\"twisterlab-api\"}", "refId": "A" }],
+          "title": "API STATUS",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 20 },
+          "id": 31,
+          "options": { "colorMode": "background", "graphMode": "none", "textMode": "auto" },
+          "targets": [{ "expr": "up{job=\"redis\"}", "refId": "A" }],
+          "title": "REDIS STATUS",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 20 },
+          "id": 32,
+          "options": { "colorMode": "background", "graphMode": "none", "textMode": "auto" },
+          "targets": [{ "expr": "up{job=\"postgres\"}", "refId": "A" }],
+          "title": "POSTGRES STATUS",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 20 },
+          "id": 33,
+          "options": { "colorMode": "background", "graphMode": "none", "textMode": "auto" },
+          "targets": [{ "expr": "up{job=\"prometheus\"}", "refId": "A" }],
+          "title": "PROMETHEUS SYNC",
+          "type": "stat"
+        }
+      ],
+      "refresh": "5s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["twisterlab", "master", "production"],
+      "time": { "from": "now-30m", "to": "now" },
+      "title": "TwisterLab MASTER CONTROL",
+      "uid": "twisterlab-master"
+    }

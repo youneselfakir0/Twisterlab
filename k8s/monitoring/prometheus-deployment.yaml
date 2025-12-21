@@ -32,40 +32,56 @@ data:
 
     # Scrape configurations
     scrape_configs:
-      # TwisterLab API - Direct pod scraping
+      # TwisterLab API - Direct pod scraping (includes Agent & GPU metrics)
       - job_name: 'twisterlab-api'
         static_configs:
-          - targets:
-              - '192.168.0.30:30000'  # NodePort service
+          - targets: ['192.168.0.30:30000', '192.168.0.30:30001']
             labels:
               service: twisterlab-api
               namespace: twisterlab
+              component: backend-gpu
 
-      # TwisterLab API - Kubernetes service discovery (alternative)
-      - job_name: 'twisterlab-api-k8s'
+      # Physical Host Infrastructure (Material Metrics)
+      - job_name: 'node-exporter'
+        static_configs:
+          - targets: ['192.168.0.30:9100']
+            labels:
+              instance: 'edgeserver-ops'
+              tier: 'physical'
+
+      # Container Performance (cAdvisor)
+      - job_name: 'kubernetes-cadvisor'
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
         kubernetes_sd_configs:
-          - role: pod
-            namespaces:
-              names:
-                - twisterlab
+          - role: node
         relabel_configs:
-          - source_labels: [__meta_kubernetes_pod_label_app]
-            action: keep
-            regex: twisterlab-api
-          - source_labels: [__meta_kubernetes_pod_ip]
-            target_label: __address__
-            replacement: ${1}:8000
-          - source_labels: [__meta_kubernetes_pod_name]
-            target_label: pod
-          - source_labels: [__meta_kubernetes_namespace]
-            target_label: namespace
-    metrics_path: /metrics
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+
+      # PostgreSQL Monitoring
+      - job_name: 'postgres'
+        static_configs:
+          - targets: ['postgres.twisterlab:5432']
+
+      # Redis Monitoring
+      - job_name: 'redis'
+        static_configs:
+          - targets: ['redis.twisterlab:6379']
 
       # Prometheus self-monitoring
       - job_name: 'prometheus'
         static_configs:
-          - targets:
-              - 'localhost:9090'
+          - targets: ['localhost:9090']
 
 ---
 # ConfigMap: Alert Rules
@@ -207,6 +223,8 @@ metadata:
     app: prometheus
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: prometheus

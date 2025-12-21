@@ -553,27 +553,21 @@ def record_ticket_processing(
 
 
 # -------------------------------
-# Monitoring agent metrics
+# MCP Metrics
 # -------------------------------
-monitoring_persisted_failures_total = _create_metric(
+mcp_tool_executions_total = _create_metric(
     Counter,
-    "twisterlab_monitoring_persisted_failures_total",
-    "Number of times the monitor persisted failed components",
-    ["agent_name"],
+    "mcp_tool_executions_total",
+    "Total number of MCP tool executions",
+    ["tool_name", "agent_name", "status"],
 )
 
-monitoring_persisted_failures = _create_metric(
-    Gauge,
-    "twisterlab_monitoring_persisted_failures",
-    "Number of persisted failed components",
-    ["agent_name"],
-)
-
-monitoring_rechecks_total = _create_metric(
-    Counter,
-    "twisterlab_monitoring_rechecks_total",
-    "Number of detailed rechecks run by the monitoring agent",
-    ["agent_name"],
+mcp_tool_duration_seconds = _create_metric(
+    Histogram,
+    "mcp_tool_duration_seconds",
+    "Duration of MCP tool executions in seconds",
+    ["tool_name", "agent_name"],
+    buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0, 10.0],
 )
 
 
@@ -638,6 +632,9 @@ __all__ = [
     "record_gpu_stats",
     "record_ollama_health",
     "record_ticket_processing",
+    # MCP
+    "mcp_tool_executions_total",
+    "mcp_tool_duration_seconds",
     # Model info
     "llm_model_info",
 ]

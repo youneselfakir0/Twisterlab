@@ -1,0 +1,216 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-unified
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  twisterlab-unified.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "title": "CORE INFRASTRUCTURE HEALTH",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "green", "value": 1 }
+                ]
+              }
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+          "id": 2,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            { "expr": "up{job=\"twisterlab-api\"}", "refId": "A" }
+          ],
+          "title": "API GATEWAY",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "green", "value": 1 }
+                ]
+              }
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+          "id": 3,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          },
+          "targets": [
+            { "expr": "count(container_start_time_seconds{namespace=\"twisterlab\",container=\"postgres\"})", "refId": "A" }
+          ],
+          "title": "POSTGRESQL DB",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "green", "value": 1 }
+                ]
+              }
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+          "id": 4,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          },
+          "targets": [
+            { "expr": "count(container_start_time_seconds{namespace=\"twisterlab\",container=\"redis\"})", "refId": "A" }
+          ],
+          "title": "REDIS CACHE",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "red", "value": null },
+                  { "color": "green", "value": 1 }
+                ]
+              }
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+          "id": 5,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "reduceOptions": { "calcs": ["lastNotNull"] }
+          },
+          "targets": [
+            { "expr": "up{job=\"prometheus\"}", "refId": "A" }
+          ],
+          "title": "PROMETHEUS SYNC",
+          "type": "stat"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+          "id": 6,
+          "title": "INFRASTRUCTURE RESOURCE CONSUMPTION",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "fillOpacity": 10, "showPoints": "never" },
+              "unit": "percentunit"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+          "id": 7,
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" }
+          },
+          "targets": [
+            { "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"twisterlab\",container!=\"\"}[5m])) by (pod)", "legendFormat": "{{pod}}", "refId": "A" }
+          ],
+          "title": "CPU Usage (per Pod)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+          "id": 8,
+          "options": {
+            "legend": { "displayMode": "list", "placement": "bottom" }
+          },
+          "targets": [
+            { "expr": "sum(container_memory_usage_bytes{namespace=\"twisterlab\",container!=\"\"}) by (pod)", "legendFormat": "{{pod}}", "refId": "A" }
+          ],
+          "title": "Memory Usage (per Pod)",
+          "type": "timeseries"
+        },
+        {
+          "collapsed": true,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+          "id": 9,
+          "panels": [
+            {
+              "gridPos": { "h": 4, "w": 24, "x": 0, "y": 15 },
+              "id": 10,
+              "options": {
+                "content": "<div style='text-align: center; vertical-align: middle; padding-top: 20px;'>\n <h2 style='color: #8E8E8E;'>FEATURE ROADMAP: MCP AGENTS & SENTIMENT ANALYSIS</h2>\n <p>Advanced metrics (Sentiment analysis, tool call rate, agent errors) will be automatically populated here upon upgrade to TwisterLab v3.2.</p>\n</div>",
+                "mode": "html"
+              },
+              "title": "V3.2 STATUS",
+              "type": "text"
+            }
+          ],
+          "title": "ADVANCED APPLICATION ANALYTICS (V3.2 PENDING)",
+          "type": "row"
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["twisterlab", "unified", "production"],
+      "templating": { "list": [] },
+      "time": { "from": "now-30m", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "TwisterLab Unified Control",
+      "uid": "twisterlab-unified",
+      "version": 1,
+      "weekStart": ""
+    }
