@@ -3,10 +3,10 @@ name: Docker Lint
 on:
   push:
     paths:
-      - '**/Dockerfile*'
+      - 'deploy/docker/Dockerfile*'
   pull_request:
     paths:
-      - '**/Dockerfile*'
+      - 'deploy/docker/Dockerfile*'
 
 jobs:
   hadolint:
@@ -16,20 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Lint Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: Dockerfile
-          failure-threshold: warning
-
       - name: Lint API Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: Dockerfile.api
+          dockerfile: deploy/docker/Dockerfile.api
           failure-threshold: warning
 
-      - name: Lint MCP Dockerfile
+      - name: Lint MCP Unified Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: Dockerfile.mcp
+          dockerfile: deploy/docker/Dockerfile.mcp-unified
           failure-threshold: warning
