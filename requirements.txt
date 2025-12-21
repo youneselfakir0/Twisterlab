@@ -24,3 +24,4 @@ pytest-cov>=4.1.0
 ruff>=0.1.0
 mypy>=1.8.0
 pre-commit>=3.6.0
+python-jose[cryptography]>=3.3.0

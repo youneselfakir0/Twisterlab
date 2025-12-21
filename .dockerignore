@@ -22,7 +22,7 @@ tests/
 scripts/
 docs/
 k8s/
-monitoring/
+
 *.md
 LICENSE
 Makefile
