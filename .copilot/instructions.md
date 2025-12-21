@@ -12,20 +12,21 @@ TwisterLab est un projet d'infrastructure IA multi-agent cloud-native :
 
 ```
 /
-├── k8s/                   # Manifests K8s, scripts de déploiement YAML
-│   ├── base/              # Namespace, PVC, secrets/config
-│   ├── deployments/       # API, agents, redis, postgres, mcp
-│   ├── monitoring/        # Prometheus, Grafana, dashboards
-│   ├── ingress/           # Exposition API/grafana avec NGINX Ingress
-│   └── scripts/           # Deploy/destroy Bash/PowerShell
+├── k8s/                   # Manifests K8s
+│   ├── base/              
+│   ├── deployments/       
+│   ├── monitoring/        
+│   └── scripts/           
+├── deploy/                # Deployment artifacts
+│   ├── docker/            # Dockerfiles (api, mcp-unified, grafana, etc.)
+│   └── specs/             # REST API Specs (OpenAPI)
 ├── src/
-│   └── twisterlab/        # Code source prod : agents, core, api, orchestrateur MCP
-├── docs/                  # Guides, tutoriels, onboarding, faq, migration swarm→k8s
-├── archive/               # Legacy/tests obsolètes, tout non prod move ici
-├── .github/               # Workflows CI/CD (test, lint, build, push docker)
-├── pyproject.toml         # Config Python projet/requirements (Poetry/pip)
-├── .gitignore             # Tous les fichiers/motifs à ignorer
-├── README.md              # Toujours à jour, avec plan arbo, quickstart, troubleshooting
+│   └── twisterlab/        # Code source prod
+├── docs/                  # Guides & Reports
+├── demos/                 # Scenarios de démonstration (autonomous_incident.py)
+├── archive/               # Legacy/tests obsolètes
+├── .github/               # Workflows CI/CD
+├── README.md              
 └── ...
 ```
 
