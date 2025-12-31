@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 from fastapi import Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -73,12 +74,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.requests = {}  # ip -> list of timestamps
-        logger.warning(f"RateLimitMiddleware initialized with limit {requests_per_minute}")
+        logger.info(f"RateLimitMiddleware initialized with limit {requests_per_minute}")
 
     async def dispatch(self, request, call_next):
         client_ip = request.client.host if request.client else "unknown"
         # Debug log to trace IP
-        logger.warning(f"RateLimit check for IP: {client_ip}. Count: {len(self.requests.get(client_ip, []))}")
+        logger.debug(f"RateLimit check for IP: {client_ip}. Count: {len(self.requests.get(client_ip, []))}")
         
         # Clean old requests
         now = datetime.now()
@@ -94,9 +95,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if len(self.requests[client_ip]) >= self.requests_per_minute:
             logger.warning(f"Rate limit exceeded for IP: {client_ip}")
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many requests",
+                content={"detail": "Too many requests"},
             )
 
         # Add current request
