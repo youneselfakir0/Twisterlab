@@ -1,0 +1,107 @@
+name: TwisterLab CD
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  workflow_dispatch:  # Allows manual trigger
+
+env:
+  REGISTRY: ghcr.io
+  # GitHub repository name in lowercase
+  IMAGE_NAME: youneselfakir0/twisterlab/api
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=short
+            type=ref,event=tag
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deploy/docker/Dockerfile.api
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    # Only deploy if KUBE_CONFIG secret is set
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Deploy to Cluster
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          if [ -z "$KUBE_CONFIG" ]; then
+            echo "::warning::KUBE_CONFIG secret is not set. Skipping deployment."
+            echo "To enable deployment, add your kubeconfig content to a GitHub Secret named KUBE_CONFIG."
+            exit 0
+          fi
+
+          # Configure kubectl
+          mkdir -p $HOME/.kube
+          echo "$KUBE_CONFIG" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+          # Update Kubernetes Resources
+          echo "🚀 Deploying to Kubernetes..."
+          
+          # Apply Manifests (Core & API)
+          # Assuming standard path structure. Adjust if your k8s/ structure differs.
+          if [ -d "k8s/core" ]; then kubectl apply -f k8s/core/; fi
+          if [ -d "k8s/api" ]; then kubectl apply -f k8s/api/; fi
+          
+          # Apply Security Policies (Important!)
+          kubectl apply -f k8s/security/network-policies.yaml
+
+          # Force Update Image
+          IMAGE_TAG=sha-$(git rev-parse --short HEAD)
+          FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG
+          
+          echo "📦 Updating deployment with image: $FULL_IMAGE"
+          kubectl set image deployment/twisterlab-api twisterlab-api=$FULL_IMAGE -n twisterlab
+          
+          # Wait for Rollout
+          kubectl rollout status deployment/twisterlab-api -n twisterlab --timeout=120s
+          
+          echo "✅ Deployment Successful!"
