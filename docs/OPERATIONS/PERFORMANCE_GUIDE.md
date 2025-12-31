@@ -181,22 +181,19 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)  # Compress responses > 1K
 
 **Problem**: Resource exhaustion from excessive requests
 
-**Solution**: Implement per-IP rate limiting
+**Solution**: Implement per-IP rate limiting using Custom Middleware.
 
 ```python
-# src/twisterlab/api/middleware/rate_limit.py
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
+# src/twisterlab/agents/api/security.py
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import JSONResponse
 
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    # Custom Token Bucket implementation
+    pass
 
-@router.get("/health")
-@limiter.limit("100/minute")  # Max 100 requests per minute per IP
-async def health(request: Request):
-    return {"status": "healthy"}
+# src/twisterlab/api/main.py
+app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
 ```
 
 **Expected Impact**: Prevent DDoS, ensure fair resource distribution
@@ -425,7 +422,7 @@ def cache_agent_result(ttl=300):
         return wrapper
     return decorator
 
-class TwisterAgent:
+class CoreAgent:
     @cache_agent_result(ttl=600)  # Cache for 10 minutes
     async def execute(self, task: str, context: dict = None):
         # Agent execution logic

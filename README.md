@@ -413,9 +413,11 @@ http://localhost:9090
 
 - 🔒 All endpoints require authentication
 - 🛡️ Role-based access control (RBAC)
+- 🚦 **Rate Limiting**: Custom Middleware (60 req/min/IP) to prevent abuse.
+- 🌐 **Network Policies**: Kubernetes "Default Deny" + Whitelist Ingress.
 - 📝 Audit logging enabled
-- 🔑 Secrets management via Vault/K8s secrets
-- 🔍 Regular security scanning (Trivy, Bandit)
+- 🔑 Secrets management via K8s secrets
+- 🔍 Automated security scanning in CI/CD pipeline
 
 Report vulnerabilities: [security@twisterlab.io](mailto:security@twisterlab.io)
 
@@ -424,6 +426,7 @@ Report vulnerabilities: [security@twisterlab.io](mailto:security@twisterlab.io)
 ## 🤝 Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+> 💡 All Pull Requests are automatically tested via our **GitHub Actions CI**. Please ensure tests pass before requesting review.
 
 ```bash
 # Fork and clone
