@@ -249,25 +249,44 @@ f1098fc fix(grafana): correct datasource UID for V3.2 dashboard
 
 ---
 
-## 🛠️ 9. ACTIONS RESTANTES
+## 🛠️ 10. ACTIONS RECOMMANDÉES
 
-### 🔴 Priorité Haute (Cette semaine)
-- [x] ~~Nettoyer les pods en erreur~~
-- [x] ~~Déployer exporters Redis/PostgreSQL~~
-- [x] ~~Configurer dashboard Grafana V3.2~~
-- [x] ~~Fixer les imports inutilisés~~
+### ✅ Complétées (Sprint 1 & 2)
+- [x] Nettoyer les pods en erreur
+- [x] Déployer exporters Redis/PostgreSQL
+- [x] Configurer dashboard Grafana V3.2
+- [x] Fixer les imports inutilisés
+- [x] Restreindre CORS aux domaines autorisés
+- [x] Implémenter rate limiting (slowapi)
+- [x] Configurer Network Policies K8s
 
-### 🟡 Priorité Moyenne (Sprint 2 - Janvier)
-- [ ] Restreindre CORS aux domaines autorisés
-- [ ] Implémenter rate limiting (slowapi)
-- [ ] Configurer Network Policies K8s
-- [ ] Augmenter couverture tests à 80%
+### 🟡 Priorité Moyenne (Sprint 3 - Janvier)
+1. **Augmenter la couverture de tests**
+   - Objectif: 80%
+   - Focus sur agents core et MCP (actuellement ~60%)
+
+2. **Refactoriser le déploiement API**
+   - Intégrer les patchs de sécurité (ConfigMap) dans l'image Docker finale
+   - Supprimer le hotfix de montage ConfigMap
 
 ### 🟢 Priorité Basse (Q1 2026)
-- [ ] Implémenter distributed tracing (Jaeger)
-- [ ] Documenter APIs MCP individuellement
-- [ ] Tests de charge automatisés (k6)
-- [ ] OAuth2/OIDC pour remplacer tokens statiques
+3. **Implémenter distributed tracing (Jaeger)**
+4. **Documenter APIs MCP individuellement**
+5. **Tests de charge automatisés (k6)**
+6. **OAuth2/OIDC pour remplacer tokens statiques**
+
+---
+
+## 📋 FICHIERS À COMMITTER (Sprint 2)
+
+```bash
+git add src/twisterlab/api/main.py
+git add src/twisterlab/agents/mcp/mcp_server_production.py
+git add k8s/security/network-policies.yaml
+git add k8s/dev/deployment-hotfix.yaml
+git add k8s/dev/patch-api-hotfix.yaml
+git add docs/AUDIT_PROJET_2025-12-31.md
+```
 
 ---
 

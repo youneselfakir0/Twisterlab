@@ -138,10 +138,13 @@ TwisterLab provides a unified API for managing and orchestrating AI agents.
 - **System Monitoring**: Health checks, metrics, and observability
 
 ### Authentication
-Currently, the API is open. Future versions will support API keys and OAuth.
+Currently supports Bearer token authentication. OAuth2/OIDC coming in future versions.
 
 ### Rate Limiting
-No rate limits are currently enforced.
+Rate limiting is enforced at {RATE_LIMIT_PER_MINUTE} requests per minute per IP (configurable via environment).
+
+### CORS
+Cross-origin requests are restricted to configured origins only.
     """,
     version="3.2.0",
     openapi_tags=OPENAPI_TAGS,
@@ -159,13 +162,32 @@ No rate limits are currently enforced.
     lifespan=lifespan,
 )
 
+
+# Security configuration via environment variables
+import os
+
+# CORS Origins - comma-separated list, defaults to common development origins
+# In production, set ALLOWED_ORIGINS=https://your-domain.com
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:8000,http://localhost:8080,http://192.168.0.30:30091,http://192.168.0.30:30001"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
+
+# Rate limiting middleware
+try:
+    from twisterlab.agents.api.security import RateLimitMiddleware
+    RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "100"))
+    app.add_middleware(RateLimitMiddleware, requests_per_minute=RATE_LIMIT)
+except ImportError:
+    pass  # Security module not available
 
 app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])

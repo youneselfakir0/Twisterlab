@@ -1,0 +1,16 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: twisterlab-api
+        volumeMounts:
+        - name: hotfix-volume
+          mountPath: /app/src/twisterlab/api/main.py
+          subPath: main.py
+        - name: hotfix-volume
+          mountPath: /app/src/twisterlab/agents/api/security.py
+          subPath: security.py
+      volumes:
+      - name: hotfix-volume
+        configMap:
+          name: api-hotfix-v1

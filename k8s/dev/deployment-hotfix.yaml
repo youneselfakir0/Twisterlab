@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: twisterlab-api
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: twisterlab
+      component: api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app: twisterlab
+        component: api
+    spec:
+      containers:
+      - name: api
+        image: localhost:5000/twisterlab-api:v3.8
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              key: ENVIRONMENT
+              name: twisterlab-config
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              key: LOG_LEVEL
+              name: twisterlab-config
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: SECRET_KEY
+              name: twisterlab-secrets
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: JWT_SECRET_KEY
+              name: twisterlab-secrets
+        - name: POSTGRES_HOST
+          value: postgres.twisterlab.svc.cluster.local
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: POSTGRES_PASSWORD
+              name: twisterlab-secrets
+        - name: REDIS_HOST
+          value: redis.twisterlab.svc.cluster.local
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: REDIS_PASSWORD
+              name: twisterlab-secrets
+        - name: ALLOWED_ORIGINS
+          value: "http://localhost:3000,http://192.168.0.30:30091"
+        - name: RATE_LIMIT_PER_MINUTE
+          value: "60"
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: hotfix-volume
+          mountPath: /app/src/twisterlab/api/main.py
+          subPath: main.py
+        - name: hotfix-volume
+          mountPath: /app/src/twisterlab/agents/api/security.py
+          subPath: security.py
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+      volumes:
+      - name: hotfix-volume
+        configMap:
+          name: api-hotfix-v1

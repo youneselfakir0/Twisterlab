@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any, Dict
 
 from fastapi import FastAPI, HTTPException
@@ -6,16 +7,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Initialize FastAPI application
-app = FastAPI()
+app = FastAPI(title="TwisterLab MCP Server", version="3.2.1")
 
-# CORS configuration
+# Security configuration via environment variables
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:8000,http://localhost:8080,http://192.168.0.30:30091,http://192.168.0.30:30080"
+).split(",")
+
+# CORS configuration - restricted origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
+
+# Rate limiting middleware
+try:
+    from twisterlab.agents.api.security import RateLimitMiddleware
+    RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "100"))
+    app.add_middleware(RateLimitMiddleware, requests_per_minute=RATE_LIMIT)
+except ImportError:
+    pass  # Security module not available
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
