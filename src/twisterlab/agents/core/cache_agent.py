@@ -11,7 +11,7 @@ import logging
 from typing import List
 
 from .base import (
-    TwisterAgent,
+    CoreAgent,
     AgentCapability,
     AgentResponse,
     CapabilityType,
@@ -22,7 +22,7 @@ from .base import (
 logger = logging.getLogger(__name__)
 
 
-class CacheAgent(TwisterAgent):
+class CacheAgent(CoreAgent):
     """
     Agent for Redis cache operations.
 

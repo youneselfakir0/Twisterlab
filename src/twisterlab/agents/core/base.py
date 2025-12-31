@@ -124,15 +124,15 @@ class AgentResponse:
             return [{"type": "text", "text": f"Error: {self.error}"}]
 
 
-class TwisterAgent(ABC):
+class CoreAgent(ABC):
     """
-    Base class for all TwisterLab agents.
+    Base class for all TwisterLab Core System Agents.
 
     Agents are MCP-agnostic - they define capabilities and implement
     business logic without any knowledge of MCP protocol.
 
     Example:
-        class MyAgent(TwisterAgent):
+        class MyAgent(CoreAgent):
             @property
             def name(self) -> str:
                 return "my_agent"
@@ -269,3 +269,6 @@ class TwisterAgent(ABC):
                 for c in self.list_capabilities()
             ],
         }
+
+# Deprecated alias for backward compatibility
+TwisterAgent = CoreAgent

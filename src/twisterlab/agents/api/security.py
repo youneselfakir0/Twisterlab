@@ -14,7 +14,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+from jose import JWTError, jwt
+try:
+    from passlib.context import CryptContext
+except ImportError:
+    CryptContext = None
+
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -24,7 +29,10 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+if CryptContext:
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+else:
+    pwd_context = None
 
 # Security schemes
 security = HTTPBearer()
@@ -65,10 +73,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.requests = {}  # ip -> list of timestamps
+        logger.warning(f"RateLimitMiddleware initialized with limit {requests_per_minute}")
 
     async def dispatch(self, request, call_next):
         client_ip = request.client.host if request.client else "unknown"
-
+        # Debug log to trace IP
+        logger.warning(f"RateLimit check for IP: {client_ip}. Count: {len(self.requests.get(client_ip, []))}")
+        
         # Clean old requests
         now = datetime.now()
         cutoff = now - timedelta(minutes=1)

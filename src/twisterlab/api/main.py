@@ -181,12 +181,14 @@ app.add_middleware(
 )
 
 # Rate limiting middleware
-try:
-    from twisterlab.agents.api.security import RateLimitMiddleware
-    RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "100"))
-    app.add_middleware(RateLimitMiddleware, requests_per_minute=RATE_LIMIT)
-except ImportError:
-    pass  # Security module not available
+# Rate limiting middleware
+import logging
+logger = logging.getLogger(__name__)
+
+from twisterlab.agents.api.security import RateLimitMiddleware
+RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "100"))
+app.add_middleware(RateLimitMiddleware, requests_per_minute=RATE_LIMIT)
+logger.info(f"✅ Security Middleware ENABLED with limit {RATE_LIMIT} req/min")
 
 app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])

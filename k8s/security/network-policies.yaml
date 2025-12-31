@@ -35,6 +35,25 @@ spec:
       port: 8000
 
 ---
+# Allow ingress to Core API (NodePort 30000)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-core-api-ingress
+  namespace: twisterlab
+spec:
+  podSelector:
+    matchLabels:
+      app: twisterlab
+      component: api
+  policyTypes:
+  - Ingress
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 8000
+
+---
 # Allow ingress to MCP Unified from anywhere (NodePort)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

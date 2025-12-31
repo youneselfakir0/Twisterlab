@@ -10,6 +10,7 @@ from .agent import Agent
 
 # New unified architecture - Base classes
 from .base import (
+    CoreAgent,
     TwisterAgent,
     AgentCapability,
     AgentResponse,
@@ -28,6 +29,7 @@ __all__ = [
     # Legacy
     "Agent",
     # Base classes
+    "CoreAgent",
     "TwisterAgent",
     "AgentCapability",
     "AgentResponse",
