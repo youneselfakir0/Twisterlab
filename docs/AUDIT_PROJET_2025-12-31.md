@@ -277,16 +277,37 @@ f1098fc fix(grafana): correct datasource UID for V3.2 dashboard
 
 ---
 
-## 📋 FICHIERS À COMMITTER (Sprint 2)
+### 6.1 Couverture Actuelle (Après Sprint 3)
 
-```bash
-git add src/twisterlab/api/main.py
-git add src/twisterlab/agents/mcp/mcp_server_production.py
-git add k8s/security/network-policies.yaml
-git add k8s/dev/deployment-hotfix.yaml
-git add k8s/dev/patch-api-hotfix.yaml
-git add docs/AUDIT_PROJET_2025-12-31.md
-```
+| Catégorie | Fichiers | Tests | Status |
+|-----------|----------|-------|--------|
+| Registry | `test_agent_registry.py` | 5 | ✅ Complet |
+| Security | `test_security_middleware.py` | 4 | ✅ Complet |
+| Monitoring | `test_monitoring_agent_core.py` | 5 | ✅ Complet |
+| Unit Tests |  9 (était 6) | ~40 | ⬆️ Augmenté |
+
+**Total**: 31 tests unitaires passés + Intégration/E2E
+**Issues Corrigées**:
+- Fixé conflit nom `monitoring.py` -> `monitoring_utils.py`
+- Fixé `conftest.py` path configuration
+- Ajouté dépendances `docker`, `slowapi`
+
+---
+
+## 🛠️ 10. ACTIONS RECOMMANDÉES
+
+### ✅ Complétées (Sprints 1, 2, 3)
+- [x] Nettoyer infrastructure K8s
+- [x] Monitoring complet (Grafana/Prometheus)
+- [x] Sécurité renforcée (CORS, Rate Limit, NetPol)
+- [x] Augmenter couverture de tests unitaires (Core Agents)
+- [x] Résoudre dette technique (conflits de noms)
+
+### 🟡 Priorité Moyenne (Sprint 4)
+1. **Refactoriser TwisterAgent**
+   - Unifier les deux définitions de `TwisterAgent` (`agents/base` vs `agents/core/base`)
+   - Éviter la confusion subie lors du Sprint 3
+
 
 ---
 

@@ -1,4 +1,4 @@
-from twisterlab.monitoring import register_standard_metrics
+from twisterlab.monitoring_utils import register_standard_metrics
 
 
 def test_register_standard_metrics_idempotent():

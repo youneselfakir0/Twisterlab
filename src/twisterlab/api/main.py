@@ -61,8 +61,7 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
     # Register monitoring metrics in a guarded way
-    try:
-        from twisterlab.monitoring import register_with_app
+        from twisterlab.monitoring_utils import register_with_app
 
         register_with_app(app)
     except Exception:

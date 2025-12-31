@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from twisterlab.monitoring import get_metric_values
+from twisterlab.monitoring_utils import get_metric_values
 
 router = APIRouter()
 
