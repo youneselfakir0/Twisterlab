@@ -5,7 +5,6 @@ Uses NLP to determine text sentiment (Positive, Negative, Neutral).
 """
 
 from typing import Any, Dict, List, Optional
-import time
 
 from twisterlab.agents.core.base import (
     TwisterAgent, 

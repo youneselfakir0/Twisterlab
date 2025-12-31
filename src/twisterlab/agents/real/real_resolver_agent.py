@@ -2,7 +2,7 @@
 Modernized RealResolverAgent
 """
 
-from typing import Any, Dict, List, Optional
+from typing import List
 from twisterlab.agents.core.base import (
     TwisterAgent, 
     AgentCapability, 

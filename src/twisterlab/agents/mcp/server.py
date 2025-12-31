@@ -24,6 +24,8 @@ from twisterlab.agents.real.real_classifier_agent import RealClassifierAgent
 from twisterlab.agents.real.real_resolver_agent import RealResolverAgent
 from twisterlab.agents.real.real_backup_agent import RealBackupAgent
 from twisterlab.agents.real.real_code_review_agent import RealCodeReviewAgent
+from twisterlab.agents.real.real_desktop_commander_agent import RealDesktopCommanderAgent
+from twisterlab.agents.real.browser_agent import BrowserAgent
 from .router import AgentRegistry, ToolRouter
 
 logger = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ MCP_VERSION = "2024-11-05"
 class UnifiedMCPServer:
     """
     Unified MCP server for TwisterLab.
-
+    
     Exposes all agents via a single MCP endpoint using stdio transport.
 
     Features:
@@ -51,7 +53,7 @@ class UnifiedMCPServer:
 
     def __init__(self, name: str = "twisterlab"):
         self.name = name
-        self.version = "2.0.0"
+        self.version = "2.1.1-dev"
 
         # Initialize registries
         self._agent_registry = AgentRegistry()
@@ -74,6 +76,10 @@ class UnifiedMCPServer:
         self._agent_registry.register(RealResolverAgent)
         self._agent_registry.register(RealBackupAgent)
         self._agent_registry.register(RealCodeReviewAgent)
+        
+        # Desktop & Browser Agents
+        self._agent_registry.register(RealDesktopCommanderAgent)
+        self._agent_registry.register(BrowserAgent)
 
         # Build tool router
         self._tool_router = ToolRouter(self._agent_registry)

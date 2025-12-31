@@ -1,57 +1,88 @@
-from typing import Optional, Dict, Any
+"""
+Browser automation agent.
 
-from fastapi import APIRouter
-from twisterlab.agents.base import TwisterAgent
+Performs web scraping and interaction tasks using a simulated browser for the demo
+or a real headless browser in production.
+"""
 
-router = APIRouter()
+from __future__ import annotations
+
+import logging
+from typing import List
+
+from twisterlab.agents.core.base import (
+    TwisterAgent,
+    AgentCapability,
+    AgentResponse,
+    CapabilityType,
+    CapabilityParam,
+    ParamType,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class BrowserAgent(TwisterAgent):
-    def __init__(self, agent_id: Optional[str] = None):
-        # Initialize with TwisterAgent to get proper base functionality
-        super().__init__(
-            name="browser",
-            display_name="Browser Agent",
-            description="Performs browser automation and web scraping tasks",
-            role="browser",
-            tools=[{"type": "function", "function": {"name": "create_browser_tool"}}],
+    """
+    Performs browser automation and web scraping.
+    """
+
+    @property
+    def name(self) -> str:
+        return "browser"
+
+    @property
+    def description(self) -> str:
+        return "Performs browser automation and web scraping tasks"
+
+    def get_capabilities(self) -> List[AgentCapability]:
+        return [
+            AgentCapability(
+                name="browse",
+                description="Browse a URL and return its content",
+                handler="handle_browse",
+                capability_type=CapabilityType.ACTION,
+                params=[
+                    CapabilityParam(
+                        "url",
+                        ParamType.STRING,
+                        "URL to visit",
+                    ),
+                    CapabilityParam(
+                        "screenshot",
+                        ParamType.BOOLEAN,
+                        "Take a screenshot",
+                        required=False,
+                        default=True,
+                    ),
+                ],
+                tags=["web", "scraping", "browser"],
+            )
+        ]
+
+    async def handle_browse(self, url: str, screenshot: bool = True) -> AgentResponse:
+        """Browse a URL."""
+        if not url.startswith("http"):
+            return AgentResponse(success=False, error="Invalid URL")
+
+        # Simulation/Stub logic for now, or use real implementation if available
+        # In a real scenario, this would import playwright logic
+        
+        logger.info(f"Browsing: {url} (screenshot={screenshot})")
+        
+        snapshots = []
+        if screenshot:
+            snapshots = ["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA"]
+
+        return AgentResponse(
+            success=True,
+            data={
+                "url": url,
+                "title": "Simulated Page Title",
+                "content": f"Content from {url}",
+                "snapshots": snapshots,
+            },
         )
-        # agent_id is optional for backward compatibility
-        if agent_id:
-            self.agent_id = agent_id
-
-    def execute_tool(self, tool_name: str, args: dict) -> dict:
-        # Minimal stub implementation for tests: respond to 'create_browser_tool'
-        if tool_name != "create_browser_tool":
-            return {"status": "error", "message": "Unknown tool"}
-
-        target_url = args.get("target_url") if args else None
-        if (
-            not target_url
-            or not isinstance(target_url, str)
-            or not target_url.startswith("http")
-        ):
-            return {"status": "error", "message": "Invalid URL provided"}
-
-        # Simulate page load and snapshot capture
-        snapshots = [
-            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA"
-        ]  # fake base64
-        llm_summary = "Page looks fine."
-
-        return {
-            "status": "success",
-            "tool_name": "browser_scraper",
-            "page_loaded": True,
-            "snapshots": snapshots,
-            "llm_summary": llm_summary,
-        }
 
 
-@router.post("/api/v1/mcp/create_browser_tool")
-async def create_browser_tool(tool_name: str, target_url: str, llm_backend: str):
-    agent = BrowserAgent()
-    # Provide simple wrapper to match the endpoint behavior
-    return agent.execute_tool(
-        tool_name, {"target_url": target_url, "llm_backend": llm_backend}
-    )
+__all__ = ["BrowserAgent"]

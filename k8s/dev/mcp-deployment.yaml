@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-unified
+  namespace: twisterlab-dev
+  labels:
+    app: mcp-unified
+    env: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-unified
+      env: dev
+  template:
+    metadata:
+      labels:
+        app: mcp-unified
+        env: dev
+    spec:
+      containers:
+      - name: mcp-unified
+        image: twisterlab/mcp-unified:dev
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: REDIS_URL
+          value: "redis://redis:6379"
+        - name: DATABASE_URL
+          value: "postgresql+asyncpg://twisterlab:demo_password@postgres:5432/twisterlab"
+        - name: MCP_LOG_LEVEL
+          value: "DEBUG"
+        - name: PORT
+          value: "8080"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-unified
+  namespace: twisterlab-dev
+spec:
+  type: NodePort
+  ports:
+  - port: 8080
+    targetPort: 8080
+    nodePort: 31080
+    name: http
+  selector:
+    app: mcp-unified
+    env: dev

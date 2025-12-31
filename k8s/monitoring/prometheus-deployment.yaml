@@ -32,14 +32,23 @@ data:
 
     # Scrape configurations
     scrape_configs:
-      # TwisterLab API - Direct pod scraping (includes Agent & GPU metrics)
+      # TwisterLab API - Service scraping
       - job_name: 'twisterlab-api'
         static_configs:
-          - targets: ['192.168.0.30:30000', '192.168.0.30:30001']
+          - targets: ['twisterlab-unified-api.twisterlab.svc.cluster.local:8000']
             labels:
               service: twisterlab-api
               namespace: twisterlab
               component: backend-gpu
+
+      # MCP Unified Agents - Service scraping
+      - job_name: 'mcp-unified'
+        static_configs:
+          - targets: ['mcp-unified.twisterlab.svc.cluster.local:8080']
+            labels:
+              service: mcp-unified
+              namespace: twisterlab
+              component: agents-core
 
       # Physical Host Infrastructure (Material Metrics)
       - job_name: 'node-exporter'

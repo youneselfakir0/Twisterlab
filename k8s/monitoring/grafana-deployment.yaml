@@ -86,7 +86,10 @@ spec:
               mountPath: /etc/grafana/provisioning/dashboards
               readOnly: true
             - name: dashboard-master
-              mountPath: /var/lib/grafana/dashboards
+              mountPath: /var/lib/grafana/dashboards/master
+              readOnly: true
+            - name: dashboard-unified
+              mountPath: /var/lib/grafana/dashboards/unified
               readOnly: true
       volumes:
         - name: datasources
@@ -98,6 +101,9 @@ spec:
         - name: dashboard-master
           configMap:
             name: grafana-dashboard-master
+        - name: dashboard-unified
+          configMap:
+            name: grafana-dashboard-unified
 
 ---
 # Service: Grafana
