@@ -77,15 +77,21 @@ data:
             target_label: __metrics_path__
             replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
 
-      # PostgreSQL Monitoring
+      # PostgreSQL Monitoring (via postgres-exporter)
       - job_name: 'postgres'
         static_configs:
-          - targets: ['postgres.twisterlab:5432']
+          - targets: ['postgres-exporter.twisterlab.svc.cluster.local:9187']
+            labels:
+              service: postgres
+              exporter: postgres-exporter
 
-      # Redis Monitoring
+      # Redis Monitoring (via redis-exporter)
       - job_name: 'redis'
         static_configs:
-          - targets: ['redis.twisterlab:6379']
+          - targets: ['redis-exporter.twisterlab.svc.cluster.local:9121']
+            labels:
+              service: redis
+              exporter: redis-exporter
 
       # Prometheus self-monitoring
       - job_name: 'prometheus'
