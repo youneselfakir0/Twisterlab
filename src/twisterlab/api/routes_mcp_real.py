@@ -32,6 +32,7 @@ from twisterlab.agents.real.real_sentiment_analyzer_agent import (
     SentimentAnalyzerAgent,
 )
 from twisterlab.agents.real.real_sync_agent import RealSyncAgent
+from twisterlab.agents.real.browser_agent import RealBrowserAgent
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -72,10 +73,19 @@ async def list_autonomous_agents() -> MCPResponse:
     """
     try:
         agents_data = {
-            "version": "2.0.0",
-            "total": 8,
+            "version": "2.1.0",
+            "total": 9,
             "base_class": "twisterlab.agents.base.TwisterAgent",
             "agents": [
+                {
+                    "name": "RealBrowserAgent",
+                    "module": "twisterlab.agents.real.browser_agent",
+                    "file": "src/twisterlab/agents/real/browser_agent.py",
+                    "mcp_tool": "browse_web",
+                    "description": "Real web browsing and scraping using Playwright",
+                    "capabilities": ["browse", "screenshot", "scrape"],
+                    "status": "operational",
+                },
                 {
                     "name": "RealMonitoringAgent",
                     "module": "twisterlab.agents.real.real_monitoring_agent",
@@ -296,6 +306,15 @@ class ExecuteCommandRequest(BaseModel):
     args: Optional[List[str]] = Field(None, description="Optional command arguments")
     target: Optional[str] = Field(
         None, description="Target for network commands (IP/hostname)"
+    )
+
+
+class BrowseWebRequest(BaseModel):
+    """Input model for browse_web endpoint."""
+
+    url: str = Field(..., description="URL to visit (http/https)")
+    screenshot: Optional[bool] = Field(
+        True, description="Take a screenshot of the page"
     )
 
 
@@ -815,7 +834,7 @@ async def sync_cache_db(request: SyncCacheDBRequest) -> MCPResponse:
             )
 
         # Extract sync data
-        sync_data = result  # The result is already the sync data dict
+        sync_data = result
 
         logger.info(
             f"✅ Sync complete: {request.operation} "
@@ -1042,3 +1061,38 @@ async def mcp_health() -> Dict[str, Any]:
         ],
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+# ============================================================================
+# BROWSER - Web Automation
+# ============================================================================
+
+
+@router.post("/browse_web", response_model=MCPResponse)
+async def browse_web(request: BrowseWebRequest) -> MCPResponse:
+    """
+    Browse a web page using RealBrowserAgent (Playwright).
+    
+    **Input**:
+    - `url`: URL to visit
+    - `screenshot`: Take screenshot (default: true)
+    
+    **Output**:
+    - Page title, content preview, screenshot (base64)
+    """
+    try:
+        logger.info(f"🌐 Browsing web: {request.url}")
+        
+        agent = RealBrowserAgent()
+        result = await agent.execute(
+            {"operation": "browse", "url": request.url, "screenshot": request.screenshot}
+        )
+        
+        if not result.success:
+             return MCPResponse(status="error", error=result.error)
+             
+        return MCPResponse(status="ok", data=result.data)
+
+    except Exception as e:
+        logger.error(f"Browse error: {e}", exc_info=True)
+        return MCPResponse(status="error", error=str(e))

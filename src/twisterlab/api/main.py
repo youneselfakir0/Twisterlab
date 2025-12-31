@@ -19,6 +19,7 @@ except Exception:  # pragma: no cover - optional dependency
     FastAPIInstrumentor = None
 
 from .routes import agents, browser, mcp, system
+from . import routes_mcp_real
 
 
 @asynccontextmanager
@@ -193,6 +194,7 @@ logger.info(f"✅ Security Middleware ENABLED with limit {RATE_LIMIT} req/min")
 app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
 app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])
+app.include_router(routes_mcp_real.router, prefix="/api/v1/mcp/tools", tags=["mcp-tools"])
 app.include_router(browser.router, prefix="/api/v1/browser", tags=["browser"])
 
 
