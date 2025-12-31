@@ -1,7 +1,7 @@
 # Grafana Deployment with MCP Dashboard
 # TwisterLab v3.2.0 - Phase 3.5
 # 
-# Access UI: http://192.168.0.30:30091
+# Access UI: http://192.168.0.30:30300
 # User: admin / admin
 
 ---
@@ -19,10 +19,12 @@ data:
         type: prometheus
         access: proxy
         orgId: 1
-        url: http://prometheus:9090
+        url: http://prometheus.monitoring.svc.cluster.local:9090
         isDefault: true
         version: 1
-        editable: false
+        editable: true
+        jsonData:
+          timeInterval: "5s"
 
 ---
 # ConfigMap: Grafana Dashboards Provisioning
@@ -35,16 +37,24 @@ data:
   dashboards.yaml: |
     apiVersion: 1
     providers:
-      - name: 'TwisterLab'
+      - name: 'TwisterLab Master'
         orgId: 1
-        folder: ''
+        folder: 'TwisterLab'
         type: file
         disableDeletion: false
         editable: true
+        updateIntervalSeconds: 10
         options:
-          path: /var/lib/grafana/dashboards
-
----
+          path: /var/lib/grafana/dashboards/master
+      - name: 'TwisterLab Unified V3.2'
+        orgId: 1
+        folder: 'TwisterLab'
+        type: file
+        disableDeletion: false
+        editable: true
+        updateIntervalSeconds: 10
+        options:
+          path: /var/lib/grafana/dashboards/unified
 
 ---
 # Deployment: Grafana
@@ -64,25 +74,52 @@ spec:
     metadata:
       labels:
         app: grafana
+      annotations:
+        # Force restart when config changes
+        checksum/config: "v3.2.1-{{ now | unixEpoch }}"
     spec:
+      securityContext:
+        fsGroup: 472
+        runAsUser: 472
       containers:
         - name: grafana
-          image: grafana/grafana:9.5.15
+          image: grafana/grafana:10.2.0
           ports:
             - containerPort: 3000
               name: http
+          env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "admin"
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_SERVER_ROOT_URL
+              value: "http://192.168.0.30:30300"
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: "/var/lib/grafana/dashboards/unified/twisterlab-unified.json"
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 200m
               memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
           volumeMounts:
             - name: datasources
               mountPath: /etc/grafana/provisioning/datasources
               readOnly: true
-            - name: dashboards
+            - name: dashboards-provisioning
               mountPath: /etc/grafana/provisioning/dashboards
               readOnly: true
             - name: dashboard-master
@@ -91,11 +128,13 @@ spec:
             - name: dashboard-unified
               mountPath: /var/lib/grafana/dashboards/unified
               readOnly: true
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
       volumes:
         - name: datasources
           configMap:
             name: grafana-datasources
-        - name: dashboards
+        - name: dashboards-provisioning
           configMap:
             name: grafana-dashboards
         - name: dashboard-master
@@ -104,9 +143,11 @@ spec:
         - name: dashboard-unified
           configMap:
             name: grafana-dashboard-unified
+        - name: grafana-storage
+          emptyDir: {}
 
 ---
-# Service: Grafana
+# Service: Grafana (NodePort 30300)
 apiVersion: v1
 kind: Service
 metadata:

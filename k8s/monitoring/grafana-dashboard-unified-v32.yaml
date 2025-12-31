@@ -11,142 +11,265 @@ data:
       "annotations": { "list": [] },
       "editable": true,
       "fiscalYearStartMonth": 0,
-      "graphTooltip": 0,
+      "graphTooltip": 1,
       "id": null,
       "links": [],
-      "liveNow": false,
+      "liveNow": true,
       "panels": [
         {
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
           "id": 1,
-          "title": "CORE INFRASTRUCTURE HEALTH",
+          "title": "🎯 CORE INFRASTRUCTURE HEALTH",
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { 
+            "defaults": { 
+              "color": { "mode": "thresholds" }, 
+              "mappings": [
+                { "options": { "0": { "color": "red", "index": 0, "text": "DOWN" }, "1": { "color": "green", "index": 1, "text": "UP" } }, "type": "value" }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } 
+            } 
+          },
           "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
           "id": 2,
-          "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } },
+          "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "textMode": "auto" },
           "targets": [{ "expr": "up{job=\"mcp-unified\"}", "refId": "A" }],
-          "title": "MCP AGENTS UP",
+          "title": "🤖 MCP AGENTS",
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { 
+            "defaults": { 
+              "color": { "mode": "thresholds" }, 
+              "mappings": [
+                { "options": { "0": { "color": "red", "index": 0, "text": "DOWN" }, "1": { "color": "green", "index": 1, "text": "UP" } }, "type": "value" }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } 
+            } 
+          },
           "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
           "id": 3,
-          "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
-          "targets": [{ "expr": "count(container_start_time_seconds{namespace=\"twisterlab\",container=\"postgres\"})", "refId": "A" }],
-          "title": "POSTGRESQL DB",
+          "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+          "targets": [{ "expr": "up{job=\"twisterlab-api\"}", "refId": "A" }],
+          "title": "🚀 API SERVER",
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { 
+            "defaults": { 
+              "color": { "mode": "thresholds" }, 
+              "mappings": [
+                { "options": { "0": { "color": "red", "index": 0, "text": "DOWN" }, "1": { "color": "green", "index": 1, "text": "UP" } }, "type": "value" }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } 
+            } 
+          },
           "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
           "id": 4,
-          "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
-          "targets": [{ "expr": "count(container_start_time_seconds{namespace=\"twisterlab\",container=\"redis\"})", "refId": "A" }],
-          "title": "REDIS CACHE",
+          "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+          "targets": [{ "expr": "up{job=\"node-exporter\"}", "refId": "A" }],
+          "title": "🖥️ NODE EXPORTER",
           "type": "stat"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { 
+            "defaults": { 
+              "color": { "mode": "thresholds" }, 
+              "mappings": [
+                { "options": { "0": { "color": "red", "index": 0, "text": "DOWN" }, "1": { "color": "green", "index": 1, "text": "UP" } }, "type": "value" }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } 
+            } 
+          },
           "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
           "id": 5,
-          "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
           "targets": [{ "expr": "up{job=\"prometheus\"}", "refId": "A" }],
-          "title": "PROMETHEUS SYNC",
+          "title": "📊 PROMETHEUS",
           "type": "stat"
         },
         {
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
-          "id": 100,
-          "title": "MCP AGENT PERFORMANCE (V3.2 LIVE)",
+          "id": 10,
+          "title": "📈 REQUEST METRICS",
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] } } },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { 
+            "defaults": { 
+              "color": { "mode": "palette-classic" }, 
+              "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "opacity", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, 
+              "mappings": [], 
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] },
+              "unit": "reqps"
+            } 
+          },
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
-          "id": 101,
-          "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
-          "targets": [{ "expr": "sum(rate(agent_requests_total[5m])) by (method)", "legendFormat": "{{method}}", "refId": "A" }],
-          "title": "Agent Request Rate (RPM)",
+          "id": 11,
+          "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+          "targets": [
+            { "expr": "sum(rate(http_requests_total[5m])) by (handler)", "legendFormat": "{{handler}}", "refId": "A" },
+            { "expr": "sum(rate(prometheus_http_requests_total[5m]))", "legendFormat": "Prometheus", "refId": "B" }
+          ],
+          "title": "📡 HTTP Request Rate",
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
-          "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "gradientMode": "none", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "auto", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 80 }] } }, "unit": "s" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { 
+            "defaults": { 
+              "color": { "mode": "palette-classic" }, 
+              "custom": { "axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "opacity", "hideFrom": { "legend": false, "tooltip": false, "viz": false }, "lineInterpolation": "smooth", "lineWidth": 2, "pointSize": 5, "scaleDistribution": { "type": "linear" }, "showPoints": "never", "spanNulls": false, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }, 
+              "mappings": [], 
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 1 }] },
+              "unit": "s"
+            } 
+          },
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
-          "id": 102,
-          "options": { "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
-          "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(agent_execution_time_seconds_bucket[5m])) by (le, method))", "legendFormat": "{{method}} p95", "refId": "A" }],
-          "title": "Agent Latency (p95)",
+          "id": 12,
+          "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, handler))", "legendFormat": "p95 {{handler}}", "refId": "A" },
+            { "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, handler))", "legendFormat": "p50 {{handler}}", "refId": "B" }
+          ],
+          "title": "⏱️ Request Latency",
           "type": "timeseries"
         },
         {
           "collapsed": false,
           "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
-          "id": 6,
-          "title": "INFRASTRUCTURE RESOURCE CONSUMPTION",
+          "id": 20,
+          "title": "💻 INFRASTRUCTURE RESOURCES",
           "type": "row"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
-              "custom": { "fillOpacity": 10, "showPoints": "never" },
-              "unit": "percentunit"
+              "custom": { "fillOpacity": 20, "showPoints": "never", "lineWidth": 2, "gradientMode": "opacity" },
+              "unit": "percentunit",
+              "max": 1
             }
           },
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
-          "id": 7,
+          "id": 21,
           "options": {
-            "legend": { "displayMode": "list", "placement": "bottom" }
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
           },
           "targets": [
             { "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"twisterlab\",container!=\"\"}[5m])) by (pod)", "legendFormat": "{{pod}}", "refId": "A" }
           ],
-          "title": "CPU Usage (per Pod)",
+          "title": "🔥 CPU Usage (per Pod)",
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "fieldConfig": {
             "defaults": {
               "color": { "mode": "palette-classic" },
+              "custom": { "fillOpacity": 20, "showPoints": "never", "lineWidth": 2, "gradientMode": "opacity" },
               "unit": "bytes"
             }
           },
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
-          "id": 8,
+          "id": 22,
           "options": {
-            "legend": { "displayMode": "list", "placement": "bottom" }
+            "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] }
           },
           "targets": [
             { "expr": "sum(container_memory_usage_bytes{namespace=\"twisterlab\",container!=\"\"}) by (pod)", "legendFormat": "{{pod}}", "refId": "A" }
           ],
-          "title": "Memory Usage (per Pod)",
+          "title": "🧠 Memory Usage (per Pod)",
           "type": "timeseries"
+        },
+        {
+          "collapsed": false,
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+          "id": 30,
+          "title": "🖥️ NODE METRICS",
+          "type": "row"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] },
+              "unit": "percent",
+              "max": 100
+            }
+          },
+          "gridPos": { "h": 6, "w": 8, "x": 0, "y": 24 },
+          "id": 31,
+          "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true },
+          "targets": [
+            { "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "refId": "A" }
+          ],
+          "title": "🔥 Node CPU %",
+          "type": "gauge"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] },
+              "unit": "percent",
+              "max": 100
+            }
+          },
+          "gridPos": { "h": 6, "w": 8, "x": 8, "y": 24 },
+          "id": 32,
+          "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true },
+          "targets": [
+            { "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "refId": "A" }
+          ],
+          "title": "🧠 Node Memory %",
+          "type": "gauge"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] },
+              "unit": "percent",
+              "max": 100
+            }
+          },
+          "gridPos": { "h": 6, "w": 8, "x": 16, "y": 24 },
+          "id": 33,
+          "options": { "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true },
+          "targets": [
+            { "expr": "(1 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})) * 100", "refId": "A" }
+          ],
+          "title": "💾 Node Disk %",
+          "type": "gauge"
         }
       ],
-      "refresh": "5s",
+      "refresh": "10s",
       "schemaVersion": 38,
       "style": "dark",
       "tags": ["twisterlab", "unified", "production", "v3.2"],
       "templating": { "list": [] },
       "time": { "from": "now-15m", "to": "now" },
-      "timepicker": {},
-      "timezone": "",
+      "timepicker": {
+        "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h"],
+        "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+      },
+      "timezone": "browser",
       "title": "TwisterLab Unified Control V3.2",
-      "uid": "twisterlab-unified",
-      "version": 2,
+      "uid": "twisterlab-unified-v32",
+      "version": 3,
       "weekStart": ""
     }
