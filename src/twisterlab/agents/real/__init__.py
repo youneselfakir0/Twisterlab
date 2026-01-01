@@ -1,5 +1,5 @@
 """Real agents package."""
 
-from .browser_agent import BrowserAgent  # noqa: F401
+from .browser_agent import RealBrowserAgent  # noqa: F401
 
-__all__ = ["BrowserAgent"]
+__all__ = ["RealBrowserAgent"]

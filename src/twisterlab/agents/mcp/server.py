@@ -1,264 +1,106 @@
-"""
-Unified MCP Server
-
-Single MCP server that exposes all TwisterLab agents via the MCP protocol.
-This is the main entry point for IDE integrations (Continue, Claude Desktop).
-"""
-
-from __future__ import annotations
-
 import asyncio
 import json
 import logging
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
-from twisterlab.agents.core import (
-    MonitoringAgent,
-    MaestroAgent,
-    DatabaseAgent,
-    CacheAgent,
-)
-from twisterlab.agents.real.real_sentiment_analyzer_agent import SentimentAnalyzerAgent
-from twisterlab.agents.real.real_classifier_agent import RealClassifierAgent
-from twisterlab.agents.real.real_resolver_agent import RealResolverAgent
-from twisterlab.agents.real.real_backup_agent import RealBackupAgent
-from twisterlab.agents.real.real_code_review_agent import RealCodeReviewAgent
-from twisterlab.agents.real.real_desktop_commander_agent import RealDesktopCommanderAgent
-from twisterlab.agents.real.browser_agent import BrowserAgent
-from .router import AgentRegistry, ToolRouter
+# Check imports gracefully for local dev where 'mcp' might not be installed yet
+try:
+    from mcp.server import Server
+    from mcp.server.stdio import stdio_server
+    import mcp.types as types
+except ImportError:
+    # Fallback mock for basic syntax checking if lib missing
+    print("MCP SDK missing. Install with 'pip install mcp'", file=sys.stderr)
+    sys.exit(1)
 
-logger = logging.getLogger(__name__)
+from twisterlab.agents.real.browser_agent import RealBrowserAgent
+from twisterlab.agents.real.real_monitoring_agent import RealMonitoringAgent
 
-# MCP Protocol version
-MCP_VERSION = "2024-11-05"
+# Configure logging to stderr to keep stdout clean for JSON-RPC
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+logger = logging.getLogger("twisterlab-mcp")
 
+app = Server("twisterlab-mcp")
 
-class UnifiedMCPServer:
-    """
-    Unified MCP server for TwisterLab.
-    
-    Exposes all agents via a single MCP endpoint using stdio transport.
-
-    Features:
-    - Auto-discovery of all registered agents
-    - Tool routing to correct agent
-    - Health monitoring
-    - Graceful shutdown
-
-    Usage:
-        server = UnifiedMCPServer()
-        await server.run()
-    """
-
-    def __init__(self, name: str = "twisterlab"):
-        self.name = name
-        self.version = "2.1.1-dev"
-
-        # Initialize registries
-        self._agent_registry = AgentRegistry()
-        self._tool_router: Optional[ToolRouter] = None
-        self._running = False
-
-        # Register default agents
-        self._register_default_agents()
-
-    def _register_default_agents(self) -> None:
-        """Register all default TwisterLab agents."""
-        self._agent_registry.register(MonitoringAgent)
-        self._agent_registry.register(MaestroAgent)
-        self._agent_registry.register(DatabaseAgent)
-        self._agent_registry.register(CacheAgent)
-        
-        # New Real Agents
-        self._agent_registry.register(SentimentAnalyzerAgent)
-        self._agent_registry.register(RealClassifierAgent)
-        self._agent_registry.register(RealResolverAgent)
-        self._agent_registry.register(RealBackupAgent)
-        self._agent_registry.register(RealCodeReviewAgent)
-        
-        # Desktop & Browser Agents
-        self._agent_registry.register(RealDesktopCommanderAgent)
-        self._agent_registry.register(BrowserAgent)
-
-        # Build tool router
-        self._tool_router = ToolRouter(self._agent_registry)
-
-        logger.info(
-            f"Registered {len(self._agent_registry.list_agents())} agents "
-            f"with {len(self._tool_router.list_tools())} tools"
-        )
-
-    def get_server_info(self) -> Dict[str, Any]:
-        """Get MCP server info for initialize response."""
-        return {
-            "protocolVersion": MCP_VERSION,
-            "serverInfo": {
-                "name": self.name,
-                "version": self.version,
-            },
-            "capabilities": {
-                "tools": {
-                    "listChanged": True,
+@app.list_tools()
+async def list_tools() -> list[types.Tool]:
+    """List available tools."""
+    return [
+        types.Tool(
+            name="browse_web",
+            description="Navigate to a website using a real headless browser. Returns content and screenshot.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL to visit"},
+                    "screenshot": {"type": "boolean", "description": "Capture screenshot", "default": True}
                 },
-                "resources": {
-                    "subscribe": False,
-                    "listChanged": False,
-                },
-                "prompts": {
-                    "listChanged": False,
-                },
-            },
-        }
-
-    async def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Handle an incoming MCP request.
-
-        Args:
-            request: JSON-RPC request
-
-        Returns:
-            JSON-RPC response
-        """
-        method = request.get("method", "")
-        params = request.get("params", {})
-        request_id = request.get("id", 0)
-
-        try:
-            if method == "initialize":
-                result = self.get_server_info()
-
-            elif method == "notifications/initialized":
-                # This is a notification, no response needed
-                return None
-
-            elif method == "tools/list":
-                result = {"tools": self._tool_router.list_tools()}
-
-            elif method == "tools/call":
-                tool_name = params.get("name", "")
-                arguments = params.get("arguments", {})
-                result = await self._tool_router.execute_tool(tool_name, arguments)
-
-            elif method == "resources/list":
-                result = {"resources": []}
-
-            elif method == "resources/templates/list":
-                # MCP spec: resource templates for dynamic resources
-                result = {"resourceTemplates": []}
-
-            elif method == "prompts/list":
-                result = {"prompts": []}
-
-            elif method == "ping":
-                result = {}
-
-            else:
-                return {
-                    "jsonrpc": "2.0",
-                    "id": request_id,
-                    "error": {"code": -32601, "message": f"Method not found: {method}"},
+                "required": ["url"]
+            }
+        ),
+        types.Tool(
+            name="monitor_system",
+            description="Check system health metrics (CPU, RAM, Docker).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "detailed": {"type": "boolean", "default": False}
                 }
-
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": result,
             }
+        )
+    ]
 
-        except Exception as e:
-            logger.exception(f"Error handling {method}")
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id or 0,
-                "error": {"code": -32603, "message": str(e)},
-            }
+@app.call_tool()
+async def call_tool(name: str, arguments: Any) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+    """Execute a tool."""
+    logger.info(f"Executing tool: {name} with args: {arguments}")
+    
+    if name == "browse_web":
+        url = arguments.get("url")
+        screenshot = arguments.get("screenshot", True)
+        
+        agent = RealBrowserAgent()
+        result = await agent.execute({
+            "operation": "browse",
+            "url": url,
+            "screenshot": screenshot
+        })
+        
+        content = []
+        if result.success:
+            # Add Text Summary
+            title = result.data.get("title", "No Title")
+            preview = result.data.get("content_preview", "")
+            text_msg = f"Title: {title}\nPreview: {preview}"
+            content.append(types.TextContent(type="text", text=text_msg))
+            
+            # Add Screenshots
+            snapshots = result.data.get("snapshots", [])
+            for snap in snapshots:
+                if isinstance(snap, str) and "base64," in snap:
+                    b64_data = snap.split("base64,")[1]
+                    content.append(types.ImageContent(type="image", data=b64_data, mimeType="image/png"))
+        else:
+            content.append(types.TextContent(type="text", text=f"Error: {result.error}"))
+            
+        return content
 
-    async def run(self) -> None:
-        """
-        Run the MCP server using stdio transport.
+    elif name == "monitor_system":
+        detailed = arguments.get("detailed", False)
+        agent = RealMonitoringAgent()
+        result = await agent.execute({
+            "operation": "health_check", 
+            "detailed": detailed
+        })
+        return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
 
-        Reads JSON-RPC requests from stdin and writes responses to stdout.
-        """
-        self._running = True
-        logger.info(f"Starting {self.name} MCP server v{self.version}")
-
-        # Use binary mode for Windows compatibility
-        stdin = sys.stdin.buffer if hasattr(sys.stdin, "buffer") else sys.stdin
-        stdout = sys.stdout.buffer if hasattr(sys.stdout, "buffer") else sys.stdout
-
-        try:
-            while self._running:
-                # Read line from stdin
-                line = await asyncio.get_event_loop().run_in_executor(
-                    None, stdin.readline
-                )
-
-                if not line:
-                    break
-
-                try:
-                    # Decode and parse
-                    if isinstance(line, bytes):
-                        line = line.decode("utf-8")
-
-                    request = json.loads(line.strip())
-
-                    # Handle request
-                    response = await self.handle_request(request)
-
-                    # Write response (skip for notifications)
-                    if response is not None:
-                        response_line = json.dumps(response) + "\n"
-                        if hasattr(stdout, "write"):
-                            if isinstance(stdout, type(sys.stdout.buffer)):
-                                stdout.write(response_line.encode("utf-8"))
-                            else:
-                                stdout.write(response_line)
-                            stdout.flush()
-
-                except json.JSONDecodeError as e:
-                    logger.error(f"Invalid JSON: {e}")
-                    error_response = {
-                        "jsonrpc": "2.0",
-                        "id": 0,
-                        "error": {"code": -32700, "message": "Parse error"},
-                    }
-                    response_line = json.dumps(error_response) + "\n"
-                    if hasattr(stdout, "write"):
-                        if isinstance(stdout, type(sys.stdout.buffer)):
-                            stdout.write(response_line.encode("utf-8"))
-                        else:
-                            stdout.write(response_line)
-                        stdout.flush()
-
-        except Exception:
-            logger.exception("Server error")
-        finally:
-            self._running = False
-            logger.info("MCP server stopped")
-
-    def stop(self) -> None:
-        """Stop the server."""
-        self._running = False
-
+    raise ValueError(f"Tool {name} not found")
 
 async def main():
-    """Entry point for running the unified MCP server."""
-    import os
-
-    # Configure logging
-    log_level = os.getenv("MCP_LOG_LEVEL", "INFO")
-    logging.basicConfig(
-        level=getattr(logging, log_level),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        stream=sys.stderr,  # Log to stderr to not interfere with MCP protocol
-    )
-
-    server = UnifiedMCPServer()
-    await server.run()
-
+    # Run the server using stdin/stdout
+    async with stdio_server() as (read_stream, write_stream):
+        await app.run(read_stream, write_stream, app.create_initialization_options())
 
 if __name__ == "__main__":
     asyncio.run(main())
