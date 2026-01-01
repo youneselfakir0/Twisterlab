@@ -214,3 +214,17 @@ class PostgresClient(DBClient):
         if self._pool:
             await self._pool.close()
             self._pool = None
+
+    # ABC Implementation Aliases
+    async def get_tables(self) -> List[str]:
+        return await self.list_tables()
+
+    async def get_stats(self) -> DBStats:
+        """Get basic DB stats from the pool."""
+        # Note: Getting real DB size requires a query like pg_database_size
+        return DBStats(
+            active_connections=self._pool.get_size() if self._pool else 0,
+            total_connections=self._pool.get_max_size() if self._pool else 0,
+            database_size="unknown", 
+            table_count=0 
+        )

@@ -32,12 +32,6 @@ class HealthCheckResponse(BaseModel):
     message: Optional[str] = None
 
 
-class TwisterLangMessage(BaseModel):
-    twisterlang_version: str
-    correlation_id: str
-    payload: Dict
-
-
 class ErrorResponse(BaseModel):
     detail: str
 

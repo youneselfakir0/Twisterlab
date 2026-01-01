@@ -292,6 +292,14 @@ class DockerSystemClient(SystemClient):
             self._client.close()
             self._client = None
 
+    # ABC Implementation Aliases
+    async def get_containers(self) -> List[ContainerInfo]:
+        return await self.list_containers()
+
+    async def get_container_logs(self, container: str, lines: int = 100) -> List[str]:
+        logs = await self.container_logs(container_id=container, tail=lines)
+        return logs.splitlines()
+
     # Additional utility methods
 
     async def get_system_info(self) -> Dict[str, Any]:

@@ -53,6 +53,11 @@ class LLMResponse:
     finish_reason: str = "stop"
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    @property
+    def content(self) -> str:
+        """Alias for text to be compatible with other interfaces."""
+        return self.text
+
 
 @dataclass
 class LLMMessage:

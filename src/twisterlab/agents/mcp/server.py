@@ -16,6 +16,7 @@ except ImportError:
 
 from twisterlab.agents.real.browser_agent import RealBrowserAgent
 from twisterlab.agents.real.real_monitoring_agent import RealMonitoringAgent
+from twisterlab.agents.real.real_code_review_agent import RealCodeReviewAgent
 
 # Configure logging to stderr to keep stdout clean for JSON-RPC
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
@@ -47,6 +48,18 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "detailed": {"type": "boolean", "default": False}
                 }
+            }
+        ),
+        types.Tool(
+            name="analyze_code",
+            description="Static analysis of code for quality and security issues.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "description": "Source code to analyze"},
+                    "language": {"type": "string", "default": "python"}
+                },
+                "required": ["code"]
             }
         )
     ]
@@ -94,6 +107,17 @@ async def call_tool(name: str, arguments: Any) -> list[types.TextContent | types
             "detailed": detailed
         })
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+
+    elif name == "analyze_code":
+        code = arguments.get("code")
+        language = arguments.get("language", "python")
+        agent = RealCodeReviewAgent()
+        result = await agent.execute({
+            "operation": "analyze_code",
+            "code": code,
+            "language": language
+        })
+        return [types.TextContent(type="text", text=json.dumps(result.data, indent=2))]
 
     raise ValueError(f"Tool {name} not found")
 

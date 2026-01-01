@@ -29,7 +29,6 @@ class MaestroAgent(CoreAgent):
     Provides capabilities for:
     - LLM chat and generation
     - Agent coordination
-    - TwisterLang parsing
     """
 
     @property
@@ -91,21 +90,7 @@ class MaestroAgent(CoreAgent):
                 ],
                 tags=["llm", "generate"],
             ),
-            # Orchestration
-            AgentCapability(
-                name="orchestrate",
-                description="Parse a TwisterLang command and route to appropriate agent",
-                handler="handle_orchestrate",
-                capability_type=CapabilityType.ACTION,
-                params=[
-                    CapabilityParam(
-                        "command",
-                        ParamType.STRING,
-                        "TwisterLang command to parse and execute",
-                    ),
-                ],
-                tags=["orchestration", "twisterlang"],
-            ),
+            # Orchestration (Simplified)
             AgentCapability(
                 name="list_agents",
                 description="List all available agents and their capabilities",
@@ -186,53 +171,6 @@ class MaestroAgent(CoreAgent):
             )
         except Exception as e:
             logger.exception("Generation failed")
-            return AgentResponse(success=False, error=str(e))
-
-    async def handle_orchestrate(self, command: str) -> AgentResponse:
-        """Parse and execute a TwisterLang command."""
-        try:
-            # Parse TwisterLang command
-            # Format: @agent.capability(param1=value1, param2=value2)
-            # Example: @monitoring.health_check()
-            # Example: @database.execute_query(sql="SELECT * FROM users")
-
-            import re
-
-            # Parse command
-            match = re.match(r"@(\w+)\.(\w+)\((.*)\)", command.strip(), re.DOTALL)
-
-            if not match:
-                return AgentResponse(
-                    success=False, error=f"Invalid TwisterLang command: {command}"
-                )
-
-            agent_name = match.group(1)
-            capability_name = match.group(2)
-            params_str = match.group(3)
-
-            # Parse parameters
-            params = {}
-            if params_str.strip():
-                # Simple key=value parsing
-                for part in params_str.split(","):
-                    if "=" in part:
-                        key, value = part.split("=", 1)
-                        key = key.strip()
-                        value = value.strip().strip("\"'")
-                        params[key] = value
-
-            return AgentResponse(
-                success=True,
-                data={
-                    "parsed": True,
-                    "agent": agent_name,
-                    "capability": capability_name,
-                    "params": params,
-                    "note": "Route to agent registry for execution",
-                },
-            )
-        except Exception as e:
-            logger.exception("Orchestration failed")
             return AgentResponse(success=False, error=str(e))
 
     async def handle_list_agents(self) -> AgentResponse:

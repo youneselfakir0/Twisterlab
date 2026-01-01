@@ -33,6 +33,7 @@ from twisterlab.agents.real.real_sentiment_analyzer_agent import (
 )
 from twisterlab.agents.real.real_sync_agent import RealSyncAgent
 from twisterlab.agents.real.browser_agent import RealBrowserAgent
+from twisterlab.agents.real.real_code_review_agent import RealCodeReviewAgent
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -84,6 +85,14 @@ async def list_autonomous_agents() -> MCPResponse:
                     "mcp_tool": "browse_web",
                     "description": "Real web browsing and scraping using Playwright",
                     "capabilities": ["browse", "screenshot", "scrape"],
+                    "status": "operational",
+                },
+                {
+                    "name": "RealCodeReviewAgent",
+                    "module": "twisterlab.agents.real.real_code_review_agent",
+                    "mcp_tool": "analyze_code",
+                    "description": "Analyze code for issues and security vulnerabilities",
+                    "capabilities": ["analyze_code", "security_scan"],
                     "status": "operational",
                 },
                 {
@@ -316,6 +325,11 @@ class BrowseWebRequest(BaseModel):
     screenshot: Optional[bool] = Field(
         True, description="Take a screenshot of the page"
     )
+
+class AnalyzeCodeRequest(BaseModel):
+    """Input model for analyze_code endpoint."""
+    code: str = Field(..., description="Code snippet to analyze")
+    language: str = Field("python", description="Programming language")
 
 
 # ============================================================================
@@ -1095,4 +1109,32 @@ async def browse_web(request: BrowseWebRequest) -> MCPResponse:
 
     except Exception as e:
         logger.error(f"Browse error: {e}", exc_info=True)
+        return MCPResponse(status="error", error=str(e))
+
+
+# ============================================================================
+# CODE ANALYSIS - Review & Security
+# ============================================================================
+
+
+@router.post("/analyze_code", response_model=MCPResponse)
+async def analyze_code(request: AnalyzeCodeRequest) -> MCPResponse:
+    """
+    Analyze code using RealCodeReviewAgent.
+    """
+    try:
+        logger.info(f"🧐 Analyzing code ({request.language})")
+        
+        agent = RealCodeReviewAgent()
+        result = await agent.execute(
+            {"operation": "analyze_code", "code": request.code, "language": request.language}
+        )
+        
+        if not result.success:
+             return MCPResponse(status="error", error=result.error)
+             
+        return MCPResponse(status="ok", data=result.data)
+
+    except Exception as e:
+        logger.error(f"Analysis error: {e}", exc_info=True)
         return MCPResponse(status="error", error=str(e))

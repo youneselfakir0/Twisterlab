@@ -7,7 +7,6 @@ from .index import (
     ErrorResponse,
     HealthCheckResponse,
     MetricsResponse,
-    TwisterLangMessage,
 )
 
 __all__ = [
@@ -19,5 +18,4 @@ __all__ = [
     "ErrorResponse",
     "HealthCheckResponse",
     "MetricsResponse",
-    "TwisterLangMessage",
 ]
