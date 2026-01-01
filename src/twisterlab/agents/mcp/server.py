@@ -17,6 +17,7 @@ except ImportError:
 from twisterlab.agents.real.browser_agent import RealBrowserAgent
 from twisterlab.agents.real.real_monitoring_agent import RealMonitoringAgent
 from twisterlab.agents.real.real_code_review_agent import RealCodeReviewAgent
+from twisterlab.agents.core.maestro_agent import MaestroAgent
 
 # Configure logging to stderr to keep stdout clean for JSON-RPC
 logging.basicConfig(stream=sys.stderr, level=logging.INFO)
@@ -60,6 +61,30 @@ async def list_tools() -> list[types.Tool]:
                     "language": {"type": "string", "default": "python"}
                 },
                 "required": ["code"]
+            }
+        ),
+        types.Tool(
+            name="ask_local_llm",
+            description="Chat with the local LLM (Ollama) via Maestro. Useful for private tasks or using specific models.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string", "description": "Message to send"},
+                    "model": {"type": "string", "default": "qwen3:8b", "description": "Local model to use"}
+                },
+                "required": ["message"]
+            }
+        ),
+        types.Tool(
+            name="analyze_content",
+            description="Use local LLM to analyze text, logs, or data patterns.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string", "description": "Text content to analyze"},
+                    "type": {"type": "string", "enum": ["general", "data", "logs", "security"], "default": "general"}
+                },
+                "required": ["content"]
             }
         )
     ]
@@ -118,6 +143,24 @@ async def call_tool(name: str, arguments: Any) -> list[types.TextContent | types
             "language": language
         })
         return [types.TextContent(type="text", text=json.dumps(result.data, indent=2))]
+
+    elif name == "ask_local_llm":
+        message = arguments.get("message")
+        model = arguments.get("model", "qwen3:8b")
+        agent = MaestroAgent()
+        result = await agent.execute({"operation": "chat", "message": message, "model": model})
+        return [types.TextContent(type="text", text=result.data.get("response", str(result)))]
+
+    elif name == "analyze_content":
+        content = arguments.get("content")
+        analysis_type = arguments.get("type", "general")
+        agent = MaestroAgent()
+        result = await agent.execute({
+            "operation": "analyze", 
+            "content": content, 
+            "analysis_type": analysis_type
+        })
+        return [types.TextContent(type="text", text=result.data.get("analysis", str(result)))]
 
     raise ValueError(f"Tool {name} not found")
 

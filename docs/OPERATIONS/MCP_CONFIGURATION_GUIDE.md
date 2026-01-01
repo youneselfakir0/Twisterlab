@@ -58,14 +58,22 @@ C'est la méthode la plus robuste ("Pro"), encapsulée dans le container Docker 
 
 ### 2. Continue IDE / VS Code
 
-Configuration dans `~/.continue/config.json`.
+Configuration dans `~/.continue/config.yaml` (**Format YAML requis**).
 
-```json
-{
-  "name": "TwisterLab",
-  "type": "command",
-  "command": "kubectl exec -i -n twisterlab deployment/twisterlab-api -- python -m twisterlab.agents.mcp.server"
-}
+```yaml
+mcpServers:
+  - name: TwisterLab
+    command: kubectl
+    args: 
+      - exec
+      - -i
+      - -n 
+      - twisterlab
+      - deployment/twisterlab-api
+      - --
+      - python
+      - -m
+      - twisterlab.agents.mcp.server
 ```
 
 ---

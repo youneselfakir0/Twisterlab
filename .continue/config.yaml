@@ -1,47 +1,35 @@
-name: TwisterLab Unified MCP v2.0
-version: 2.0.0
-schema: v1
-
 models:
-  - title: "Llama3.2 Fast (Cortex)"
+  - title: "Qwen 2.5 Coder (Ollama)"
     provider: ollama
-    model: "llama3.2:1b"
+    model: qwen2.5-coder:7b
     apiBase: "http://192.168.0.20:11434"
-  - title: "Qwen 3 (Cortex)"
+  - title: "Llama 3.2 (Ollama)"
     provider: ollama
-    model: "qwen3:8b"
-    apiBase: "http://192.168.0.20:11434"
-  - title: "DeepSeek R1 (Cortex)"
-    provider: ollama
-    model: "deepseek-r1:latest"
-    apiBase: "http://192.168.0.20:11434"
-  - title: "GPT OSS 120B"
-    provider: ollama
-    model: "gpt-oss-120b"
+    model: llama3.2:1b
     apiBase: "http://192.168.0.20:11434"
 
+# Configuration MCP (Mode Pro - Kubectl Exec)
 mcpServers:
-  "TwisterLab Unified MCP":
-    type: sse
-    url: http://192.168.0.30:30080/mcp
-
-systemMessage: |
-  TwisterLab MCP Tools
-  TwisterLab MCP Server with 21 tools across 4 agents.
-  - Monitoring: health_check, get_system_metrics, list_containers
-  - Maestro: chat, generate, orchestrate, list_agents, analyze
-  - Database: execute_query, list_tables, describe_table, db_health
-  - Cache: cache_get, cache_set, cache_delete, cache_keys, cache_stats
-  
-  Always check system health before diagnosing issues.
+  - name: TwisterLab
+    command: kubectl
+    args: 
+      - exec
+      - -i
+      - -n 
+      - twisterlab
+      - deployment/twisterlab-api
+      - --
+      - python
+      - -m
+      - twisterlab.agents.mcp.server
 
 tabAutocompleteModel:
-  title: "DeepSeek Code"
+  title: "Qwen 2.5 Coder"
   provider: ollama
-  model: "deepseek-r1:latest"
+  model: qwen2.5-coder:7b
   apiBase: "http://192.168.0.20:11434"
 
 customCommands:
   - name: audit
-    prompt: "Analyze code for security and performance issues"
-    description: "TwisterLab Audit"
+    prompt: "Analyze code for security and performance issues using TwisterLab Agents"
+    description: "Run TwisterLab Audit"
