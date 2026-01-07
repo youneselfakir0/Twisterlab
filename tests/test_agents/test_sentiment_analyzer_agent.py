@@ -19,129 +19,107 @@ class TestSentimentAnalyzerAgent:
     async def test_agent_initialization(self, agent):
         """Test agent initializes correctly."""
         assert agent.name == "sentiment-analyzer"
-        assert agent.display_name == "Sentiment Analyzer"
-        assert agent.model == "llama-3.2"
-        assert agent.temperature == 0.3
+        assert "sentiment" in agent.description.lower()
 
     async def test_positive_sentiment(self, agent):
         """Test detection of positive sentiment."""
-        result = await agent.execute("This is an excellent and amazing product! I love it!")
+        response = await agent.handle_analyze_sentiment(
+            "This is an excellent and amazing product! I love it!"
+        )
         
-        assert result["sentiment"] == "positive"
-        assert result["confidence"] > 0.5
-        assert "analyzed_text" in result
-        assert "error" not in result
+        assert response.success is True
+        assert response.data["sentiment"] == "positive"
+        assert response.data["confidence"] > 0.5
+        assert "text_length" in response.data
 
     async def test_negative_sentiment(self, agent):
         """Test detection of negative sentiment."""
-        result = await agent.execute("This is terrible and awful. I hate it completely.")
+        response = await agent.handle_analyze_sentiment(
+            "This is terrible and bad. I hate it completely."
+        )
         
-        assert result["sentiment"] == "negative"
-        assert result["confidence"] > 0.5
-        assert "analyzed_text" in result
+        assert response.success is True
+        assert response.data["sentiment"] == "negative"
+        assert response.data["confidence"] > 0.5
 
     async def test_neutral_sentiment(self, agent):
         """Test detection of neutral sentiment."""
-        result = await agent.execute("The product was delivered on Tuesday.")
+        response = await agent.handle_analyze_sentiment(
+            "The product was delivered on Tuesday."
+        )
         
-        assert result["sentiment"] == "neutral"
-        assert "confidence" in result
-        assert "analyzed_text" in result
+        assert response.success is True
+        assert response.data["sentiment"] == "neutral"
+        assert response.data["confidence"] == 0.5
 
     async def test_empty_text(self, agent):
         """Test handling of empty text."""
-        result = await agent.execute("")
+        response = await agent.handle_analyze_sentiment("")
         
-        assert "error" in result
-        assert result["sentiment"] == "neutral"
-        assert result["confidence"] == 0.0
+        assert response.success is True
+        assert response.data["sentiment"] == "neutral"
+        assert response.data["text_length"] == 0
 
     async def test_detailed_analysis(self, agent):
-        """Test detailed analysis mode."""
-        result = await agent.execute(
-            "This product is great and wonderful!",
-            context={"detailed": True}
+        """Test detailed mode returns keywords."""
+        response = await agent.handle_analyze_sentiment(
+            "This is great and excellent!",
+            detailed=True
         )
         
-        assert "details" in result
-        assert "positive_score" in result["details"]
-        assert "negative_score" in result["details"]
-        assert "neutral_score" in result["details"]
-        assert "detected_keywords" in result["details"]
+        assert response.success is True
+        assert "keywords" in response.data
+        assert "great" in response.data["keywords"]
+        assert "excellent" in response.data["keywords"]
 
-    async def test_french_text(self, agent):
-        """Test sentiment analysis with French text."""
-        result = await agent.execute("C'est g├⌐nial et super formidable!")
+    async def test_no_keywords_without_detailed(self, agent):
+        """Test keywords not returned without detailed flag."""
+        response = await agent.handle_analyze_sentiment(
+            "This is great and excellent!",
+            detailed=False
+        )
         
-        assert result["sentiment"] == "positive"
-        assert result["confidence"] > 0
-
-    async def test_multilingual_keywords(self, agent):
-        """Test that French keywords are detected."""
-        text = "C'est mauvais et catastrophique"
-        result = await agent.execute(text, context={"detailed": True})
-        
-        assert result["sentiment"] == "negative"
-        detected = result["details"]["detected_keywords"]["negative"]
-        assert any(kw in ["mauvais", "catastrophique"] for kw in detected)
-
-    async def test_long_text_truncation(self, agent):
-        """Test that long text is truncated in response."""
-        long_text = "excellent " * 50  # 450 chars
-        result = await agent.execute(long_text)
-        
-        assert len(result["analyzed_text"]) <= 103  # 100 + "..."
+        assert response.success is True
+        assert "keywords" not in response.data
 
     async def test_capabilities(self, agent):
-        """Test agent capabilities list."""
+        """Test agent has analyze_sentiment capability."""
         caps = agent.get_capabilities()
-        
-        assert "sentiment_analysis" in caps
-        assert "text_classification" in caps
-        assert "confidence_scoring" in caps
-        assert len(caps) >= 4
+        cap_names = [c.name for c in caps]
+        assert "analyze_sentiment" in cap_names
 
-    async def test_schema_export_microsoft(self, agent):
-        """Test Microsoft Agent Framework schema export."""
-        schema = agent.to_schema(format="microsoft")
+    async def test_capability_params(self, agent):
+        """Test capability has correct parameters."""
+        caps = agent.get_capabilities()
+        analyze_cap = next(c for c in caps if c.name == "analyze_sentiment")
         
-        # Check top-level structure
-        assert "agent_type" in schema
-        assert schema["agent_type"] == "SentimentAnalyzer"
-        assert "metadata" in schema
-        assert "input_schema" in schema
-        assert "output_schema" in schema
-        
-        # Check metadata
-        metadata = schema["metadata"]
-        assert "name" in metadata
-        assert metadata["name"] == "sentiment-analyzer"
-        assert "capabilities" in metadata
-        assert len(metadata["capabilities"]) >= 3
-
-    async def test_error_handling(self, agent):
-        """Test error handling for edge cases."""
-        # None as task should be handled gracefully
-        result = await agent.execute(None)
-        assert "error" in result or result["sentiment"] == "neutral"
+        param_names = [p.name for p in analyze_cap.params]
+        assert "text" in param_names
+        assert "detailed" in param_names
 
     async def test_mixed_sentiment(self, agent):
-        """Test text with mixed positive and negative words."""
-        result = await agent.execute(
-            "The product is great but the service is terrible.",
-            context={"detailed": True}
+        """Test text with both positive and negative words."""
+        response = await agent.handle_analyze_sentiment(
+            "This is great but also terrible",
+            detailed=True
         )
         
-        # Should detect both sentiment types
-        details = result["details"]
-        assert details["positive_score"] > 0
-        assert details["negative_score"] > 0
+        assert response.success is True
+        # Equal positive/negative should be neutral
+        assert response.data["sentiment"] == "neutral"
+        assert "great" in response.data["keywords"]
+        assert "terrible" in response.data["keywords"]
 
-    async def test_timestamp_format(self, agent):
-        """Test that timestamp is in ISO format."""
-        result = await agent.execute("Test text")
+    async def test_confidence_scaling(self, agent):
+        """Test confidence increases with more sentiment words."""
+        response1 = await agent.handle_analyze_sentiment("good")
+        response2 = await agent.handle_analyze_sentiment("good great excellent amazing")
         
-        assert "timestamp" in result
-        # Verify ISO format (contains 'T' and timezone)
-        assert "T" in result["timestamp"]
-        assert result["timestamp"].endswith("Z") or "+" in result["timestamp"]
+        assert response2.data["confidence"] > response1.data["confidence"]
+
+    async def test_case_insensitive(self, agent):
+        """Test sentiment detection is case insensitive."""
+        response = await agent.handle_analyze_sentiment("EXCELLENT AMAZING GREAT")
+        
+        assert response.success is True
+        assert response.data["sentiment"] == "positive"

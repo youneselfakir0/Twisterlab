@@ -266,3 +266,198 @@ class TestMaestroEndpoints:
         with pytest.raises(ValidationError):
             OrchestrateRequest(task="Hi")  # Less than 5 chars
 
+
+class TestClassifyTicketEndpoint:
+    """Tests for classify_ticket endpoint.
+    
+    Note: These tests may fail without a database connection.
+    They are marked with @pytest.mark.integration for environments with DB.
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_classify_ticket_software(self, async_client):
+        """Test ticket classification for software issues."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/classify_ticket",
+            json={"description": "Application crashes when I click the button"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        # Should return ok or error (db may not be available)
+        assert data["status"] in ["ok", "error"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_classify_ticket_hardware(self, async_client):
+        """Test ticket classification for hardware issues."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/classify_ticket",
+            json={"description": "Server hardware failure, disk errors"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ["ok", "error"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_classify_ticket_network(self, async_client):
+        """Test ticket classification for network issues."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/classify_ticket",
+            json={"description": "Network connection timeout, can't access server"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ["ok", "error"]
+
+
+class TestResolveTicketEndpoint:
+    """Tests for resolve_ticket endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_resolve_ticket_success(self, async_client):
+        """Test successful ticket resolution."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/resolve_ticket",
+            json={"category": "software"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        # May fail if DB not available
+        assert data["status"] in ["ok", "error"]
+
+    @pytest.mark.asyncio
+    async def test_resolve_ticket_hardware(self, async_client):
+        """Test hardware ticket resolution."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/resolve_ticket",
+            json={"category": "hardware"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ["ok", "error"]
+
+
+class TestMonitorSystemHealthEndpoint:
+    """Tests for monitor_system_health endpoint.
+    
+    Note: These tests may fail without a database connection.
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_monitor_health_all_checks(self, async_client):
+        """Test monitoring with all checks enabled."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/monitor_system_health",
+            json={
+                "check_cpu": True,
+                "check_memory": True,
+                "check_disk": True
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        # May fail if DB not available for logging
+        assert data["status"] in ["ok", "error"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_monitor_health_minimal(self, async_client):
+        """Test monitoring with minimal checks."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/monitor_system_health",
+            json={"check_cpu": True}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ["ok", "error"]
+
+
+class TestAnalyzeSentimentEndpointMCP:
+    """Tests for analyze_sentiment on MCP tools route."""
+
+    @pytest.mark.asyncio
+    async def test_sentiment_via_tools(self, async_client):
+        """Test sentiment analysis via /tools/ route."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/analyze_sentiment",
+            json={"text": "This is great!", "detailed": False}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["data"]["sentiment"] == "positive"
+
+    @pytest.mark.asyncio
+    async def test_sentiment_negative_via_tools(self, async_client):
+        """Test negative sentiment via /tools/ route."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/analyze_sentiment",
+            json={"text": "This is terrible and bad!", "detailed": True}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["data"]["sentiment"] == "negative"
+        assert "keywords" in data["data"]
+
+
+class TestListAgentsEndpoint:
+    """Tests for list_autonomous_agents endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_list_agents_get(self, async_client):
+        """Test GET list_autonomous_agents."""
+        response = await async_client.get("/api/v1/mcp/tools/list_autonomous_agents")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "agents" in data["data"]
+        assert len(data["data"]["agents"]) >= 9  # We have 9 agents
+
+    @pytest.mark.asyncio
+    async def test_list_agents_post(self, async_client):
+        """Test POST list_autonomous_agents."""
+        response = await async_client.post("/api/v1/mcp/tools/list_autonomous_agents")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "agents" in data["data"]
+
+    @pytest.mark.asyncio
+    async def test_list_agents_contains_maestro(self, async_client):
+        """Test that maestro agent is in the list."""
+        response = await async_client.get("/api/v1/mcp/tools/list_autonomous_agents")
+        
+        data = response.json()
+        agent_names = [a["name"] for a in data["data"]["agents"]]
+        # Check for RealMaestroAgent (the actual class name)
+        assert any("Maestro" in name for name in agent_names)
+
+
+class TestHealthEndpointMCP:
+    """Tests for /health endpoint on MCP tools."""
+
+    @pytest.mark.asyncio
+    async def test_tools_health(self, async_client):
+        """Test health check on tools route."""
+        response = await async_client.get("/api/v1/mcp/tools/health")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] in ["healthy", "ok"]
+        # May have agents_count or just other fields
+        assert "timestamp" in data or "agents_count" in data

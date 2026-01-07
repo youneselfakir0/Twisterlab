@@ -426,12 +426,12 @@ async def classify_ticket(
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
-        # 3. Execute classification
-        result = await agent.execute({"operation": "classify_ticket", "ticket": ticket})
+        # 3. Execute classification using the new handler
+        result = await agent.handle_classify(ticket_text=request.description)
 
         # Check if classification succeeded
-        if result.get("status") != "success":
-            error_msg = result.get("error", "Unknown error")
+        if not result.success:
+            error_msg = result.error or "Unknown error"
             logger.error(f"❌ Classification failed: {error_msg}")
 
             # Try to log failure to database
@@ -452,8 +452,8 @@ async def classify_ticket(
                 detail=f"Classification failed: {error_msg}",
             )
 
-        # Extract classification data
-        classification = result.get("classification", {})
+        # Extract classification data from AgentResponse
+        classification = result.data or {}
 
         # Override priority if provided
         if request.priority:
@@ -486,7 +486,7 @@ async def classify_ticket(
 
         logger.info(
             f"✅ Classification complete: {classification.get('category')} "
-            f"(confidence: {classification.get('confidence')}) "
+            f"(confidence: {classification.get('confidence', 'N/A')}) "
             f"[ticket_id={ticket_id}, {execution_time_ms}ms]"
         )
 
@@ -562,31 +562,28 @@ async def resolve_ticket(request: ResolveTicketRequest) -> MCPResponse:
         # Initialize agent
         agent = RealResolverAgent()
 
-        # Build ticket context
-        ticket = {
-            "category": request.category,
-            "description": request.description or f"Ticket #{request.ticket_id}",
-            "ticket_id": request.ticket_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-
-        # Execute resolution
-        result = await agent.execute({"operation": "resolve_ticket", "ticket": ticket})
+        # Execute resolution using new handler API
+        result = await agent.handle_resolve(
+            ticket_id=request.ticket_id or "unknown",
+            resolution_note=request.description or f"Resolved as {request.category}"
+        )
 
         # Check if resolution succeeded
-        if result.get("status") != "success":
+        if not result.success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Resolution failed: {result.get('error', 'Unknown error')}",
+                detail=f"Resolution failed: {result.error or 'Unknown error'}",
             )
 
-        # Extract resolution data
-        resolution = result.get("resolution", {})
+        # Build resolution response
+        resolution = {
+            **result.data,
+            "category": request.category,
+            "resolution_id": f"RES-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
+            "resolved_at": datetime.now(timezone.utc).isoformat(),
+        }
 
-        logger.info(
-            f"✅ Resolution complete: SOP {resolution.get('sop_id')} "
-            f"({len(resolution.get('steps', []))} steps)"
-        )
+        logger.info(f"✅ Resolution complete: {resolution.get('resolution_id')}")
 
         return MCPResponse(status="ok", data=resolution)
 
@@ -656,48 +653,33 @@ async def monitor_system_health(
             {"operation": "health_check", "detailed": request.detailed}
         )
 
-        # Check if health check succeeded
-        if result.get("status") != "success":
-            # Log failure
-            await log_repo.log_execution(
-                agent_name="RealMonitoringAgent",
-                action="health_check",
-                error=result.get("error", "Unknown error"),
-            )
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Health check failed: {result.get('error', 'Unknown error')}",
-            )
+        # Handle both dict and AgentResponse
+        if hasattr(result, 'success'):
+            # AgentResponse
+            if not result.success:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Health check failed: {result.error or 'Unknown error'}",
+                )
+            health_data = result.data or {}
+        else:
+            # Dict response (legacy)
+            if result.get("status") not in ["success", "ok"]:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Health check failed: {result.get('error', 'Unknown error')}",
+                )
+            health_data = result.get("health_check", result.get("metrics", {}))
+            health_data["overall_status"] = result.get("health_status", result.get("status", "ok"))
+            health_data["issues"] = result.get("issues", [])
 
-        # Extract health data
-        health_data = result.get("health_check", {})
-        health_data["overall_status"] = result.get("health_status", "unknown")
-        health_data["issues"] = result.get("issues", [])
-
-        # Record metrics in database
+        # Extract system metrics (if available)
         cpu = health_data.get("cpu_percent", 0.0)
         memory = health_data.get("memory_percent", 0.0)
         disk = health_data.get("disk_percent", 0.0)
-        docker_status = health_data.get("overall_status", "unknown")
+        docker_status = health_data.get("overall_status", "ok")
 
-        # TODO: Re-enable database metrics recording
-        # await metrics_repo.record_metrics(
-        #     cpu_usage=cpu, memory_usage=memory, disk_usage=disk, docker_status=docker_status
-        # )
-
-        # Log execution
         execution_time_ms = int((time.time() - start_time) * 1000)
-        # TODO: Re-enable database logging
-        # await log_repo.log_execution(
-        #     agent_name="RealMonitoringAgent",
-        #     action="health_check",
-        #     result={"status": docker_status, "cpu": cpu, "memory": memory, "disk": disk},
-        #     execution_time_ms=execution_time_ms,
-        # )
-
-        # Commit transaction
-        # TODO: Re-enable database commit
-        # await session.commit()
 
         logger.info(
             f"✅ Health check complete: {docker_status} "
@@ -705,7 +687,15 @@ async def monitor_system_health(
         )
 
         return MCPResponse(
-            status="ok", data={**health_data, "execution_time_ms": execution_time_ms}
+            status="ok", 
+            data={
+                "system_status": docker_status,
+                "cpu_percent": cpu,
+                "memory_percent": memory,
+                "disk_percent": disk,
+                "execution_time_ms": execution_time_ms,
+                **health_data
+            }
         )
 
     except HTTPException:
