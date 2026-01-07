@@ -3,8 +3,6 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from twisterlang.codec import build_message, validate_message
-
 router = APIRouter()
 
 
@@ -27,17 +25,9 @@ class CreateBrowserToolResponse(BaseModel):
 async def create_browser_tool(request: CreateBrowserToolRequest):
     correlation_id = str(uuid.uuid4())
 
-    # Build the message to send to the BrowserAgent
-    message = build_message(
-        tool_name=request.tool_name,
-        target_url=request.target_url,
-        llm_backend=request.llm_backend,
-        correlation_id=correlation_id,
-    )
-
-    # Validate the message
-    if not validate_message(message):
-        raise HTTPException(status_code=400, detail="Invalid message format")
+    # Validate the request
+    if not request.target_url or not request.tool_name:
+        raise HTTPException(status_code=400, detail="Missing required fields")
 
     # Simulate the tool creation process (replace with actual logic)
     response = {

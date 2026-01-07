@@ -29,7 +29,7 @@ class TestAgentRegistry:
     @patch("twisterlab.agents.registry.RealSyncAgent")
     @patch("twisterlab.agents.registry.RealDesktopCommanderAgent")
     @patch("twisterlab.agents.registry.RealMaestroAgent")
-    @patch("twisterlab.agents.registry.BrowserAgent")
+    @patch("twisterlab.agents.registry.RealBrowserAgent")
     @patch("twisterlab.agents.registry.SentimentAnalyzerAgent")
     def test_singleton_pattern(self, *mocks):
         """Ensure only one instance is created"""

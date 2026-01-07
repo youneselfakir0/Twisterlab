@@ -1,7 +1,7 @@
 from typing import Dict
 
 from twisterlab.agents.base.base_agent import BaseAgent
-from twisterlab.agents.real.browser_agent import BrowserAgent
+from twisterlab.agents.real.browser_agent import RealBrowserAgent
 from twisterlab.agents.real.real_backup_agent import RealBackupAgent
 
 # Importe les classes d'agents v2 que nous avons refactorisées
@@ -43,7 +43,7 @@ class AgentRegistry:
         sync = RealSyncAgent()
         desktop_commander = RealDesktopCommanderAgent()
         maestro = RealMaestroAgent(agent_registry=self)
-        browser = BrowserAgent()  # Browser agent with BaseAgent inheritance
+        browser = RealBrowserAgent()  # Browser agent with BaseAgent inheritance
         sentiment_analyzer = SentimentAnalyzerAgent()  # Sentiment analysis agent
 
         self._agents = {

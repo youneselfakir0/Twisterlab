@@ -63,14 +63,17 @@ async def analyze_sentiment(request: AnalyzeSentimentRequest) -> MCPResponse:
         # Create agent instance
         agent = SentimentAnalyzerAgent()
 
-        # Execute sentiment analysis
+        # Execute sentiment analysis using capability name
         result = await agent.execute(
-            task=request.text, context={"detailed": request.detailed}
+            "analyze_sentiment", 
+            text=request.text, 
+            detailed=request.detailed
         )
 
-        # Return success response
+        # Return success response with MCP content format
         return MCPResponse(
-            content=[{"type": "text", "text": str(result)}], isError=False
+            content=result.to_mcp_content(), 
+            isError=not result.success
         )
 
     except Exception as e:

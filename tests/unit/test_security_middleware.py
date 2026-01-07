@@ -36,13 +36,9 @@ class TestRateLimitMiddleware:
         await middleware.dispatch(request, call_next)
         await middleware.dispatch(request, call_next)
         
-        # 3rd should fail
-        with pytest.raises(Exception) as excinfo:
-            await middleware.dispatch(request, call_next)
-        
-        # Should be an HTTPException with 429 status code
-        # Note: In unit test env, we catch the exception. In FastAPI app, it's handled.
-        assert excinfo.value.status_code == 429
+        # 3rd should return 429 (middleware returns JSONResponse, not exception)
+        response = await middleware.dispatch(request, call_next)
+        assert response.status_code == 429
 
     @pytest.mark.asyncio
     async def test_rate_limit_reset(self):
@@ -87,7 +83,6 @@ class TestRateLimitMiddleware:
         await middleware.dispatch(req1, call_next)
         await middleware.dispatch(req2, call_next)
         
-        # 2nd request for IP 1 should fail
-        with pytest.raises(Exception) as exc:
-            await middleware.dispatch(req1, call_next)
-        assert exc.value.status_code == 429
+        # 2nd request for IP 1 should return 429
+        response = await middleware.dispatch(req1, call_next)
+        assert response.status_code == 429

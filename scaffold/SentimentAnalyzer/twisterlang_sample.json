@@ -1,9 +1,0 @@
-{
-    "twisterlang_version": "1.0",
-    "correlation_id": "sample-correlation-id",
-    "data": {
-        "tool_name": "sample_tool",
-        "target_url": "https://example.com",
-        "llm_backend": "llama-3.2"
-    }
-}

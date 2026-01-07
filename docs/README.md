@@ -2,13 +2,13 @@
 
 ## Overview
 
-TwisterLab is a cloud-native, multi-agent AI infrastructure designed to facilitate complex tasks through autonomous agents. Built on a robust architecture using Python and FastAPI, TwisterLab leverages the Model Context Protocol (MCP) and a custom communication language called TwisterLang to enable seamless interaction between agents.
+TwisterLab is a cloud-native, multi-agent AI infrastructure designed to facilitate complex tasks through autonomous agents. Built on a robust architecture using Python and FastAPI, TwisterLab leverages the Model Context Protocol (MCP) to enable seamless interaction between agents.
 
 ## Key Features
 
 - **Autonomous Agents**: TwisterLab consists of a swarm of AI agents that collaborate to perform various tasks such as monitoring, backups, and incident resolution.
 - **Cloud-Native Architecture**: The system is designed for deployment on Kubernetes, emphasizing automation, monitoring, and CI/CD practices.
-- **Structured Communication**: The TwisterLang protocol ensures standardized, compressed, and observable communications between agents, enhancing scalability and maintainability.
+- **MCP Integration**: Full Model Context Protocol support for IDE integration (Claude Desktop, Continue).
 - **Flexible Operation Modes**: The system can operate in real, hybrid, or mock modes, showcasing its maturity in design for development and testing.
 
 ## Getting Started
@@ -43,8 +43,8 @@ To get started with TwisterLab, follow these steps:
 
 ## Directory Structure
 
-- **src/twisterlab**: Contains the main application code, including API routes, agents, and TwisterLang protocol implementations.
-- **k8s**: Contains Kubernetes manifests for deploying the application.
+- **src/twisterlab**: Contains the main application code, including API routes and agents.
+- **deploy/k8s**: Contains Kubernetes manifests for deploying the application.
 - **docs**: Documentation files for the project.
 - **tests**: Unit tests for the application components.
 - **scripts**: Utility scripts for scaffolding and logging.

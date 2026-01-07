@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import database layer
@@ -253,7 +253,8 @@ class ClassifyTicketRequest(BaseModel):
         description="Optional manual priority override",
     )
 
-    @validator("description")
+    @field_validator("description")
+    @classmethod
     def validate_description(cls, v):
         """Ensure description is not just whitespace."""
         if not v or not v.strip():
@@ -1006,32 +1007,32 @@ async def analyze_sentiment(request: AnalyzeSentimentRequest) -> MCPResponse:
         # Initialize agent
         agent = SentimentAnalyzerAgent()
 
-        # Prepare context
-        context = {"detailed": request.detailed}
-
-        # Execute sentiment analysis
-        result = await agent.execute(task=request.text, context=context)
+        # Execute sentiment analysis using capability name
+        result = await agent.execute(
+            "analyze_sentiment", 
+            text=request.text, 
+            detailed=request.detailed
+        )
 
         # Check if analysis succeeded
-        if result.get("status") == "error":
+        if not result.success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Sentiment analysis failed: {result.get('error', 'Unknown error')}",
+                detail=f"Sentiment analysis failed: {result.error or 'Unknown error'}",
             )
 
-        # Extract sentiment data
+        # Extract sentiment data from AgentResponse
+        result_data = result.data if isinstance(result.data, dict) else {}
         sentiment_data = {
-            "sentiment": result.get("sentiment", "unknown"),
-            "confidence": result.get("confidence", 0.0),
+            "sentiment": result_data.get("sentiment", "unknown"),
+            "confidence": result_data.get("confidence", 0.0),
             "text_length": len(request.text),
-            "timestamp": result.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         # Add detailed data if requested
         if request.detailed:
-            sentiment_data["keywords"] = result.get("keywords", [])
-            sentiment_data["positive_score"] = result.get("positive_score", 0.0)
-            sentiment_data["negative_score"] = result.get("negative_score", 0.0)
+            sentiment_data["keywords"] = result_data.get("keywords", [])
 
         execution_time_ms = int((time.time() - start_time) * 1000)
         logger.info(
@@ -1138,3 +1139,123 @@ async def analyze_code(request: AnalyzeCodeRequest) -> MCPResponse:
     except Exception as e:
         logger.error(f"Analysis error: {e}", exc_info=True)
         return MCPResponse(status="error", error=str(e))
+
+
+# ============================================================================
+# MAESTRO ORCHESTRATION - Multi-Agent Coordination
+# ============================================================================
+
+
+class OrchestrateRequest(BaseModel):
+    """Input model for orchestrate endpoint."""
+
+    task: str = Field(
+        ...,
+        min_length=5,
+        max_length=5000,
+        description="Task/ticket description to process",
+    )
+    context: Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Additional context (priority, metadata, etc.)",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="If true, plan only without execution",
+    )
+
+
+class AnalyzeTaskRequest(BaseModel):
+    """Input model for analyze_task endpoint."""
+
+    task: str = Field(
+        ...,
+        min_length=5,
+        max_length=5000,
+        description="Task/ticket description to analyze",
+    )
+
+
+@router.post("/orchestrate", response_model=MCPResponse)
+async def orchestrate(request: OrchestrateRequest) -> MCPResponse:
+    """
+    Orchestrate a multi-agent workflow using RealMaestroAgent.
+    
+    This is the main entry point for autonomous incident resolution.
+    Maestro will:
+    1. Analyze the task (LLM or rule-based)
+    2. Create a multi-step plan
+    3. Dispatch specialized agents
+    4. Synthesize results
+    
+    Args:
+        request: OrchestrateRequest with task, context, and dry_run flag
+        
+    Returns:
+        MCPResponse with orchestration results
+    """
+    from twisterlab.agents.registry import agent_registry
+    
+    try:
+        logger.info(f"🧠 Maestro orchestration: {request.task[:50]}...")
+        
+        maestro = agent_registry.get_agent("maestro")
+        if not maestro:
+            return MCPResponse(
+                status="error",
+                error="Maestro agent not found in registry"
+            )
+        
+        result = await maestro.execute(
+            "orchestrate",
+            task=request.task,
+            context=request.context,
+            dry_run=request.dry_run
+        )
+        
+        if not result.success:
+            return MCPResponse(status="error", error=result.error)
+        
+        return MCPResponse(status="ok", data=result.data)
+
+    except Exception as e:
+        logger.error(f"Orchestration error: {e}", exc_info=True)
+        return MCPResponse(status="error", error=str(e))
+
+
+@router.post("/analyze_task", response_model=MCPResponse)
+async def analyze_task(request: AnalyzeTaskRequest) -> MCPResponse:
+    """
+    Analyze a task to determine category, priority, and suggested agents.
+    
+    This is a lightweight endpoint for task classification without execution.
+    
+    Args:
+        request: AnalyzeTaskRequest with task description
+        
+    Returns:
+        MCPResponse with analysis (category, priority, suggested_agents)
+    """
+    from twisterlab.agents.registry import agent_registry
+    
+    try:
+        logger.info(f"🔍 Task analysis: {request.task[:50]}...")
+        
+        maestro = agent_registry.get_agent("maestro")
+        if not maestro:
+            return MCPResponse(
+                status="error",
+                error="Maestro agent not found in registry"
+            )
+        
+        result = await maestro.execute("analyze_task", task=request.task)
+        
+        if not result.success:
+            return MCPResponse(status="error", error=result.error)
+        
+        return MCPResponse(status="ok", data=result.data)
+
+    except Exception as e:
+        logger.error(f"Analysis error: {e}", exc_info=True)
+        return MCPResponse(status="error", error=str(e))
+

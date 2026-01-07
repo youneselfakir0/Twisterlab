@@ -41,7 +41,7 @@
     "maestro": [
       "maestro_chat - Send a message to the LLM",
       "maestro_generate - Generate text completion",
-      "maestro_orchestrate - Parse TwisterLang command",
+      "maestro_orchestrate - Orchestrate agent tasks",
       "maestro_list_agents - List all available agents",
       "maestro_analyze - Analyze data or code using LLM"
     ],

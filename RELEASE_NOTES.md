@@ -7,7 +7,6 @@ TwisterLab is an AI agent orchestration platform featuring:
 - 📡 **MCP server** for Model Context Protocol
 - 🌐 **FastAPI backend** with PostgreSQL & Redis
 - 🔧 **K3s deployment** ready
-- 📝 **TwisterLang** custom messaging protocol
 
 ## What's New
 
@@ -18,8 +17,7 @@ TwisterLab is an AI agent orchestration platform featuring:
 - Health monitoring with Prometheus metrics
 
 ### Testing
-- 18 unit tests (14 passing, 4 skipped for codec)
-- pytest with async support
+- Unit tests with pytest async support
 - API endpoint testing with HTTPX
 
 ### Infrastructure
@@ -50,14 +48,12 @@ pytest tests/unit/ -v
 ```
 
 ## Known Limitations
-- TwisterLang codec not yet packaged as standalone module
 - Ollama integration requires local model setup
 - MCP server requires K8s for full deployment
 
 ## Next Steps
 - [ ] Complete MCP tools implementation
 - [ ] Add integration tests
-- [ ] Package TwisterLang codec
 - [ ] Add OpenAPI documentation
 
 ---

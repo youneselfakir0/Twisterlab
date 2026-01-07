@@ -168,3 +168,101 @@ class TestMCPRequestModels:
         
         with pytest.raises(ValidationError):
             ResolveTicketRequest(category="not_a_valid_category")
+
+
+class TestMaestroEndpoints:
+    """Tests for Maestro orchestration endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_orchestrate_dry_run(self, async_client):
+        """Test orchestrate endpoint with dry_run=True."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/orchestrate",
+            json={
+                "task": "Database is running slow, users are complaining",
+                "context": {"source": "test"},
+                "dry_run": True
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "data" in data
+        assert data["data"]["mode"] == "dry_run"
+        assert "plan" in data["data"]
+        assert "analysis" in data["data"]
+
+    @pytest.mark.asyncio
+    async def test_orchestrate_full_execution(self, async_client):
+        """Test orchestrate endpoint with full execution."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/orchestrate",
+            json={
+                "task": "Server returning 502 errors",
+                "dry_run": False
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "synthesis" in data["data"]
+        assert "success_rate" in data["data"]["synthesis"]
+
+    @pytest.mark.asyncio
+    async def test_analyze_task(self, async_client):
+        """Test analyze_task endpoint."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/analyze_task",
+            json={"task": "Network connection timeout on server-01"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "category" in data["data"]
+        assert "priority" in data["data"]
+        assert "suggested_agents" in data["data"]
+
+    @pytest.mark.asyncio
+    async def test_analyze_task_database_category(self, async_client):
+        """Test that database keywords are correctly categorized."""
+        response = await async_client.post(
+            "/api/v1/mcp/tools/analyze_task",
+            json={"task": "PostgreSQL queries are slow, need optimization"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["data"]["category"] == "database"
+
+    def test_orchestrate_request_valid(self):
+        """Test valid OrchestrateRequest model."""
+        from twisterlab.api.routes_mcp_real import OrchestrateRequest
+        
+        request = OrchestrateRequest(
+            task="Server is down",
+            context={"priority": "high"},
+            dry_run=True
+        )
+        assert request.task == "Server is down"
+        assert request.dry_run is True
+        assert request.context == {"priority": "high"}
+
+    def test_analyze_task_request_valid(self):
+        """Test valid AnalyzeTaskRequest model."""
+        from twisterlab.api.routes_mcp_real import AnalyzeTaskRequest
+        
+        request = AnalyzeTaskRequest(task="Check database status")
+        assert request.task == "Check database status"
+
+    def test_orchestrate_request_too_short(self):
+        """Test OrchestrateRequest rejects too short task."""
+        from twisterlab.api.routes_mcp_real import OrchestrateRequest
+        from pydantic import ValidationError
+        
+        with pytest.raises(ValidationError):
+            OrchestrateRequest(task="Hi")  # Less than 5 chars
+

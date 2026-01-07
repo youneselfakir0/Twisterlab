@@ -1,6 +1,6 @@
-# TwisterLang Core Package
+# TwisterLab Core Package
 """
-Core modules for TwisterLang encoding/decoding functionality and settings.
+Core modules for TwisterLab configuration and settings.
 """
 
 from .settings import Settings, get_settings, load_environment_config

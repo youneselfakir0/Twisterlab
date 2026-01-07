@@ -1,11 +1,6 @@
 import pytest
 
 from twisterlab.agents.real.browser_agent import BrowserAgent
-from twisterlab.twisterlang.codec import (
-    build_message,
-    decode_message_from_base64,
-    encode_message_to_base64,
-)
 
 
 @pytest.fixture
@@ -33,15 +28,3 @@ def test_browser_agent_error_handling(browser_agent):
         "create_browser_tool", {"target_url": "invalid_url"}
     )
     assert result.get("status") == "error"
-
-
-def test_twisterlang_roundtrip(browser_agent):
-    payload = {
-        "twisterlang_version": "1.0",
-        "correlation_id": "roundtrip-id",
-        "data": {"k": "v"},
-    }
-    message = build_message(payload)
-    encoded_message = encode_message_to_base64(message)
-    decoded_message = decode_message_from_base64(encoded_message)
-    assert decoded_message == message

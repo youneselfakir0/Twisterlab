@@ -62,8 +62,7 @@ twisterlab/
 │   │   └── api/             # Routes API agents (7 fichiers)
 │   ├── api/                 # FastAPI Application
 │   ├── database/            # Modèles SQLAlchemy
-│   ├── services/            # Services métier
-│   └── twisterlang/         # DSL propriétaire
+│   └── services/            # Services métier
 ├── k8s/                     # Manifests Kubernetes
 │   ├── monitoring/          # Prometheus + Grafana + Exporters
 │   ├── dev/                 # Environnement dev
@@ -235,7 +234,6 @@ twisterlab/
 | Release | ✅ Actif |
 | Security | ✅ Actif |
 | Docker Lint | ✅ Actif |
-| TwisterLang | ✅ Actif |
 
 ---
 

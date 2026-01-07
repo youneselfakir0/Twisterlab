@@ -1,12 +1,13 @@
 <div align="center">
 
-# 🌀 TwisterLab v3.3.0
+# 🌀 TwisterLab v3.4.0
 
 [![CI Pipeline](https://github.com/youneselfakir0/twisterlab/actions/workflows/ci.yml/badge.svg)](https://github.com/youneselfakir0/twisterlab/actions/workflows/ci.yml)
 [![CD Pipeline](https://github.com/youneselfakir0/twisterlab/actions/workflows/cd.yml/badge.svg)](https://github.com/youneselfakir0/twisterlab/actions/workflows/cd.yml)
+[![codecov](https://codecov.io/gh/youneselfakir0/twisterlab/branch/main/graph/badge.svg)](https://codecov.io/gh/youneselfakir0/twisterlab)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](pyproject.toml)
-[![K8s](https://img.shields.io/badge/kubernetes-ready-326ce5.svg)](k8s/)
+[![K8s](https://img.shields.io/badge/kubernetes-ready-326ce5.svg)](deploy/k8s/)
 
 ### **Universal MCP Platform for Autonomous AI Agents**
 
@@ -20,27 +21,72 @@ TwisterLab acts as a bridge between LLMs (**Claude**, **Ollama**) and your infra
 
 ## 🏗️ Architecture
 
-TwisterLab is built as a **Hybrid AI Operating System**:
+TwisterLab is built as a **Hybrid AI Operating System** with autonomous multi-agent orchestration:
+
+```mermaid
+graph TB
+    subgraph "Input"
+        TICKET[📝 Support Ticket]
+    end
+    
+    subgraph "TwisterLab Platform"
+        API[🌐 FastAPI Server]
+        MAESTRO[🧠 Maestro Orchestrator]
+        
+        subgraph "Agents"
+            SENT[😊 Sentiment]
+            CLASS[🏷️ Classifier]
+            CMD[💻 Commander]
+            MON[📊 Monitoring]
+            RES[✅ Resolver]
+        end
+    end
+    
+    TICKET --> API --> MAESTRO
+    MAESTRO --> SENT & CLASS & CMD & MON & RES
+```
 
 - **Core API**: FastAPI + Python 3.11 (Async)
 - **Transport**: Native MCP (Stdio & SSE)
-- **Agents**:
-  - 🌍 **Browser Agent**: Headless Chromium (Playwright) for web automation.
-  - 🧐 **Code Review Agent**: Native static analysis (AST/Security).
-  - 📈 **Monitoring Agent**: Real-time system health & K8s metrics.
+- **Orchestrator**: **Maestro Agent** - LLM-powered decision making
+- **Agents** (9 total):
+  - 🧠 **Maestro**: Orchestrates multi-agent workflows
+  - 😊 **Sentiment Analyzer**: Detects urgency and emotion
+  - 🏷️ **Classifier**: Categorizes tickets
+  - 💻 **Desktop Commander**: Executes system commands
+  - 🌍 **Browser Agent**: Web automation (Playwright)
+  - 📈 **Monitoring Agent**: System health & K8s metrics
+  - ✅ **Resolver**: Ticket resolution
+  - 💾 **Backup**: Data backup
+  - 🔄 **Sync**: Data synchronization
 - **Infrastructure**:
-  - **Kubernetes**: Scalable deployment (Deployment, Service, HPA).
-  - **Docker**: Containerized runtime.
-  - **Ollama**: Remote LLM inference (Llama, Mistral, Qwen).
+  - **Kubernetes**: Scalable deployment
+  - **Docker**: Containerized runtime
+  - **Ollama**: Local LLM inference
 
 ---
 
 ## ✨ Key Features
 
-1.  **🔌 Seamless Integration**: Connects natively to **Claude Desktop**, **Continue IDE**, and **LM Studio**.
-2.  **🕸️ Real Web Browsing**: Not just a mock. TwisterLab drives a real browser to fetch pages, take screenshots, and extract content via MCP.
-3.  **🛡️ Security First**: Rate limiting, Network Policies (K8s), and hardcoded secret scanning.
-4.  **⚡ High Performance**: Redis caching and async Pydantic validation.
+1. **🧠 Autonomous Orchestration**: Maestro agent coordinates multi-agent workflows with LLM intelligence.
+2. **🔌 Seamless Integration**: Connects natively to **Claude Desktop**, **Continue IDE**, and **LM Studio**.
+3. **🕸️ Real Web Browsing**: TwisterLab drives a real browser via Playwright.
+4. **🛡️ Security First**: Rate limiting, Network Policies, and secret scanning.
+5. **⚡ High Performance**: Redis caching and async Pydantic validation.
+
+### 🚀 Maestro API
+
+```bash
+# Analyze a task
+curl -X POST http://localhost:8000/api/v1/mcp/tools/analyze_task \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Database is slow"}'
+
+# Full orchestration (dry run)
+curl -X POST http://localhost:8000/api/v1/mcp/tools/orchestrate \
+  -H "Content-Type: application/json" \
+  -d '{"task": "Server returning 502 errors", "dry_run": true}'
+```
 
 ---
 

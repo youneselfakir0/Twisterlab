@@ -16,8 +16,10 @@ from .base import (
     AgentResponse,
     CapabilityType,
     CapabilityParam,
+    CapabilityParam,
     ParamType,
 )
+from twisterlab.services.base import LLMMessage
 
 logger = logging.getLogger(__name__)
 
@@ -136,8 +138,8 @@ class MaestroAgent(CoreAgent):
 
             messages = []
             if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": message})
+                messages.append(LLMMessage(role="system", content=system_prompt))
+            messages.append(LLMMessage(role="user", content=message))
 
             response = await llm.chat(messages, model=model)
 
@@ -247,8 +249,8 @@ class MaestroAgent(CoreAgent):
 
             response = await llm.chat(
                 [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": content},
+                    LLMMessage(role="system", content=system_prompt),
+                    LLMMessage(role="user", content=content),
                 ],
                 model="qwen3:8b",
             )
