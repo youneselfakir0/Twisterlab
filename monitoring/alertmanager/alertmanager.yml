@@ -1,0 +1,222 @@
+# Alertmanager Configuration for TwisterLab
+# Manages alert routing, grouping, and notifications
+
+global:
+  # Slack webhook URL (set via environment variable)
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  
+  # SMTP settings for email alerts
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_from: 'twisterlab-alerts@${DOMAIN}'
+  smtp_auth_username: '${SMTP_USER}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+  smtp_require_tls: true
+
+# Alert templates
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route tree for alert handling
+route:
+  # Default receiver
+  receiver: 'twisterlab-default'
+  
+  # Group alerts by these labels
+  group_by: ['alertname', 'severity', 'agent']
+  
+  # Wait time before sending first notification
+  group_wait: 30s
+  
+  # Interval between notifications for the same group
+  group_interval: 5m
+  
+  # Minimum interval between repeated notifications
+  repeat_interval: 4h
+  
+  # Child routes for specific alert types
+  routes:
+    # Critical alerts → immediate Slack + Email
+    - match:
+        severity: critical
+      receiver: 'twisterlab-critical'
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: true
+    
+    # Security alerts → security team
+    - match:
+        category: security
+      receiver: 'twisterlab-security'
+      group_wait: 10s
+      repeat_interval: 30m
+    
+    # Agent failures → ops team
+    - match:
+        alertname: AgentFailure
+      receiver: 'twisterlab-agents'
+      group_by: ['agent']
+    
+    # High error rate alerts
+    - match:
+        alertname: HighErrorRate
+      receiver: 'twisterlab-ops'
+    
+    # Maestro orchestration issues
+    - match:
+        agent: maestro
+      receiver: 'twisterlab-maestro'
+      group_wait: 15s
+    
+    # Database alerts
+    - match_re:
+        category: database|db
+      receiver: 'twisterlab-database'
+
+# Alert receivers
+receivers:
+  # Default receiver - Slack only
+  - name: 'twisterlab-default'
+    slack_configs:
+      - channel: '#twisterlab-alerts'
+        username: 'TwisterLab Bot'
+        icon_emoji: ':tornado:'
+        send_resolved: true
+        title: '{{ .Status | toUpper }} | {{ .CommonLabels.alertname }}'
+        text: >-
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+          *Severity:* {{ .CommonLabels.severity }}
+          *Source:* {{ .CommonLabels.instance }}
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ (index .Alerts 0).GeneratorURL }}'
+          - type: button
+            text: 'Silence Alert'
+            url: '${ALERTMANAGER_URL}/#/silences/new?filter=%7Balertname%3D%22{{ .CommonLabels.alertname }}%22%7D'
+
+  # Critical alerts - Slack + Email + PagerDuty
+  - name: 'twisterlab-critical'
+    slack_configs:
+      - channel: '#twisterlab-critical'
+        username: 'TwisterLab CRITICAL'
+        icon_emoji: ':rotating_light:'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        title: ':rotating_light: CRITICAL | {{ .CommonLabels.alertname }}'
+        text: >-
+          *IMMEDIATE ACTION REQUIRED*
+          
+          *Alert:* {{ .CommonLabels.alertname }}
+          *Severity:* CRITICAL
+          *Agent:* {{ .CommonLabels.agent }}
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+          
+          *Affected Instance:* {{ .CommonLabels.instance }}
+          *Started:* {{ .StartsAt }}
+    email_configs:
+      - to: 'oncall@twisterlab.io'
+        send_resolved: true
+        html: |
+          <h2>🚨 CRITICAL ALERT: {{ .CommonLabels.alertname }}</h2>
+          <p><strong>Summary:</strong> {{ .CommonAnnotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .CommonAnnotations.description }}</p>
+          <p><strong>Agent:</strong> {{ .CommonLabels.agent }}</p>
+          <p><strong>Instance:</strong> {{ .CommonLabels.instance }}</p>
+          <p><a href="{{ (index .Alerts 0).GeneratorURL }}">View in Grafana</a></p>
+
+  # Security alerts
+  - name: 'twisterlab-security'
+    slack_configs:
+      - channel: '#twisterlab-security'
+        username: 'TwisterLab Security'
+        icon_emoji: ':lock:'
+        send_resolved: true
+        color: 'danger'
+        title: ':lock: SECURITY ALERT | {{ .CommonLabels.alertname }}'
+        text: >-
+          *Security Incident Detected*
+          
+          *Alert:* {{ .CommonLabels.alertname }}
+          *Category:* {{ .CommonLabels.category }}
+          *Summary:* {{ .CommonAnnotations.summary }}
+          
+          *Actions Required:*
+          1. Investigate the alert immediately
+          2. Check audit logs
+          3. Escalate if necessary
+    email_configs:
+      - to: 'security@twisterlab.io'
+        send_resolved: true
+
+  # Agent failures
+  - name: 'twisterlab-agents'
+    slack_configs:
+      - channel: '#twisterlab-agents'
+        username: 'TwisterLab Agents'
+        icon_emoji: ':robot_face:'
+        send_resolved: true
+        title: ':robot_face: Agent Issue | {{ .CommonLabels.agent }}'
+        text: >-
+          *Agent:* {{ .CommonLabels.agent }}
+          *Issue:* {{ .CommonAnnotations.summary }}
+          *Details:* {{ .CommonAnnotations.description }}
+
+  # Operations team
+  - name: 'twisterlab-ops'
+    slack_configs:
+      - channel: '#twisterlab-ops'
+        username: 'TwisterLab Ops'
+        icon_emoji: ':wrench:'
+        send_resolved: true
+
+  # Maestro-specific alerts
+  - name: 'twisterlab-maestro'
+    slack_configs:
+      - channel: '#twisterlab-maestro'
+        username: 'Maestro Brain'
+        icon_emoji: ':brain:'
+        send_resolved: true
+        title: ':brain: Maestro | {{ .CommonLabels.alertname }}'
+        text: >-
+          *Orchestration Alert*
+          
+          {{ .CommonAnnotations.summary }}
+          
+          *Tasks Affected:* {{ .CommonLabels.task_count }}
+          *Status:* {{ .Status }}
+
+  # Database alerts
+  - name: 'twisterlab-database'
+    slack_configs:
+      - channel: '#twisterlab-database'
+        username: 'TwisterLab DB'
+        icon_emoji: ':floppy_disk:'
+        send_resolved: true
+    email_configs:
+      - to: 'dba@twisterlab.io'
+        send_resolved: true
+
+# Inhibition rules - prevent less severe alerts when critical is firing
+inhibit_rules:
+  # Critical suppresses high
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'high'
+    equal: ['alertname', 'agent']
+  
+  # High suppresses medium
+  - source_match:
+      severity: 'high'
+    target_match:
+      severity: 'medium'
+    equal: ['alertname', 'agent']
+  
+  # If API is down, suppress agent-specific alerts
+  - source_match:
+      alertname: 'APIDown'
+    target_match_re:
+      alertname: 'Agent.*'
+    equal: ['instance']

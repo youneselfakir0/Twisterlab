@@ -171,8 +171,7 @@ class TestRealDesktopCommanderAgent:
     async def test_execute_command(self, agent):
         """Test executing a command."""
         response = await agent.handle_execute_command(
-            device_id="local",
-            command="echo hello"
+            command="hostname"
         )
         assert response.success is True
         assert response.data["status"] == "completed"
@@ -193,9 +192,10 @@ class TestRealMonitoringAgent:
     @pytest.mark.asyncio
     async def test_execute(self, agent):
         """Test monitoring execution."""
-        result = await agent.execute("health_check")
+        result = await agent.handle_collect_metrics()
         assert result is not None
-        assert "status" in result or "metrics" in result
+        assert result.success is True
+        assert "cpu" in result.data or "data_source" in result.data
 
 
 class TestRealMaestroAgent:

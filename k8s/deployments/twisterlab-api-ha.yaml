@@ -1,0 +1,429 @@
+# =============================================================================
+# TwisterLab API - High Availability Deployment
+# =============================================================================
+# Configuration HA avec:
+# - 3 replicas minimum (auto-scale jusqu'à 10)
+# - RollingUpdate zero-downtime
+# - Anti-affinity pour répartir sur différents nodes
+# - HorizontalPodAutoscaler
+# - PodDisruptionBudget
+# =============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: twisterlab-api-ha
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+    tier: backend
+    version: v3.0
+    ha: "true"
+  annotations:
+    kubernetes.io/change-cause: "HA deployment with auto-scaling"
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: twisterlab
+      component: api
+      ha: "true"
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 2
+  template:
+    metadata:
+      labels:
+        app: twisterlab
+        component: api
+        tier: backend
+        ha: "true"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Anti-affinity: ne pas placer 2 pods sur le même node
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: twisterlab
+                    component: api
+                topologyKey: kubernetes.io/hostname
+          # Hard constraint pour production
+          # requiredDuringSchedulingIgnoredDuringExecution:
+          #   - labelSelector:
+          #       matchLabels:
+          #         app: twisterlab
+          #         component: api
+          #     topologyKey: kubernetes.io/hostname
+
+      # Graceful shutdown
+      terminationGracePeriodSeconds: 60
+
+      # Service Account
+      serviceAccountName: twisterlab-api
+
+      # Init container pour attendre les dépendances
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres.twisterlab.svc.cluster.local 5432; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready!"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+
+        - name: wait-for-redis
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis.twisterlab.svc.cluster.local 6379; do
+                echo "Waiting for Redis..."
+                sleep 2
+              done
+              echo "Redis is ready!"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+
+      containers:
+        - name: api
+          image: localhost:5000/twisterlab-api:v3.0-ha
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+
+          # Environment variables
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: WORKERS
+              value: "4"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+
+          envFrom:
+            - configMapRef:
+                name: twisterlab-config
+            - secretRef:
+                name: twisterlab-secrets
+
+          # Health checks
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # Resources with guaranteed QoS
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+
+          # Security context
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # Volume mounts
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /app/.cache
+
+          # Lifecycle hooks
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - "sleep 10"
+
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: cache
+          emptyDir:
+            sizeLimit: 500Mi
+
+---
+# =============================================================================
+# Service pour le deployment HA
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: twisterlab-api-ha
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+    ha: "true"
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: twisterlab
+    component: api
+    ha: "true"
+
+---
+# =============================================================================
+# HorizontalPodAutoscaler - Auto-scaling basé sur CPU/Memory
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: twisterlab-api-hpa
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: twisterlab-api-ha
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    # Scale sur CPU
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+    # Scale sur Memory
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+    # Scale sur requests/sec (si metrics-server custom)
+    # - type: Pods
+    #   pods:
+    #     metric:
+    #       name: http_requests_per_second
+    #     target:
+    #       type: AverageValue
+    #       averageValue: 1000
+
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max
+
+---
+# =============================================================================
+# PodDisruptionBudget - Garantir disponibilité pendant maintenance
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: twisterlab-api-pdb
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+spec:
+  # Au moins 2 pods toujours disponibles
+  minAvailable: 2
+  # Ou maximum 1 pod indisponible à la fois
+  # maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: twisterlab
+      component: api
+      ha: "true"
+
+---
+# =============================================================================
+# ServiceAccount pour l'API
+# =============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: twisterlab-api
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+automountServiceAccountToken: false
+
+---
+# =============================================================================
+# NetworkPolicy - Sécurité réseau
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: twisterlab-api-network-policy
+  namespace: twisterlab
+spec:
+  podSelector:
+    matchLabels:
+      app: twisterlab
+      component: api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Autoriser trafic depuis Ingress Controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Autoriser trafic depuis Prometheus
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Autoriser trafic interne namespace
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Autoriser DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+    # Autoriser PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Autoriser Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Autoriser Ollama LLM
+    - to:
+        - podSelector:
+            matchLabels:
+              app: ollama
+      ports:
+        - protocol: TCP
+          port: 11434

@@ -1,0 +1,281 @@
+# TwisterLab Alert Rules
+# Prometheus alerting rules for all TwisterLab components
+
+groups:
+  # ==========================================================================
+  # API Health Alerts
+  # ==========================================================================
+  - name: twisterlab.api
+    interval: 30s
+    rules:
+      - alert: APIDown
+        expr: up{job="twisterlab-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "TwisterLab API is down"
+          description: "The TwisterLab API on {{ $labels.instance }} has been unreachable for more than 1 minute."
+          runbook_url: "https://docs.twisterlab.io/runbooks/api-down"
+
+      - alert: APIHighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="twisterlab-api"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: high
+          category: performance
+        annotations:
+          summary: "API response time is high"
+          description: "95th percentile response time is {{ $value | humanizeDuration }} on {{ $labels.instance }}"
+
+      - alert: APIHighErrorRate
+        expr: sum(rate(http_requests_total{job="twisterlab-api", status=~"5.."}[5m])) / sum(rate(http_requests_total{job="twisterlab-api"}[5m])) * 100 > 5
+        for: 5m
+        labels:
+          severity: high
+          category: errors
+        annotations:
+          summary: "High API error rate"
+          description: "Error rate is {{ $value | humanize }}% (threshold: 5%)"
+
+  # ==========================================================================
+  # Agent Health Alerts
+  # ==========================================================================
+  - name: twisterlab.agents
+    interval: 30s
+    rules:
+      - alert: AgentFailure
+        expr: increase(twisterlab_agent_errors_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: high
+          category: agents
+        annotations:
+          summary: "Agent {{ $labels.agent }} has high failure rate"
+          description: "Agent {{ $labels.agent }} has {{ $value | humanize }} errors in the last 5 minutes"
+
+      - alert: AgentSlowResponse
+        expr: histogram_quantile(0.95, rate(twisterlab_agent_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: medium
+          category: performance
+        annotations:
+          summary: "Agent {{ $labels.agent }} is slow"
+          description: "Agent {{ $labels.agent }} p95 latency is {{ $value | humanizeDuration }}"
+
+      - alert: AgentNotResponding
+        expr: increase(twisterlab_agent_calls_total[10m]) == 0 and twisterlab_agent_calls_total > 0
+        for: 10m
+        labels:
+          severity: high
+          category: agents
+        annotations:
+          summary: "Agent {{ $labels.agent }} is not responding"
+          description: "Agent {{ $labels.agent }} has not processed any requests in 10 minutes"
+
+      - alert: MaestroOrchestrationFailure
+        expr: increase(twisterlab_maestro_orchestration_errors_total[5m]) > 3
+        for: 2m
+        labels:
+          severity: critical
+          agent: maestro
+          category: orchestration
+        annotations:
+          summary: "Maestro orchestration failures detected"
+          description: "{{ $value | humanize }} orchestration failures in the last 5 minutes"
+
+      - alert: AllAgentsDown
+        expr: count(up{job=~"twisterlab-agent.*"} == 1) == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: agents
+        annotations:
+          summary: "All TwisterLab agents are down"
+          description: "No agents are responding. This is a critical failure."
+
+  # ==========================================================================
+  # Ticket Resolution Alerts
+  # ==========================================================================
+  - name: twisterlab.tickets
+    interval: 1m
+    rules:
+      - alert: HighTicketBacklog
+        expr: twisterlab_tickets_pending > 50
+        for: 10m
+        labels:
+          severity: high
+          category: tickets
+        annotations:
+          summary: "High ticket backlog"
+          description: "{{ $value | humanize }} tickets pending (threshold: 50)"
+
+      - alert: CriticalTicketUnresolved
+        expr: twisterlab_tickets_critical > 0 and increase(twisterlab_tickets_resolved_total{priority="critical"}[30m]) == 0
+        for: 30m
+        labels:
+          severity: critical
+          category: tickets
+        annotations:
+          summary: "Critical ticket not being resolved"
+          description: "{{ $value | humanize }} critical tickets have not been resolved in 30 minutes"
+
+      - alert: SlowResolutionTime
+        expr: avg(twisterlab_ticket_resolution_time_seconds) > 3600
+        for: 30m
+        labels:
+          severity: medium
+          category: tickets
+        annotations:
+          summary: "Ticket resolution time is high"
+          description: "Average resolution time is {{ $value | humanizeDuration }} (threshold: 1h)"
+
+      - alert: TicketSpikeDetected
+        expr: increase(twisterlab_tickets_created_total[5m]) > 20
+        for: 5m
+        labels:
+          severity: high
+          category: tickets
+        annotations:
+          summary: "Unusual spike in ticket creation"
+          description: "{{ $value | humanize }} new tickets in 5 minutes (potential incident)"
+
+  # ==========================================================================
+  # Security Alerts
+  # ==========================================================================
+  - name: twisterlab.security
+    interval: 30s
+    rules:
+      - alert: SecurityScanVulnerability
+        expr: twisterlab_security_vulnerabilities_detected > 0
+        for: 1m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Security vulnerability detected"
+          description: "Code review agent detected {{ $value | humanize }} vulnerabilities"
+
+      - alert: UnauthorizedAccessAttempt
+        expr: increase(twisterlab_auth_failures_total[5m]) > 50
+        for: 2m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Possible brute force attack"
+          description: "{{ $value | humanize }} failed authentication attempts in 5 minutes"
+
+      - alert: SuspiciousAgentActivity
+        expr: increase(twisterlab_agent_calls_total{agent="real-desktop-commander"}[1m]) > 100
+        for: 1m
+        labels:
+          severity: high
+          category: security
+        annotations:
+          summary: "Unusual command execution rate"
+          description: "Desktop commander executed {{ $value | humanize }} commands in 1 minute"
+
+  # ==========================================================================
+  # Infrastructure Alerts
+  # ==========================================================================
+  - name: twisterlab.infrastructure
+    interval: 30s
+    rules:
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: high
+          category: infrastructure
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanize }}%"
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: high
+          category: infrastructure
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | humanize }}%"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes) * 100 < 15
+        for: 5m
+        labels:
+          severity: high
+          category: infrastructure
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value | humanize }}% disk space remaining on {{ $labels.mountpoint }}"
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache on {{ $labels.instance }} is unreachable"
+
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database on {{ $labels.instance }} is unreachable"
+
+      - alert: PostgresHighConnections
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: high
+          category: database
+        annotations:
+          summary: "High PostgreSQL connection count"
+          description: "{{ $value | humanize }} active connections (threshold: 80)"
+
+  # ==========================================================================
+  # Predictive Alerts (ML-based)
+  # ==========================================================================
+  - name: twisterlab.predictive
+    interval: 1m
+    rules:
+      - alert: AnomalyDetected
+        expr: twisterlab_anomaly_score > 0.8
+        for: 5m
+        labels:
+          severity: high
+          category: predictive
+        annotations:
+          summary: "Anomaly detected in {{ $labels.metric }}"
+          description: "Anomaly score {{ $value | humanize }} exceeds threshold (0.8)"
+
+      - alert: PredictedFailure
+        expr: predict_linear(twisterlab_agent_errors_total[1h], 3600) > twisterlab_agent_errors_total * 2
+        for: 15m
+        labels:
+          severity: medium
+          category: predictive
+        annotations:
+          summary: "Predicted increase in errors for {{ $labels.agent }}"
+          description: "Error rate predicted to double in the next hour"
+
+      - alert: CapacityWarning
+        expr: predict_linear(twisterlab_tickets_pending[6h], 21600) > 100
+        for: 30m
+        labels:
+          severity: medium
+          category: predictive
+        annotations:
+          summary: "Ticket backlog predicted to grow"
+          description: "Pending tickets predicted to reach {{ $value | humanize }} in 6 hours"
