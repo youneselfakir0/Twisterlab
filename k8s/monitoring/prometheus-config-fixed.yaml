@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: twisterlab
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'twisterlab'
+        env: 'production'
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: []
+
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+
+    scrape_configs:
+      # Prometheus self-monitoring
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+        metrics_path: /metrics
+
+      # TwisterLab API - Kubernetes Service
+      - job_name: 'twisterlab-api'
+        static_configs:
+          - targets: ['twisterlab-api.twisterlab.svc.cluster.local:8000']
+            labels:
+              service: 'api'
+              environment: 'production'
+        metrics_path: /metrics
+        scheme: http
+
+      # MCP Unified - Kubernetes Service  
+      - job_name: 'mcp-unified'
+        static_configs:
+          - targets: ['mcp-unified.twisterlab.svc.cluster.local:8080']
+            labels:
+              service: 'mcp'
+              environment: 'production'
+        metrics_path: /metrics
+        scheme: http
+
+      # Node Exporter
+      - job_name: 'node-exporter'
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: node
+          - source_labels: [__address__]
+            regex: '(.+):10250'
+            replacement: '${1}:9100'
+            target_label: __address__
+        metrics_path: /metrics
+
+      # Kubernetes cAdvisor
+      - job_name: 'kubernetes-cadvisor'
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_node_name]
+            target_label: node
+          - source_labels: [__address__]
+            regex: '(.+):10250'
+            replacement: '${1}:10250'
+            target_label: __address__
+          - target_label: __metrics_path__
+            replacement: /metrics/cadvisor
+
+      # PostgreSQL Exporter
+      - job_name: 'postgres'
+        static_configs:
+          - targets: ['postgres-exporter.twisterlab.svc.cluster.local:9187']
+            labels:
+              service: 'postgres'
+        metrics_path: /metrics
+
+      # Redis Exporter
+      - job_name: 'redis'
+        static_configs:
+          - targets: ['redis-exporter.twisterlab.svc.cluster.local:9121']
+            labels:
+              service: 'redis'
+        metrics_path: /metrics

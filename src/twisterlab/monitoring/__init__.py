@@ -1,29 +1,63 @@
 """TwisterLab Monitoring - Prometheus metrics for API and Agents."""
 
 from .metrics import (
+    # Metrics
     AGENT_EXECUTIONS,
     AGENT_EXECUTION_DURATION,
     AGENT_ERRORS,
     AGENT_COUNT,
+    AGENT_CALLS,
+    AGENT_LATENCY,
+    ACTIVE_AGENTS,
     HTTP_REQUESTS,
     HTTP_REQUEST_DURATION,
+    MAESTRO_DECISIONS,
+    MAESTRO_ACTIVE_WORKFLOWS,
+    TICKETS_RESOLVED,
+    TICKET_RESOLUTION_TIME,
+    COMMANDS_EXECUTED,
+    COMMAND_DURATION,
+    # Functions
     register_with_app,
     track_agent_execution,
+    track_agent_call,
     track_agent_error,
+    track_maestro_decision,
+    track_ticket_resolved,
+    track_command_executed,
     update_agent_count,
+    set_active_agents,
+    set_maestro_workflows,
     get_metric_values,
 )
 
 __all__ = [
+    # Metrics
     "AGENT_EXECUTIONS",
     "AGENT_EXECUTION_DURATION",
     "AGENT_ERRORS",
     "AGENT_COUNT",
+    "AGENT_CALLS",
+    "AGENT_LATENCY",
+    "ACTIVE_AGENTS",
     "HTTP_REQUESTS",
     "HTTP_REQUEST_DURATION",
+    "MAESTRO_DECISIONS",
+    "MAESTRO_ACTIVE_WORKFLOWS",
+    "TICKETS_RESOLVED",
+    "TICKET_RESOLUTION_TIME",
+    "COMMANDS_EXECUTED",
+    "COMMAND_DURATION",
+    # Functions
     "register_with_app",
     "track_agent_execution",
+    "track_agent_call",
     "track_agent_error",
+    "track_maestro_decision",
+    "track_ticket_resolved",
+    "track_command_executed",
     "update_agent_count",
+    "set_active_agents",
+    "set_maestro_workflows",
     "get_metric_values",
 ]

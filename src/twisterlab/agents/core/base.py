@@ -13,6 +13,7 @@ The MCP adapter layer handles protocol translation.
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
@@ -213,6 +214,7 @@ class CoreAgent(ABC):
 
         This is the main entry point for running agent operations.
         It looks up the capability and calls the handler method.
+        Automatically records Prometheus metrics for observability.
         """
         capability = self.get_capability(capability_name)
         if not capability:
@@ -227,9 +229,28 @@ class CoreAgent(ABC):
                 success=False, error=f"Handler not found: {capability.handler}"
             )
 
+        # Start timing for metrics
+        start_time = time.perf_counter()
+        
         try:
             # Call handler with kwargs
             result = await handler(**kwargs)
+            
+            # Calculate duration
+            duration = time.perf_counter() - start_time
+
+            # Record success metrics
+            try:
+                from twisterlab.monitoring import track_agent_execution
+                track_agent_execution(
+                    agent_name=self.name,
+                    agent_type="core",
+                    duration=duration,
+                    success=True,
+                    capability=capability_name
+                )
+            except Exception:
+                pass  # Don't fail if metrics recording fails
 
             # Ensure result is AgentResponse
             if isinstance(result, AgentResponse):
@@ -238,6 +259,27 @@ class CoreAgent(ABC):
                 return AgentResponse(success=True, data=result)
 
         except Exception as e:
+            # Calculate duration even on error
+            duration = time.perf_counter() - start_time
+            
+            # Record error metrics
+            try:
+                from twisterlab.monitoring import track_agent_execution, track_agent_error
+                track_agent_execution(
+                    agent_name=self.name,
+                    agent_type="core",
+                    duration=duration,
+                    success=False,
+                    capability=capability_name
+                )
+                track_agent_error(
+                    agent_name=self.name,
+                    agent_type="core",
+                    error_type=type(e).__name__
+                )
+            except Exception:
+                pass  # Don't fail if metrics recording fails
+            
             logger.exception(f"Error executing {capability_name}")
             return AgentResponse(success=False, error=str(e))
 

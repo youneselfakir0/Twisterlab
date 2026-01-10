@@ -34,10 +34,22 @@ AGENT_COUNT = Gauge(
     "agent_count_total", "Total number of registered agents", ["agent_type", "status"]
 )
 
+# Active agents gauge (for dashboards)
+ACTIVE_AGENTS = Gauge(
+    "active_agents_count", "Number of currently active agents"
+)
+
 AGENT_EXECUTIONS = Counter(
     "agent_execution_total",
     "Total agent executions",
     ["agent_name", "agent_type", "status"],
+)
+
+# Alias for dashboard compatibility: agent_calls_total
+AGENT_CALLS = Counter(
+    "agent_calls_total",
+    "Total agent calls (alias for agent_execution_total)",
+    ["agent_name", "capability"],
 )
 
 AGENT_EXECUTION_DURATION = Histogram(
@@ -47,10 +59,67 @@ AGENT_EXECUTION_DURATION = Histogram(
     buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0),
 )
 
+# Alias for dashboard compatibility: agent_latency_seconds
+AGENT_LATENCY = Histogram(
+    "agent_latency_seconds",
+    "Agent call latency in seconds",
+    ["agent_name", "capability"],
+    buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
+)
+
 AGENT_ERRORS = Counter(
     "agent_errors_total",
     "Total agent errors",
     ["agent_name", "agent_type", "error_type"],
+)
+
+# =============================================================================
+# Maestro/Orchestration Metrics
+# =============================================================================
+
+MAESTRO_DECISIONS = Counter(
+    "maestro_decisions_total",
+    "Total decisions made by Maestro orchestrator",
+    ["decision_type", "outcome"],
+)
+
+MAESTRO_ACTIVE_WORKFLOWS = Gauge(
+    "maestro_active_workflows",
+    "Number of active Maestro workflows"
+)
+
+# =============================================================================
+# Ticket/Incident Resolution Metrics
+# =============================================================================
+
+TICKETS_RESOLVED = Counter(
+    "tickets_resolved_total",
+    "Total tickets resolved",
+    ["resolution_type", "agent_name", "priority"],
+)
+
+TICKET_RESOLUTION_TIME = Histogram(
+    "ticket_resolution_time_seconds",
+    "Time to resolve tickets in seconds",
+    ["priority"],
+    buckets=(30, 60, 120, 300, 600, 1800, 3600, 7200),
+)
+
+# =============================================================================
+# Command Execution Metrics (DesktopCommander)
+# =============================================================================
+
+COMMANDS_EXECUTED = Counter(
+    "commands_executed_total",
+    "Total commands executed by DesktopCommander",
+    ["command_type", "status"],
+)
+
+COMMAND_DURATION = Histogram(
+    "command_duration_seconds",
+    "Command execution duration in seconds",
+    ["command_type"],
+    buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0),
 )
 
 # =============================================================================
@@ -60,7 +129,7 @@ AGENT_ERRORS = Counter(
 APP_INFO = Info("twisterlab_app", "TwisterLab application information")
 
 # Set app info at module load
-APP_INFO.info({"version": "2.1.0", "name": "twisterlab", "environment": "production"})
+APP_INFO.info({"version": "3.5.0", "name": "twisterlab", "environment": "production"})
 
 # =============================================================================
 # Helper Functions
@@ -68,7 +137,8 @@ APP_INFO.info({"version": "2.1.0", "name": "twisterlab", "environment": "product
 
 
 def track_agent_execution(
-    agent_name: str, agent_type: str, duration: float, success: bool = True
+    agent_name: str, agent_type: str, duration: float, success: bool = True,
+    capability: str = "execute"
 ) -> None:
     """Track an agent execution with its duration and status.
 
@@ -77,8 +147,11 @@ def track_agent_execution(
         agent_type: Type of the agent (e.g., 'chat', 'code', 'browser')
         duration: Execution duration in seconds
         success: Whether the execution was successful
+        capability: The capability that was called
     """
     status = "success" if success else "failure"
+    
+    # Original metrics
     AGENT_EXECUTIONS.labels(
         agent_name=agent_name, agent_type=agent_type, status=status
     ).inc()
@@ -86,6 +159,38 @@ def track_agent_execution(
     AGENT_EXECUTION_DURATION.labels(
         agent_name=agent_name, agent_type=agent_type
     ).observe(duration)
+    
+    # Dashboard-compatible metrics (aliases)
+    AGENT_CALLS.labels(
+        agent_name=agent_name, capability=capability
+    ).inc()
+    
+    AGENT_LATENCY.labels(
+        agent_name=agent_name, capability=capability
+    ).observe(duration)
+
+
+def track_agent_call(
+    agent_name: str, capability: str, duration: float, success: bool = True,
+    error_type: str = None
+) -> None:
+    """Track an agent call (dashboard-compatible helper).
+
+    Args:
+        agent_name: Name of the agent
+        capability: The capability that was called
+        duration: Call duration in seconds
+        success: Whether the call was successful
+        error_type: Type of error if failed
+    """
+    # Dashboard-compatible metrics
+    AGENT_CALLS.labels(agent_name=agent_name, capability=capability).inc()
+    AGENT_LATENCY.labels(agent_name=agent_name, capability=capability).observe(duration)
+    
+    if not success and error_type:
+        AGENT_ERRORS.labels(
+            agent_name=agent_name, agent_type="core", error_type=error_type
+        ).inc()
 
 
 def track_agent_error(
@@ -101,6 +206,61 @@ def track_agent_error(
     AGENT_ERRORS.labels(
         agent_name=agent_name, agent_type=agent_type, error_type=error_type
     ).inc()
+
+
+def track_maestro_decision(decision_type: str, outcome: str = "success") -> None:
+    """Track a Maestro orchestration decision.
+    
+    Args:
+        decision_type: Type of decision (e.g., 'dispatch', 'escalate', 'resolve')
+        outcome: Outcome of the decision
+    """
+    MAESTRO_DECISIONS.labels(decision_type=decision_type, outcome=outcome).inc()
+
+
+def track_ticket_resolved(
+    resolution_type: str, agent_name: str, priority: str = "normal", 
+    resolution_time: float = None
+) -> None:
+    """Track a resolved ticket.
+    
+    Args:
+        resolution_type: How the ticket was resolved
+        agent_name: Agent that resolved it
+        priority: Ticket priority
+        resolution_time: Time taken to resolve in seconds
+    """
+    TICKETS_RESOLVED.labels(
+        resolution_type=resolution_type, agent_name=agent_name, priority=priority
+    ).inc()
+    
+    if resolution_time is not None:
+        TICKET_RESOLUTION_TIME.labels(priority=priority).observe(resolution_time)
+
+
+def track_command_executed(command_type: str, success: bool = True, duration: float = None) -> None:
+    """Track a command execution by DesktopCommander.
+    
+    Args:
+        command_type: Type of command
+        success: Whether it succeeded
+        duration: Execution duration in seconds
+    """
+    status = "success" if success else "failure"
+    COMMANDS_EXECUTED.labels(command_type=command_type, status=status).inc()
+    
+    if duration is not None:
+        COMMAND_DURATION.labels(command_type=command_type).observe(duration)
+
+
+def set_active_agents(count: int) -> None:
+    """Set the number of active agents."""
+    ACTIVE_AGENTS.set(count)
+
+
+def set_maestro_workflows(count: int) -> None:
+    """Set the number of active Maestro workflows."""
+    MAESTRO_ACTIVE_WORKFLOWS.set(count)
 
 
 def update_agent_count(agent_type: str, status: str, count: int) -> None:
