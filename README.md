@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌀 TwisterLab v3.4.0
+# 🌀 TwisterLab v3.5.0
 
 [![CI Pipeline](https://github.com/youneselfakir0/twisterlab/actions/workflows/ci.yml/badge.svg)](https://github.com/youneselfakir0/twisterlab/actions/workflows/ci.yml)
 [![CD Pipeline](https://github.com/youneselfakir0/twisterlab/actions/workflows/cd.yml/badge.svg)](https://github.com/youneselfakir0/twisterlab/actions/workflows/cd.yml)
@@ -8,14 +8,43 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](pyproject.toml)
 [![K8s](https://img.shields.io/badge/kubernetes-ready-326ce5.svg)](deploy/k8s/)
+[![Tests](https://img.shields.io/badge/tests-89%20passing-brightgreen.svg)](#-testing)
 
 ### **Universal MCP Platform for Autonomous AI Agents**
 
 TwisterLab acts as a bridge between LLMs (**Claude**, **Ollama**) and your infrastructure. It exposes specialized Agents (Browser, Monitoring, Code Review) via the standardized **Model Context Protocol (MCP)**.
 
-[🚀 Quick Start](#-quick-start) • [📚 Documentation](docs/) • [🤝 Contributing](#-contributing)
+[🚀 Quick Start](#-quick-start) • [📚 Documentation](docs/) • [🤝 Contributing](#-contributing) • [📊 Demo](#-demo)
 
 </div>
+
+---
+
+## 🆕 What's New in v3.5.0
+
+### ✅ **REAL Agent Implementations** (Production-Ready)
+
+| Agent | Before | After |
+|-------|--------|-------|
+| **MonitoringAgent** | ❌ Hardcoded `{cpu: 45}` | ✅ Real psutil metrics |
+| **DesktopCommander** | ❌ Simulated `return "OK"` | ✅ Real subprocess + security |
+| **Maestro** | ❌ Empty orchestration | ✅ Full LLM-powered workflow |
+
+### 🔒 **Security Features**
+- **51+ whitelisted safe commands** (hostname, df, ps, etc.)
+- **Dangerous command blocking** (rm -rf, format, etc.)
+- **Timeout protection** (max 300s)
+- **Audit logging** of all command executions
+
+### 📊 **Monitoring Stack**
+- **Grafana Dashboard** with real-time gauges (CPU, RAM, Disk)
+- **Prometheus Alert Rules** (25+ rules)
+- **Alertmanager** with Slack/Email routing
+
+### 🚀 **Kubernetes HA**
+- **HorizontalPodAutoscaler** (3-10 replicas)
+- **PodDisruptionBudget** (min 2 available)
+- **NetworkPolicy** for security isolation
 
 ---
 
