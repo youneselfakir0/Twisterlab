@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-unified
+  namespace: twisterlab
+spec:
+  template:
+    spec:
+      initContainers:
+      - name: apply-fixes
+        image: busybox
+        command:
+        - sh
+        - -c
+        - |
+          # Copy fixed files from ConfigMap to code locations
+          cp /fixes/services_base.py /app-code/services-base.py
+          cp /fixes/system_client.py /app-code/system_client.py
+          cp /fixes/postgres_client.py /app-code/postgres_client.py
+          cp /fixes/agents_base.py /app-code/agents-base.py
+          cp /fixes/maestro_agent.py /app-code/maestro_agent.py
+          cp /fixes/db_agent.py /app-code/db_agent.py
+          cp /fixes/cache_agent.py /app-code/cache_agent.py
+          cp /fixes/monitoring.py /app-code/monitoring.py
+        volumeMounts:
+        - name: fixes
+          mountPath: /fixes
+        - name: app-code
+          mountPath: /app-code
+      containers:
+      - name: mcp-unified
+        volumeMounts:
+        - name: app-code
+          mountPath: /app/src/twisterlab/services/base.py
+          subPath: services-base.py
+        - name: app-code
+          mountPath: /app/src/twisterlab/services/system_client.py
+          subPath: system_client.py
+        - name: app-code
+          mountPath: /app/src/twisterlab/services/postgres_client.py
+          subPath: postgres_client.py
+        - name: app-code
+          mountPath: /app/src/twisterlab/agents/core/base.py
+          subPath: agents-base.py
+        - name: app-code
+          mountPath: /app/src/twisterlab/agents/core/maestro_agent.py
+          subPath: maestro_agent.py
+        - name: app-code
+          mountPath: /app/src/twisterlab/agents/core/db_agent.py
+          subPath: db_agent.py
+        - name: app-code
+          mountPath: /app/src/twisterlab/agents/core/cache_agent.py
+          subPath: cache_agent.py
+        - name: app-code
+          mountPath: /app/src/twisterlab/agents/core/monitoring.py
+          subPath: monitoring.py
+      volumes:
+      - name: fixes
+        configMap:
+          name: mcp-unified-fixes
+      - name: app-code
+        emptyDir: {}

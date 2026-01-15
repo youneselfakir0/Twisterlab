@@ -1,33 +1,31 @@
-# Continue IDE Configuration for TwisterLab MCP Server
-# Copy this to ~/.continue/config.yaml
+﻿# Continue IDE Configuration for TwisterLab MCP Server
+# Updated: 2026-01-14
+# Format: Continue v1.2.x
 
-version: 1.0
+version: "1.0"
 
 name: "TwisterLab Dev"
 
 models:
-  - title: "Cortex Qwen3:8B"
+  - name: "Cortex Qwen3:8B"
     provider: "ollama"
     model: "qwen3:8b"
     apiBase: "http://192.168.0.20:11434"
   
-  - title: "Cortex CodeLlama"
+  - name: "Cortex CodeLlama"
     provider: "ollama"
     model: "codellama"
     apiBase: "http://192.168.0.20:11434"
 
-  - title: "Cortex Deepseek-R1"
+  - name: "Cortex Deepseek-R1"
     provider: "ollama"
     model: "deepseek-r1:1.5b"
     apiBase: "http://192.168.0.20:11434"
 
-contextProviders:
-  - name: "file"
-    params: {}
-  - name: "code"
-    params: {}
-  - name: "terminal"
-    params: {}
+context:
+  - provider: "file"
+  - provider: "code"
+  - provider: "terminal"
 
 # MCP Server Configuration
 mcpServers:
@@ -35,64 +33,6 @@ mcpServers:
     command: "npx"
     args:
       - "-y"
-      - "@anthropic-ai/mcp-proxy@latest"
-      - "--url"
+      - "mcp-remote"
       - "http://192.168.0.30:30080/mcp"
-    env: {}
-
-  # Or use HTTP transport directly (if supported)
-  # - name: "twisterlab-http"
-  #   transport: "http"
-  #   url: "http://192.168.0.30:30080/mcp"
-
-slashCommands:
-  - name: "health"
-    description: "Check TwisterLab system health"
-    command: "Use the monitoring_health_check tool"
-  
-  - name: "metrics"
-    description: "Show system metrics"
-    command: "Use the monitoring_get_system_metrics tool"
-  
-  - name: "containers"
-    description: "List Docker containers"
-    command: "Use the monitoring_list_containers tool"
-  
-  - name: "models"
-    description: "List available LLM models"
-    command: "Use the monitoring_list_models tool"
-  
-  - name: "chat"
-    description: "Chat with Cortex LLM"
-    command: "Use the maestro_chat tool with the provided message"
-  
-  - name: "analyze"
-    description: "Analyze code or data"
-    command: "Use the maestro_analyze tool on the selected content"
-  
-  - name: "query"
-    description: "Execute SQL query"
-    command: "Use the database_execute_query tool with the provided SQL"
-  
-  - name: "tables"
-    description: "List database tables"
-    command: "Use the database_list_tables tool"
-
-tabAutocompleteModel:
-  title: "Cortex CodeLlama"
-  provider: "ollama"
-  model: "codellama"
-  apiBase: "http://192.168.0.20:11434"
-
-systemMessage: |
-  You are a helpful assistant for TwisterLab, a platform for managing LLM workflows.
-  
-  Available MCP tools:
-  - Monitoring: health_check, system_metrics, containers, logs, cache_stats, llm_status, models
-  - Maestro: chat, generate, orchestrate, list_agents, analyze
-  - Database: execute_query, list_tables, describe_table, db_health
-  - Cache: cache_get, cache_set, cache_delete, cache_keys, cache_stats
-  
-  Architecture:
-  - EdgeServer (192.168.0.30): K3s cluster with TwisterLab services
-  - Cortex (192.168.0.20): Ollama LLM server with qwen3:8b, codellama, deepseek-r1
+      - "--allow-http"

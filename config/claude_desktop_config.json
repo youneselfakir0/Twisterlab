@@ -1,29 +1,20 @@
 {
-  "$schema": "https://raw.githubusercontent.com/anthropics/model-context-protocol/main/schema/claude_desktop_config.json",
   "_comment": "Claude Desktop Configuration for TwisterLab MCP Server",
   "_instructions": "Copy this file to: Windows: %APPDATA%\\Claude\\claude_desktop_config.json, Mac: ~/Library/Application Support/Claude/claude_desktop_config.json",
+  "_updated": "2026-01-12",
+  "_server": "http://192.168.0.30:30080",
   
   "mcpServers": {
     "twisterlab": {
-      "_comment": "TwisterLab MCP Server - HTTP proxy via npx",
       "command": "npx",
       "args": [
         "-y",
-        "@anthropic-ai/mcp-proxy@latest",
-        "--url",
-        "http://192.168.0.30:30080/mcp"
+        "mcp-remote",
+        "http://192.168.0.30:30080/mcp",
+        "--allow-http"
       ],
       "env": {
         "MCP_LOG_LEVEL": "INFO"
-      }
-    },
-    
-    "twisterlab-direct": {
-      "_comment": "Direct HTTP connection (requires Claude Desktop with HTTP transport support)",
-      "disabled": true,
-      "transport": {
-        "type": "http",
-        "url": "http://192.168.0.30:30080/mcp"
       }
     }
   },

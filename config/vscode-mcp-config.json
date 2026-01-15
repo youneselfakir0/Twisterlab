@@ -1,0 +1,58 @@
+{
+  "_comment": "VS Code MCP Configuration for TwisterLab",
+  "_instructions": "Add this to your VS Code settings.json or workspace .vscode/settings.json",
+  "_updated": "2026-01-12",
+  "_endpoint": "http://192.168.0.30:30080",
+  
+  "mcp": {
+    "servers": {
+      "twisterlab": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "mcp-remote", "http://192.168.0.30:30080/mcp", "--allow-http"]
+      }
+    }
+  },
+
+  "_tools_reference": {
+    "monitoring": [
+      "monitoring_health_check",
+      "monitoring_get_system_metrics",
+      "monitoring_list_containers",
+      "monitoring_get_container_logs",
+      "monitoring_get_cache_stats",
+      "monitoring_get_llm_status",
+      "monitoring_list_models"
+    ],
+    "maestro": [
+      "maestro_chat",
+      "maestro_generate",
+      "maestro_orchestrate",
+      "maestro_list_agents",
+      "maestro_analyze"
+    ],
+    "database": [
+      "database_execute_query",
+      "database_list_tables",
+      "database_describe_table",
+      "database_db_health"
+    ],
+    "cache": [
+      "cache_cache_get",
+      "cache_cache_set",
+      "cache_cache_delete",
+      "cache_cache_keys",
+      "cache_cache_stats"
+    ],
+    "agents": [
+      "sentiment-analyzer_analyze_sentiment",
+      "real-classifier_classify_ticket",
+      "real-resolver_resolve_ticket",
+      "real-backup_create_backup",
+      "real-desktop-commander_execute_command",
+      "browser_browse",
+      "code-review_analyze_code",
+      "code-review_security_scan"
+    ]
+  }
+}
