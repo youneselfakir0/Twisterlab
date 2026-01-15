@@ -29,12 +29,12 @@ MCP_TOOLS = {
     # Maestro (5)
     "maestro_chat": {"message": "Hello, status check"},
     "maestro_generate": {"prompt": "Test generation"},
-    "maestro_orchestrate": {"task": "health check"},
+    "maestro_orchestrate": {"command": "check health"},
     "maestro_list_agents": {},
-    "maestro_analyze": {"data": "sample data for analysis"},
+    "maestro_analyze": {"content": "sample data for analysis"},
     
     # Database (4)
-    "database_execute_query": {"query": "SELECT 1"},
+    "database_execute_query": {"sql": "SELECT 1"},
     "database_list_tables": {},
     "database_describe_table": {"table_name": "tickets"},
     "database_db_health": {},
@@ -142,9 +142,12 @@ async def call_mcp_tool(session: aiohttp.ClientSession, tool_name: str, argument
         }
     }
     
+    # LLM tools need longer timeout (60s), others use 30s
+    timeout_seconds = 60 if tool_name.startswith("maestro_") else 30
+    
     start = time.perf_counter()
     try:
-        async with session.post(MCP_URL, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as response:
+        async with session.post(MCP_URL, json=payload, timeout=aiohttp.ClientTimeout(total=timeout_seconds)) as response:
             latency_ms = (time.perf_counter() - start) * 1000
             data = await response.json()
             

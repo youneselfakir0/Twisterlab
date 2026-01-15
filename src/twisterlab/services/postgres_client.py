@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 
 from .base import (
     DBClient,
+    DBStats,
     QueryResult,
     ServiceHealth,
     ServiceStatus,

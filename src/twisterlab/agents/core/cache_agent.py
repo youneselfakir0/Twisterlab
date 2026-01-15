@@ -160,14 +160,25 @@ class CacheAgent(CoreAgent):
             cache = self.registry.get_cache()
             success = await cache.set(key, value, ttl=ttl)
 
-            return AgentResponse(
-                success=success,
-                data={
-                    "key": key,
-                    "stored": success,
-                    "ttl": ttl,
-                },
-            )
+            if success:
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "key": key,
+                        "stored": True,
+                        "ttl": ttl,
+                    },
+                )
+            else:
+                return AgentResponse(
+                    success=False,
+                    error="Failed to store value in cache (Redis connection failed or unavailable)",
+                    data={
+                        "key": key,
+                        "stored": False,
+                        "ttl": ttl,
+                    },
+                )
         except Exception as e:
             logger.exception(f"Cache set failed for key {key}")
             return AgentResponse(success=False, error=str(e))

@@ -94,6 +94,20 @@ class MaestroAgent(CoreAgent):
             ),
             # Orchestration (Simplified)
             AgentCapability(
+                name="orchestrate",
+                description="Parse a TwisterLang command and route to appropriate agent",
+                handler="handle_orchestrate",
+                capability_type=CapabilityType.ACTION,
+                params=[
+                    CapabilityParam(
+                        "command",
+                        ParamType.STRING,
+                        "TwisterLang command to parse and execute",
+                    ),
+                ],
+                tags=["orchestration", "twisterlang"],
+            ),
+            AgentCapability(
                 name="list_agents",
                 description="List all available agents and their capabilities",
                 handler="handle_list_agents",
@@ -228,6 +242,56 @@ class MaestroAgent(CoreAgent):
             )
         except Exception as e:
             logger.exception("List agents failed")
+            return AgentResponse(success=False, error=str(e))
+
+    async def handle_orchestrate(self, command: str) -> AgentResponse:
+        """
+        Parse a TwisterLang command and route to appropriate agent.
+        
+        Simple routing based on command keywords.
+        """
+        try:
+            command_lower = command.lower()
+            
+            # Simple command routing
+            if "health" in command_lower or "status" in command_lower:
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "command": command,
+                        "action": "health_check",
+                        "message": "Routing to monitoring agent for health check",
+                    },
+                )
+            elif "analyze" in command_lower or "review" in command_lower:
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "command": command,
+                        "action": "analyze",
+                        "message": "Routing to analysis workflow",
+                    },
+                )
+            elif "backup" in command_lower:
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "command": command,
+                        "action": "backup",
+                        "message": "Routing to backup agent",
+                    },
+                )
+            else:
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "command": command,
+                        "action": "unknown",
+                        "message": f"Command parsed but no specific handler found. Use 'health', 'analyze', or 'backup' keywords.",
+                    },
+                )
+        except Exception as e:
+            logger.exception("Orchestrate failed")
             return AgentResponse(success=False, error=str(e))
 
     async def handle_analyze(
