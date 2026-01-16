@@ -56,9 +56,9 @@ jobs:
 
   deploy:
     name: Deploy to Kubernetes
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, k3s]
     needs: build-and-push
-    # Only deploy if KUBE_CONFIG secret is set
+    # Only deploy if running on self-hosted runner with K8s access
     if: github.event_name != 'pull_request'
 
     steps:
@@ -69,37 +69,25 @@ jobs:
         uses: azure/setup-kubectl@v3
 
       - name: Deploy to Cluster
-        env:
-          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
         run: |
-          if [ -z "$KUBE_CONFIG" ]; then
-            echo "::warning::KUBE_CONFIG secret is not set. Skipping deployment."
-            echo "To enable deployment, add your kubeconfig content to a GitHub Secret named KUBE_CONFIG."
-            exit 0
-          fi
-
-          # Configure kubectl
-          mkdir -p $HOME/.kube
-          echo "$KUBE_CONFIG" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
-          # Update Kubernetes Resources
+          # Self-hosted runner has direct access to K8s cluster
           echo "🚀 Deploying to Kubernetes..."
           
-          # Apply Manifests (Core & API)
-          # Assuming standard path structure. Adjust if your k8s/ structure differs.
-          if [ -d "k8s/core" ]; then kubectl apply -f k8s/core/; fi
-          if [ -d "k8s/api" ]; then kubectl apply -f k8s/api/; fi
+          # Apply Manifests if they exist
+          if [ -d "k8s/base" ]; then kubectl apply -f k8s/base/ -n twisterlab; fi
+          if [ -d "k8s/deployments" ]; then kubectl apply -f k8s/deployments/ -n twisterlab; fi
           
-          # Apply Security Policies (Important!)
-          kubectl apply -f k8s/security/network-policies.yaml
+          # Apply Security Policies
+          if [ -f "k8s/security/network-policies.yaml" ]; then
+            kubectl apply -f k8s/security/network-policies.yaml
+          fi
 
           # Force Update Image
           IMAGE_TAG=sha-$(git rev-parse --short HEAD)
           FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG
           
           echo "📦 Updating deployment with image: $FULL_IMAGE"
-          kubectl set image deployment/twisterlab-api twisterlab-api=$FULL_IMAGE -n twisterlab
+          kubectl set image deployment/twisterlab-api api=$FULL_IMAGE -n twisterlab
           
           # Wait for Rollout
           kubectl rollout status deployment/twisterlab-api -n twisterlab --timeout=120s
