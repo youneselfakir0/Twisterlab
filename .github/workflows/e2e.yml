@@ -1,0 +1,89 @@
+name: TwisterLab E2E Tests
+
+on:
+  # Run after CD deployment
+  workflow_run:
+    workflows: ["TwisterLab CD"]
+    types:
+      - completed
+  # Manual trigger
+  workflow_dispatch:
+  # Scheduled daily
+  schedule:
+    - cron: '0 6 * * *'  # 6 AM UTC daily
+
+env:
+  MCP_API_URL: http://192.168.0.30:30080
+
+jobs:
+  e2e-tests:
+    name: Run E2E Tests
+    runs-on: [self-hosted, linux, k3s]
+    # Only run if CD was successful or manual/scheduled trigger
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-html httpx playwright
+          playwright install chromium
+
+      - name: Wait for deployment to stabilize
+        run: |
+          echo "⏳ Waiting 30s for deployment to stabilize..."
+          sleep 30
+
+      - name: Check API health
+        run: |
+          echo "🔍 Checking API health..."
+          curl -f http://192.168.0.30:30000/ || exit 1
+          curl -f http://192.168.0.30:30080/health || exit 1
+          echo "✅ API is healthy"
+
+      - name: Run E2E Platform Tests
+        env:
+          MCP_API_URL: http://192.168.0.30:30080
+        run: |
+          echo "🧪 Running E2E Platform Tests..."
+          pytest tests/e2e/test_1_platform.py -v --tb=short || true
+
+      - name: Run E2E Agent Tests
+        env:
+          MCP_API_URL: http://192.168.0.30:30080
+        run: |
+          echo "🤖 Running E2E Agent Tests..."
+          pytest tests/e2e/test_2_agents.py -v --tb=short || true
+
+      - name: Run E2E Incident Scenarios
+        env:
+          MCP_API_URL: http://192.168.0.30:30080
+        run: |
+          echo "🚨 Running E2E Incident Scenarios..."
+          pytest tests/e2e/test_4_incident_scenarios.py -v --tb=short || true
+
+      - name: Generate Test Report
+        if: always()
+        run: |
+          echo "📊 Test Summary"
+          echo "============================================"
+          echo "E2E tests completed at $(date)"
+          echo "API URL: $MCP_API_URL"
+          echo "============================================"
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ E2E Tests Failed!"
+          echo "Check the logs for details."
