@@ -1,0 +1,257 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  namespace: monitoring
+data:
+  twisterlab-alerts.yml: |
+    groups:
+      # ============================================================
+      # API & APPLICATION ALERTS
+      # ============================================================
+      - name: twisterlab-api
+        rules:
+          - alert: APIHighErrorRate
+            expr: |
+              (
+                sum(rate(http_requests_total{job="twisterlab-api", status=~"5.."}[5m]))
+                /
+                sum(rate(http_requests_total{job="twisterlab-api"}[5m]))
+              ) > 0.05
+            for: 5m
+            labels:
+              severity: critical
+              team: backend
+            annotations:
+              summary: "High API error rate detected"
+              description: "API error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+          - alert: APIHighLatency
+            expr: |
+              histogram_quantile(0.95, 
+                sum(rate(http_request_duration_seconds_bucket{job="twisterlab-api"}[5m])) by (le)
+              ) > 2
+            for: 5m
+            labels:
+              severity: warning
+              team: backend
+            annotations:
+              summary: "High API latency detected"
+              description: "P95 latency is {{ $value | humanizeDuration }} (threshold: 2s)"
+
+          - alert: APIDown
+            expr: up{job="twisterlab-api"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              team: backend
+            annotations:
+              summary: "TwisterLab API is DOWN"
+              description: "API endpoint is not responding for more than 1 minute"
+
+      # ============================================================
+      # MCP SERVER ALERTS
+      # ============================================================
+      - name: mcp-unified
+        rules:
+          - alert: MCPServerDown
+            expr: up{job="mcp-unified"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              team: backend
+            annotations:
+              summary: "MCP Unified Server is DOWN"
+              description: "MCP server is not responding for more than 2 minutes"
+
+          - alert: MCPHighToolLatency
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(mcp_tool_duration_seconds_bucket[5m])) by (le, tool_name)
+              ) > 5
+            for: 5m
+            labels:
+              severity: warning
+              team: backend
+            annotations:
+              summary: "MCP tool {{ $labels.tool_name }} is slow"
+              description: "P95 latency is {{ $value | humanizeDuration }}"
+
+      # ============================================================
+      # DATABASE ALERTS (PostgreSQL)
+      # ============================================================
+      - name: postgres
+        rules:
+          - alert: PostgresDown
+            expr: up{job="postgres"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              team: database
+            annotations:
+              summary: "PostgreSQL is DOWN"
+              description: "PostgreSQL database is not responding"
+
+          - alert: PostgresHighConnections
+            expr: |
+              pg_stat_activity_count{state="active"} 
+              / 
+              pg_settings_max_connections > 0.8
+            for: 5m
+            labels:
+              severity: warning
+              team: database
+            annotations:
+              summary: "PostgreSQL connection usage high"
+              description: "Connection usage is {{ $value | humanizePercentage }}"
+
+          - alert: PostgresSlowQueries
+            expr: |
+              rate(pg_stat_statements_seconds_total[5m]) 
+              / 
+              rate(pg_stat_statements_calls_total[5m]) > 1
+            for: 10m
+            labels:
+              severity: warning
+              team: database
+            annotations:
+              summary: "PostgreSQL slow queries detected"
+              description: "Average query time is {{ $value | humanizeDuration }}"
+
+      # ============================================================
+      # REDIS ALERTS
+      # ============================================================
+      - name: redis
+        rules:
+          - alert: RedisDown
+            expr: up{job="redis"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              team: infrastructure
+            annotations:
+              summary: "Redis is DOWN"
+              description: "Redis cache is not responding"
+
+          - alert: RedisHighMemory
+            expr: |
+              redis_memory_used_bytes 
+              / 
+              redis_memory_max_bytes > 0.9
+            for: 5m
+            labels:
+              severity: warning
+              team: infrastructure
+            annotations:
+              summary: "Redis memory usage high"
+              description: "Memory usage is {{ $value | humanizePercentage }}"
+
+          - alert: RedisHighLatency
+            expr: redis_commands_duration_seconds_total / redis_commands_total > 0.01
+            for: 5m
+            labels:
+              severity: warning
+              team: infrastructure
+            annotations:
+              summary: "Redis latency is high"
+              description: "Average command latency is {{ $value | humanizeDuration }}"
+
+      # ============================================================
+      # KUBERNETES / INFRASTRUCTURE ALERTS
+      # ============================================================
+      - name: kubernetes
+        rules:
+          - alert: PodCrashLooping
+            expr: |
+              rate(kube_pod_container_status_restarts_total{namespace="twisterlab"}[15m]) * 60 * 15 > 3
+            for: 5m
+            labels:
+              severity: critical
+              team: infrastructure
+            annotations:
+              summary: "Pod {{ $labels.pod }} is crash looping"
+              description: "Pod has restarted {{ $value }} times in the last 15 minutes"
+
+          - alert: PodNotReady
+            expr: |
+              kube_pod_status_ready{namespace="twisterlab", condition="true"} == 0
+            for: 5m
+            labels:
+              severity: warning
+              team: infrastructure
+            annotations:
+              summary: "Pod {{ $labels.pod }} is not ready"
+              description: "Pod has been not ready for more than 5 minutes"
+
+          - alert: HighCPUUsage
+            expr: |
+              (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 85
+            for: 10m
+            labels:
+              severity: warning
+              team: infrastructure
+            annotations:
+              summary: "High CPU usage on node"
+              description: "CPU usage is {{ $value | printf \"%.1f\" }}%"
+
+          - alert: HighMemoryUsage
+            expr: |
+              (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+            for: 5m
+            labels:
+              severity: critical
+              team: infrastructure
+            annotations:
+              summary: "High memory usage on node"
+              description: "Memory usage is {{ $value | printf \"%.1f\" }}%"
+
+          - alert: DiskSpaceLow
+            expr: |
+              (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 85
+            for: 10m
+            labels:
+              severity: warning
+              team: infrastructure
+            annotations:
+              summary: "Disk space low on node"
+              description: "Disk usage is {{ $value | printf \"%.1f\" }}%"
+
+      # ============================================================
+      # AGENT SPECIFIC ALERTS
+      # ============================================================
+      - name: agents
+        rules:
+          - alert: AgentExecutionFailed
+            expr: |
+              increase(agent_execution_errors_total[5m]) > 5
+            for: 5m
+            labels:
+              severity: warning
+              team: backend
+            annotations:
+              summary: "Agent {{ $labels.agent_name }} has failures"
+              description: "{{ $value }} execution errors in the last 5 minutes"
+
+          - alert: SentimentAnalyzerDown
+            expr: |
+              up{job=~".*sentiment.*"} == 0 or absent(up{job=~".*sentiment.*"})
+            for: 5m
+            labels:
+              severity: warning
+              team: backend
+            annotations:
+              summary: "Sentiment Analyzer agent is not available"
+              description: "Sentiment analysis capability may be degraded"
+
+          - alert: MaestroOrchestratorSlow
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(maestro_orchestration_duration_seconds_bucket[5m])) by (le)
+              ) > 10
+            for: 5m
+            labels:
+              severity: warning
+              team: backend
+            annotations:
+              summary: "Maestro orchestrator is slow"
+              description: "P95 orchestration time is {{ $value | humanizeDuration }}"
