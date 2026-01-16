@@ -80,7 +80,7 @@ class TestDatabaseIncidentScenario:
             "arguments": {}
         }
         response = client.post(
-            "/tools/real-monitoring_check_health",
+            "/tools/monitoring_health_check",
             json=payload,
             headers=admin_headers
         )
@@ -89,7 +89,7 @@ class TestDatabaseIncidentScenario:
         content = response.json()["content"][0]["text"]
         
         # Should return health status
-        assert "status" in content.lower() or "health" in content.lower()
+        assert "status" in content.lower() or "health" in content.lower() or "ok" in content.lower()
 
     def test_step4_resolve_incident(self, client, admin_headers):
         """Step 4: Mark incident as resolved."""

@@ -37,13 +37,30 @@ class RealClassifierAgent(TwisterAgent):
     async def handle_classify(self, ticket_text: str) -> AgentResponse:
         """Simple classification logic."""
         text = ticket_text.lower()
-        if "password" in text or "login" in text:
+        
+        # Priority detection
+        priority = "medium"
+        if any(word in text for word in ["urgent", "critical", "emergency", "asap", "down"]):
+            priority = "high"
+        elif any(word in text for word in ["when you can", "low priority", "minor"]):
+            priority = "low"
+        
+        # Category detection
+        if any(word in text for word in ["database", "sql", "query", "postgres", "mysql", "db"]):
+            category = "DATABASE"
+        elif any(word in text for word in ["slow", "performance", "latency", "timeout"]):
+            category = "PERFORMANCE"
+        elif any(word in text for word in ["password", "login", "auth", "access", "permission"]):
             category = "ACCESS"
-        elif "software" in text or "install" in text:
+        elif any(word in text for word in ["software", "install", "update", "version"]):
             category = "SOFTWARE"
-        elif "bug" in text or "error" in text:
+        elif any(word in text for word in ["bug", "error", "crash", "exception", "fail"]):
             category = "TECHNICAL"
+        elif any(word in text for word in ["security", "breach", "hack", "vulnerability"]):
+            category = "SECURITY"
+        elif any(word in text for word in ["network", "connection", "dns", "firewall"]):
+            category = "NETWORK"
         else:
             category = "GENERAL"
             
-        return AgentResponse(success=True, data={"category": category, "priority": "medium"})
+        return AgentResponse(success=True, data={"category": category, "priority": priority})

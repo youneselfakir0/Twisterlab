@@ -48,26 +48,33 @@ class SentimentAnalyzerAgent(TwisterAgent):
         # Simulated logic (real NLP could be added here)
         text_lower = text.lower()
         
-        positive_words = ["good", "great", "excellent", "amazing", "love", "fantastic"]
-        negative_words = ["bad", "hate", "terrible", "catastrophic", "frustrated", "down"]
+        positive_words = ["good", "great", "excellent", "amazing", "love", "fantastic", "resolved", "fixed", "working", "success"]
+        negative_words = ["bad", "hate", "terrible", "catastrophic", "frustrated", "down", "slow", "urgent", "critical", 
+                         "emergency", "error", "fail", "broken", "crash", "complaining", "issue", "problem", "not working"]
         
         pos_count = sum(1 for word in positive_words if word in text_lower)
         neg_count = sum(1 for word in negative_words if word in text_lower)
         
+        # Urgency detection
+        is_urgent = any(word in text_lower for word in ["urgent", "critical", "emergency", "asap", "immediately"])
+        
         if pos_count > neg_count:
             sentiment = "positive"
             confidence = min(0.5 + (pos_count * 0.1), 0.99)
-        elif neg_count > pos_count:
+        elif neg_count > pos_count or is_urgent:
             sentiment = "negative"
             confidence = min(0.5 + (neg_count * 0.1), 0.99)
+            if is_urgent:
+                confidence = max(confidence, 0.8)
         else:
             sentiment = "neutral"
             confidence = 0.5
 
         result = {
             "sentiment": sentiment,
-            "confidence": confidence,
-            "text_length": len(text)
+            "confidence": round(confidence, 2),
+            "text_length": len(text),
+            "urgency": "high" if is_urgent else "normal"
         }
         
         if detailed:
