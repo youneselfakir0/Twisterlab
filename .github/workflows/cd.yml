@@ -65,11 +65,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configure kubectl
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          mkdir -p $HOME/.kube
+          echo "$KUBE_CONFIG" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
       - name: Deploy to Cluster
         run: |
-          # Self-hosted runner has direct access to K8s cluster via twister user
-          export KUBECONFIG=/home/twister/.kube/config
-          
           echo "🚀 Deploying to Kubernetes..."
           
           # Force Update Image (simple and reliable)
