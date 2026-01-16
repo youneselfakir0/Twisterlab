@@ -657,7 +657,7 @@ class TestBrowserAgentWithMock:
 
     @pytest.mark.asyncio
     async def test_browse_exception_handling(self):
-        """Test browse handles exceptions gracefully."""
+        """Test browse handles exceptions gracefully with httpx fallback."""
         mock_async_playwright = MagicMock()
         mock_async_playwright.__aenter__ = AsyncMock(side_effect=Exception("Browser crashed"))
         mock_async_playwright.__aexit__ = AsyncMock(return_value=None)
@@ -666,8 +666,10 @@ class TestBrowserAgentWithMock:
             agent = RealBrowserAgent()
             response = await agent.handle_browse("https://example.com")
             
-            assert response.success is False
-            assert "Browser crashed" in response.error
+            # With dual-engine, httpx fallback should succeed
+            assert response.success is True
+            assert response.data["engine"] == "httpx"
+            assert "Browser crashed" in response.data.get("fallback_reason", "")
 
 
 class TestBrowserScreenshotAgentWithMock:
@@ -1055,14 +1057,16 @@ class TestBrowserAgentImportPaths:
 
     @pytest.mark.asyncio
     async def test_playwright_not_installed_message(self):
-        """Test error message when playwright not installed."""
+        """Test httpx fallback when playwright not installed."""
         with patch('twisterlab.agents.real.browser_agent.async_playwright', None):
             agent = RealBrowserAgent()
             result = await agent.handle_browse("https://example.com")
             
-            # Should return error about playwright
-            assert result.success is False
-            assert "playwright" in result.error.lower() or "not installed" in result.error.lower()
+            # With dual-engine, httpx fallback should succeed
+            assert result.success is True
+            assert result.data["engine"] == "httpx"
+            # Fallback reason should mention the error
+            assert "fallback_reason" in result.data
 
 
 class TestBrowserScreenshotImportPaths:

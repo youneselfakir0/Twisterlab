@@ -164,7 +164,7 @@ Cross-origin requests are restricted to configured origins only.
 
 
 # Security configuration via environment variables
-import os
+import os  # noqa: E402
 
 # CORS Origins - comma-separated list, defaults to common development origins
 # In production, set ALLOWED_ORIGINS=https://your-domain.com
@@ -182,11 +182,10 @@ app.add_middleware(
 )
 
 # Rate limiting middleware
-# Rate limiting middleware
-import logging
+import logging  # noqa: E402
 logger = logging.getLogger(__name__)
 
-from twisterlab.agents.api.security import RateLimitMiddleware
+from twisterlab.agents.api.security import RateLimitMiddleware  # noqa: E402
 RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "100"))
 app.add_middleware(RateLimitMiddleware, requests_per_minute=RATE_LIMIT)
 logger.info(f"✅ Security Middleware ENABLED with limit {RATE_LIMIT} req/min")

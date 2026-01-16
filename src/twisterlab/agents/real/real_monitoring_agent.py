@@ -5,7 +5,6 @@ RealMonitoringAgent - Real System Metrics Collection.
 from __future__ import annotations
 
 import logging
-import os
 import platform
 import socket
 from datetime import datetime, timezone
@@ -23,8 +22,6 @@ from twisterlab.agents.core.base import (
     AgentCapability,
     AgentResponse,
     CapabilityType,
-    CapabilityParam,
-    ParamType,
 )
 
 logger = logging.getLogger(__name__)

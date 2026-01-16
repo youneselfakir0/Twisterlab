@@ -418,8 +418,8 @@ async def classify_ticket(
         # 2. Initialize agent
         agent = RealClassifierAgent()
 
-        # Build ticket context
-        ticket = {
+        # Build ticket context for future use (logging, tracing)
+        _ticket_context = {
             "id": ticket_id,  # Include DB ticket ID if available
             "description": request.description,
             "title": request.description[:100],
@@ -641,9 +641,8 @@ async def monitor_system_health(
         logger.info(f"🏥 Monitoring system health (detailed: {request.detailed})")
         start_time = time.time()
 
-        # Initialize repositories
-        # metrics_repo reserved for future metrics collection
-        log_repo = AgentLogRepository(session)
+        # Note: log_repo reserved for future logging/metrics integration
+        # log_repo = AgentLogRepository(session)
 
         # Initialize agent
         agent = RealMonitoringAgent()

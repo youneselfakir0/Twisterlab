@@ -16,7 +16,6 @@ from .base import (
     AgentResponse,
     CapabilityType,
     CapabilityParam,
-    CapabilityParam,
     ParamType,
 )
 from twisterlab.services.base import LLMMessage
@@ -287,7 +286,7 @@ class MaestroAgent(CoreAgent):
                     data={
                         "command": command,
                         "action": "unknown",
-                        "message": f"Command parsed but no specific handler found. Use 'health', 'analyze', or 'backup' keywords.",
+                        "message": "Command parsed but no specific handler found. Use 'health', 'analyze', or 'backup' keywords.",
                     },
                 )
         except Exception as e:

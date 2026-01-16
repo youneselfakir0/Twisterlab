@@ -2,11 +2,10 @@ import asyncio
 import json
 import logging
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from fastapi.responses import Response, StreamingResponse
 
 # Import Agents
 from twisterlab.agents.real.browser_agent import RealBrowserAgent
@@ -125,9 +124,6 @@ async def handle_sse(request: Request):
         # 1. Send the 'endpoint' event pointing to the POST handler
         # The URL must be absolute or relative to the client. 
         # Since we are often behind K8s NodePort/Reverse Proxy, relative is safer if client supports it.
-        # But MCP spec usually wants the full interaction endpoint.
-        # We construct it from the request base.
-        base_url = str(request.base_url).rstrip("/")
         # We assume the prefix is /api/v1/mcp if mounted there
         messages_url = f"/api/v1/mcp/messages?session_id={session_id}"
         
