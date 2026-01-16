@@ -65,24 +65,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Kubectl
-        uses: azure/setup-kubectl@v3
-
       - name: Deploy to Cluster
         run: |
-          # Self-hosted runner has direct access to K8s cluster
+          # Self-hosted runner has direct access to K8s cluster via twister user
+          export KUBECONFIG=/home/twister/.kube/config
+          
           echo "🚀 Deploying to Kubernetes..."
           
-          # Apply Manifests if they exist
-          if [ -d "k8s/base" ]; then kubectl apply -f k8s/base/ -n twisterlab; fi
-          if [ -d "k8s/deployments" ]; then kubectl apply -f k8s/deployments/ -n twisterlab; fi
-          
-          # Apply Security Policies
-          if [ -f "k8s/security/network-policies.yaml" ]; then
-            kubectl apply -f k8s/security/network-policies.yaml
-          fi
-
-          # Force Update Image
+          # Force Update Image (simple and reliable)
           IMAGE_TAG=sha-$(git rev-parse --short HEAD)
           FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG
           
