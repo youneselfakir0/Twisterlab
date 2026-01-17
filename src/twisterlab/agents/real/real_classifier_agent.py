@@ -45,9 +45,15 @@ class RealClassifierAgent(TwisterAgent):
         elif any(word in text for word in ["when you can", "low priority", "minor"]):
             priority = "low"
         
-        # Category detection
+        # Category detection - order matters (more specific first)
         if any(word in text for word in ["database", "sql", "query", "postgres", "mysql", "db"]):
             category = "DATABASE"
+        elif any(word in text for word in ["security", "breach", "hack", "vulnerability", "unauthorized"]):
+            category = "SECURITY"
+        elif any(word in text for word in ["application", "app", "web", "website", "server", "api", "service"]):
+            category = "APPLICATION"
+        elif any(word in text for word in ["network", "connection", "dns", "firewall", "connectivity"]):
+            category = "NETWORK"
         elif any(word in text for word in ["slow", "performance", "latency", "timeout"]):
             category = "PERFORMANCE"
         elif any(word in text for word in ["password", "login", "auth", "access", "permission"]):
@@ -56,10 +62,6 @@ class RealClassifierAgent(TwisterAgent):
             category = "SOFTWARE"
         elif any(word in text for word in ["bug", "error", "crash", "exception", "fail"]):
             category = "TECHNICAL"
-        elif any(word in text for word in ["security", "breach", "hack", "vulnerability"]):
-            category = "SECURITY"
-        elif any(word in text for word in ["network", "connection", "dns", "firewall"]):
-            category = "NETWORK"
         else:
             category = "GENERAL"
             
