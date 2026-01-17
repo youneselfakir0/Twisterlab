@@ -315,7 +315,6 @@ class TestSecurityBreachScenario:
         content = response.json()["content"][0]["text"]
         assert "backup_id" in content.lower()
 
-    @pytest.mark.skip(reason="code-review_security_scan tool not available in current MCP server")
     def test_step3_security_code_scan(self, client, admin_headers):
         """Scan for security vulnerabilities."""
         payload = {
@@ -360,7 +359,7 @@ def login(request):
         assert "resolved" in content.lower()
 
     def test_full_security_breach_flow(self, client, admin_headers):
-        """Complete E2E flow for security breach (without code-review scan)."""
+        """Complete E2E flow for security breach."""
         print("\n🔒 Security Breach Incident Flow:")
         
         # Step 1: Classify
@@ -390,7 +389,16 @@ def login(request):
         assert backup.status_code == 200
         print("   3. Emergency backup: ✅")
         
-        # Step 4: Resolve (skipping security scan - tool not available)
+        # Step 4: Security scan
+        scan = client.post(
+            "/tools/code-review_security_scan",
+            json={"arguments": {"code": "password = 'secret123'"}},
+            headers=admin_headers
+        )
+        assert scan.status_code == 200
+        print("   4. Security scan: ✅")
+        
+        # Step 5: Resolve
         resolve = client.post(
             "/tools/real-resolver_resolve_ticket",
             json={"arguments": {
@@ -400,7 +408,7 @@ def login(request):
             headers=admin_headers
         )
         assert resolve.status_code == 200
-        print("   4. Resolution: ✅")
+        print("   5. Resolution: ✅")
         
         print("\n✅ Security breach incident fully resolved!")
 
