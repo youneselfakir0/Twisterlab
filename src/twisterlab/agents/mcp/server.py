@@ -169,5 +169,77 @@ async def main():
     async with stdio_server() as (read_stream, write_stream):
         await app.run(read_stream, write_stream, app.create_initialization_options())
 
+
+class UnifiedMCPServer:
+    """
+    Unified MCP Server for HTTP deployment.
+    
+    Wraps the ToolRouter and AgentRegistry for HTTP-based MCP communication.
+    """
+    
+    def __init__(self):
+        from twisterlab.agents.mcp.router import AgentRegistry, ToolRouter
+        from twisterlab.agents.registry import agent_registry
+        
+        # Use the global agent registry
+        self._agent_registry = AgentRegistry()
+        
+        # Copy agents from global registry to MCP registry
+        for agent_name, agent in agent_registry._agents.items():
+            self._agent_registry.register_instance(agent)
+        
+        self._tool_router = ToolRouter(self._agent_registry)
+        
+        self.name = "twisterlab-mcp-unified"
+        self.version = "3.2.0"
+    
+    def get_server_info(self) -> dict:
+        """Get server information."""
+        return {
+            "name": self.name,
+            "version": self.version,
+            "agents": len(self._agent_registry.list_agents()),
+            "tools": len(self._tool_router.list_tools()),
+        }
+    
+    async def handle_request(self, rpc_request: dict) -> dict:
+        """Handle JSON-RPC request."""
+        method = rpc_request.get("method", "")
+        params = rpc_request.get("params", {})
+        req_id = rpc_request.get("id", 0)
+        
+        if method == "tools/list":
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {"tools": self._tool_router.list_tools()}
+            }
+        elif method == "tools/call":
+            tool_name = params.get("name")
+            arguments = params.get("arguments", {})
+            result = await self._tool_router.execute_tool(tool_name, arguments)
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": result
+            }
+        elif method == "initialize":
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "serverInfo": self.get_server_info(),
+                    "capabilities": {"tools": {}}
+                }
+            }
+        else:
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "error": {"code": -32601, "message": f"Method not found: {method}"}
+            }
+
+
 if __name__ == "__main__":
     asyncio.run(main())
