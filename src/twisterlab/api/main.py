@@ -18,7 +18,7 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     FastAPIInstrumentor = None
 
-from .routes import agents, browser, mcp, system, mcp_sse
+from .routes import agents, browser, mcp, system, mcp_sse, tools
 from . import routes_mcp_real
 
 
@@ -195,6 +195,7 @@ app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
 app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])
 app.include_router(mcp_sse.router, prefix="/api/v1/mcp", tags=["mcp-sse"])
 app.include_router(routes_mcp_real.router, prefix="/api/v1/mcp/tools", tags=["mcp-tools"])
+app.include_router(tools.router, prefix="/tools", tags=["tools"])
 app.include_router(browser.router, prefix="/api/v1/browser", tags=["browser"])
 
 
