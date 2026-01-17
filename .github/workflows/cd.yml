@@ -81,14 +81,10 @@ jobs:
           IMAGE_TAG=sha-$(git rev-parse --short HEAD)
           FULL_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG
           
-          echo "📦 Updating deployments with image: $FULL_IMAGE"
+          echo "📦 Updating deployment with image: $FULL_IMAGE"
           
-          # Update twisterlab-api
+          # Update twisterlab-api only (mcp-unified uses different port/config)
           kubectl set image deployment/twisterlab-api api=$FULL_IMAGE -n twisterlab
           kubectl rollout status deployment/twisterlab-api -n twisterlab --timeout=120s
           
-          # Update mcp-unified (uses same image)
-          kubectl set image deployment/mcp-unified mcp-unified=$FULL_IMAGE -n twisterlab
-          kubectl rollout status deployment/mcp-unified -n twisterlab --timeout=120s
-          
-          echo "✅ All Deployments Successful!"
+          echo "✅ Deployment Successful!"
