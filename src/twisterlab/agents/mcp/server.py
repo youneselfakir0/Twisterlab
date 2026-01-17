@@ -181,12 +181,16 @@ class UnifiedMCPServer:
         from twisterlab.agents.mcp.router import AgentRegistry, ToolRouter
         from twisterlab.agents.registry import agent_registry
         
-        # Use the global agent registry
+        # Use a fresh agent registry for MCP
         self._agent_registry = AgentRegistry()
         
-        # Copy agents from global registry to MCP registry
+        # Copy only compatible agents (those with list_capabilities method)
         for agent_name, agent in agent_registry._agents.items():
-            self._agent_registry.register_instance(agent)
+            if hasattr(agent, 'list_capabilities') or hasattr(agent, 'get_capabilities'):
+                try:
+                    self._agent_registry.register_instance(agent)
+                except Exception as e:
+                    logger.warning(f"Could not register agent {agent_name}: {e}")
         
         self._tool_router = ToolRouter(self._agent_registry)
         
