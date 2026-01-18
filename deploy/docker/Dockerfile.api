@@ -46,6 +46,10 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # This installs required shared libraries and the browser binary
 RUN playwright install --with-deps chromium
 
+# Add build argument to invalidate cache for source code
+ARG CACHE_BUST=1
+RUN echo "Cache bust: $CACHE_BUST"
+
 # Copy application source code
 COPY ./src /app/src
 
