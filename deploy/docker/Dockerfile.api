@@ -53,6 +53,9 @@ RUN echo "Cache bust: $CACHE_BUST"
 # Copy application source code
 COPY ./src /app/src
 
+# Debug: verify the copied file has the right content
+RUN grep -n "from .routes" /app/src/twisterlab/api/main.py || echo "GREP FAILED"
+
 # Copy pyproject.toml for package installation
 COPY pyproject.toml ./
 
