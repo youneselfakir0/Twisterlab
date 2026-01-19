@@ -264,9 +264,14 @@ class RealDesktopCommanderAgent(TwisterAgent):
         self, 
         command: str, 
         timeout: int = 30,
-        working_dir: Optional[str] = None
+        working_dir: Optional[str] = None,
+        **kwargs  # Accept additional params from orchestration (e.g., device_id)
     ) -> AgentResponse:
         """Execute a command on the local system."""
+        # Log any unexpected kwargs for debugging
+        if kwargs:
+            logger.debug(f"💡 Received extra params (ignored): {list(kwargs.keys())}")
+        
         logger.info(f"💻 Executing command: {command[:100]}...")
         
         # Security check
@@ -368,7 +373,8 @@ class RealDesktopCommanderAgent(TwisterAgent):
         self, 
         device_id: str, 
         command: str, 
-        timeout: int = 30
+        timeout: int = 30,
+        **kwargs  # Accept additional params from orchestration
     ) -> AgentResponse:
         """
         Execute a command on a remote device.

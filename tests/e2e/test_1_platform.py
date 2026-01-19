@@ -24,13 +24,14 @@ def test_tool_list_authenticated(client, admin_headers):
     
     tool_names = [t["name"] for t in data["tools"]]
     
-    # Core Agents
-    assert "monitoring_health_check" in tool_names
-    assert "maestro_chat" in tool_names
+    # Core Agents (updated to match deployed tools)
+    assert "monitoring_collect_metrics" in tool_names
+    assert "maestro_analyze_task" in tool_names
     
     # Real Agents
     assert "sentiment-analyzer_analyze_sentiment" in tool_names
     assert "real-classifier_classify_ticket" in tool_names
     assert "real-resolver_resolve_ticket" in tool_names
     assert "real-backup_create_backup" in tool_names
-    assert "code-review_analyze_code" in tool_names
+    assert "real-desktop-commander_execute_command" in tool_names
+

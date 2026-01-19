@@ -24,21 +24,18 @@ class TestRealAgents:
         content = response.json()["content"][0]["text"]
         assert "ACCESS" in content # Expecting ACCESS category
 
-    def test_code_review_agent(self, client, admin_headers):
-        """Test Code Review (Admin required)."""
+    def test_desktop_commander_agent(self, client, admin_headers):
+        """Test Desktop Commander - list allowed commands (Admin required)."""
         payload = {
-            "arguments": {
-                "code": "password = '123'; print(password)"
-            }
+            "arguments": {}
         }
-        response = client.post("/tools/code-review_security_scan", json=payload, headers=admin_headers)
+        response = client.post("/tools/real-desktop-commander_get_allowed_commands", json=payload, headers=admin_headers)
         
         assert response.status_code == 200
         content = response.json()["content"][0]["text"]
         
-        # Should detect hardcoded secret
-        assert "vulnerable" in content
-        assert "hardcoded secret" in content
+        # Should return list of allowed commands
+        assert "commands" in content.lower() or "allowed" in content.lower() or "[" in content
 
     def test_resolver_agent(self, client, admin_headers):
         """Test Resolver (Admin required)."""

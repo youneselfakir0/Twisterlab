@@ -1,9 +1,9 @@
 {
   "_comment": "Claude Desktop Configuration for TwisterLab MCP Server",
   "_instructions": "Copy this file to: Windows: %APPDATA%\\Claude\\claude_desktop_config.json, Mac: ~/Library/Application Support/Claude/claude_desktop_config.json",
-  "_updated": "2026-01-12",
+  "_updated": "2026-01-18",
   "_server": "http://192.168.0.30:30080",
-  
+  "_version": "3.2.0",
   "mcpServers": {
     "twisterlab": {
       "command": "npx",
@@ -18,44 +18,67 @@
       }
     }
   },
-  
   "_tools_available": {
-    "monitoring": [
-      "monitoring_health_check - Check health of all TwisterLab services",
-      "monitoring_get_system_metrics - Get system metrics (CPU, memory, disk)",
-      "monitoring_list_containers - List all Docker containers",
-      "monitoring_get_container_logs - Get logs from a Docker container",
-      "monitoring_get_cache_stats - Get Redis cache statistics",
-      "monitoring_get_llm_status - Check Cortex LLM server status",
-      "monitoring_list_models - List available LLM models"
+    "ticket_management": [
+      "real-classifier_classify_ticket - Classify a ticket based on its text",
+      "real-resolver_resolve_ticket - Resolve a support ticket"
     ],
-    "maestro": [
-      "maestro_chat - Send a message to the LLM",
-      "maestro_generate - Generate text completion",
-      "maestro_orchestrate - Orchestrate agent tasks",
-      "maestro_list_agents - List all available agents",
-      "maestro_analyze - Analyze data or code using LLM"
+    "monitoring_backup": [
+      "monitoring_collect_metrics - Collect all system metrics",
+      "real-backup_create_backup - Create a backup for a specific service"
     ],
-    "database": [
-      "database_execute_query - Execute SQL query (SELECT only)",
-      "database_list_tables - List all tables",
-      "database_describe_table - Get table schema",
-      "database_db_health - Check database health"
+    "desktop_commander": [
+      "real-desktop-commander_execute_command - Execute a command on the local system (with security checks)",
+      "real-desktop-commander_execute_command_remote - Execute a command on a remote device",
+      "real-desktop-commander_get_allowed_commands - List all allowed commands in safe mode",
+      "real-desktop-commander_get_audit_log - Get the command execution audit log"
     ],
-    "cache": [
-      "cache_cache_get - Get value from cache",
-      "cache_cache_set - Set value in cache",
-      "cache_cache_delete - Delete key from cache",
-      "cache_cache_keys - List cache keys",
-      "cache_cache_stats - Get cache statistics"
+    "maestro_orchestration": [
+      "maestro_orchestrate - Orchestrate a complete task workflow across multiple agents",
+      "maestro_analyze_task - Analyze a task to determine category and priority"
+    ],
+    "browser": [
+      "browser_browse - Browse a URL and return page content (Playwright or httpx fallback)",
+      "browser_status - Get browser agent status and available engines"
+    ],
+    "analysis": [
+      "sentiment-analyzer_analyze_sentiment - Determine the sentiment of a given text"
     ]
   },
-  
   "_network": {
     "edgeserver": "192.168.0.30 (K3s cluster)",
     "cortex": "192.168.0.20 (Ollama LLM server)",
     "mcp_port": 30080,
-    "api_port": 30000,
-    "grafana_port": 30300
+    "api_port": 30001,
+    "grafana_port": 30300,
+    "prometheus_port": 30090
+  },
+  "_usage_examples": {
+    "classify_ticket": {
+      "tool": "real-classifier_classify_ticket",
+      "arguments": {
+        "ticket_text": "The production server is down!"
+      }
+    },
+    "analyze_sentiment": {
+      "tool": "sentiment-analyzer_analyze_sentiment",
+      "arguments": {
+        "text": "I am very happy with the service!",
+        "detailed": true
+      }
+    },
+    "orchestrate_task": {
+      "tool": "maestro_orchestrate",
+      "arguments": {
+        "task": "Resolve the database performance incident",
+        "dry_run": false
+      }
+    },
+    "create_backup": {
+      "tool": "real-backup_create_backup",
+      "arguments": {
+        "service_name": "production-database"
+      }
+    }
   }
 }
