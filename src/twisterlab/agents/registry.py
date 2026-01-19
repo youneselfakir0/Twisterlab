@@ -20,6 +20,11 @@ from twisterlab.agents.real.real_sentiment_analyzer_agent import (
 )
 from twisterlab.agents.real.real_sync_agent import RealSyncAgent
 
+# Core agents for database and cache operations
+from twisterlab.agents.core.cache_agent import CacheAgent
+from twisterlab.agents.core.db_agent import DatabaseAgent
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -80,6 +85,9 @@ class AgentRegistry:
                     RealBrowserAgent(),
                     SentimentAnalyzerAgent(),
                     RealCodeReviewAgent(),
+                    # Core agents for database and cache
+                    CacheAgent(),
+                    DatabaseAgent(),
                 ]
                 
                 # Maestro needs registry reference for cross-agent communication
