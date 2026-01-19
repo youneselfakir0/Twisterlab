@@ -1,9 +1,9 @@
 {
   "_comment": "Claude Desktop Configuration for TwisterLab MCP Server",
   "_instructions": "Copy this file to: Windows: %APPDATA%\\Claude\\claude_desktop_config.json, Mac: ~/Library/Application Support/Claude/claude_desktop_config.json",
-  "_updated": "2026-01-18",
+  "_updated": "2026-01-19",
   "_server": "http://192.168.0.30:30080",
-  "_version": "3.2.0",
+  "_version": "3.2.1",
   "mcpServers": {
     "twisterlab": {
       "command": "npx",
@@ -23,8 +23,10 @@
       "real-classifier_classify_ticket - Classify a ticket based on its text",
       "real-resolver_resolve_ticket - Resolve a support ticket"
     ],
-    "monitoring_backup": [
-      "monitoring_collect_metrics - Collect all system metrics",
+    "monitoring": [
+      "monitoring_collect_metrics - Collect all system metrics (CPU, memory, disk)"
+    ],
+    "backup": [
       "real-backup_create_backup - Create a backup for a specific service"
     ],
     "desktop_commander": [
@@ -33,18 +35,36 @@
       "real-desktop-commander_get_allowed_commands - List all allowed commands in safe mode",
       "real-desktop-commander_get_audit_log - Get the command execution audit log"
     ],
-    "maestro_orchestration": [
-      "maestro_orchestrate - Orchestrate a complete task workflow across multiple agents",
-      "maestro_analyze_task - Analyze a task to determine category and priority"
-    ],
     "browser": [
       "browser_browse - Browse a URL and return page content (Playwright or httpx fallback)",
       "browser_status - Get browser agent status and available engines"
     ],
     "analysis": [
       "sentiment-analyzer_analyze_sentiment - Determine the sentiment of a given text"
+    ],
+    "code_review": [
+      "code-review_analyze_code - Analyze a snippet of code for basic issues",
+      "code-review_security_scan - Scan code for known security patterns (hardcoded secrets, SQL injection, etc.)"
+    ],
+    "cache_redis": [
+      "cache_cache_get - Get a value from cache",
+      "cache_cache_set - Set a value in cache with optional TTL",
+      "cache_cache_delete - Delete a key from cache",
+      "cache_cache_keys - List cache keys matching a pattern",
+      "cache_cache_stats - Get cache statistics (clients, memory, hit rate)"
+    ],
+    "database_postgresql": [
+      "database_execute_query - Execute a SQL query (SELECT only)",
+      "database_list_tables - List all tables in the database",
+      "database_describe_table - Get schema for a specific table",
+      "database_db_health - Check database connection health"
+    ],
+    "maestro_orchestration": [
+      "maestro_orchestrate - Orchestrate a complete task workflow across multiple agents",
+      "maestro_analyze_task - Analyze a task to determine category and priority"
     ]
   },
+  "_tools_count": 24,
   "_network": {
     "edgeserver": "192.168.0.30 (K3s cluster)",
     "cortex": "192.168.0.20 (Ollama LLM server)",
@@ -78,6 +98,27 @@
       "tool": "real-backup_create_backup",
       "arguments": {
         "service_name": "production-database"
+      }
+    },
+    "execute_command": {
+      "tool": "real-desktop-commander_execute_command",
+      "arguments": {
+        "command": "df -h",
+        "timeout": 30
+      }
+    },
+    "database_health": {
+      "tool": "database_db_health",
+      "arguments": {}
+    },
+    "cache_stats": {
+      "tool": "cache_cache_stats",
+      "arguments": {}
+    },
+    "security_scan": {
+      "tool": "code-review_security_scan",
+      "arguments": {
+        "code": "password = 'secret123'"
       }
     }
   }
