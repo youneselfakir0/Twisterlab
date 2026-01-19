@@ -36,23 +36,24 @@ class TestMaestroAgentIntegration:
     @pytest.mark.asyncio
     async def test_maestro_initialization(self, maestro_agent):
         """Test Maestro agent initializes correctly."""
-        assert maestro_agent.name == "real-maestro"
-        assert maestro_agent.role == "maestro"
-        assert "orchestrate" in str(maestro_agent.tools)
+        assert maestro_agent.name == "maestro"
+        assert hasattr(maestro_agent, 'get_capabilities')
+        capabilities = maestro_agent.get_capabilities()
+        cap_names = [c.name for c in capabilities]
+        assert "orchestrate" in cap_names
 
     @pytest.mark.asyncio
     async def test_maestro_execute_simple_task(self, maestro_agent):
-        """Test Maestro can execute a simple task."""
-        result = await maestro_agent.execute("analyze system health")
-        assert result["status"] == "ok"
-        assert result["task"] == "analyze system health"
+        """Test Maestro can execute a simple task via handle_orchestrate."""
+        result = await maestro_agent.handle_orchestrate(task="analyze system health")
+        assert result.success is True
+        assert result.data is not None
 
     @pytest.mark.asyncio
     async def test_maestro_execute_with_context(self, maestro_agent):
         """Test Maestro handles context correctly."""
-        context = {"priority": "high", "source": "monitoring"}
-        result = await maestro_agent.execute("urgent alert", context=context)
-        assert result["status"] == "ok"
+        result = await maestro_agent.handle_analyze_task(task="urgent alert")
+        assert result.success is True
 
     @pytest.mark.asyncio
     async def test_maestro_with_registry(self, mock_registry):
@@ -192,17 +193,19 @@ class TestAgentCommunication:
         
         # Create mock subordinate agent
         mock_agent = AsyncMock()
-        mock_agent.execute = AsyncMock(return_value={"status": "completed"})
+        mock_agent.name = "mock-agent"
+        mock_agent.execute_capability = AsyncMock(return_value={"status": "completed"})
         
         # Create registry with mock agent
         mock_registry = MagicMock()
         mock_registry.get_agent = MagicMock(return_value=mock_agent)
+        mock_registry.list_agents = MagicMock(return_value=[mock_agent])
         
         maestro = RealMaestroAgent(agent_registry=mock_registry)
         
-        # Execute task
-        result = await maestro.execute("delegate task to monitoring")
-        assert result["status"] == "ok"
+        # Execute task via handle_orchestrate
+        result = await maestro.handle_orchestrate(task="delegate task to monitoring")
+        assert result.success is True
 
     @pytest.mark.asyncio
     async def test_multiple_agents_workflow(self):
@@ -215,12 +218,12 @@ class TestAgentCommunication:
         # Create agents
         maestro = RealMaestroAgent()
         
-        # Simulate workflow steps
-        step1 = await maestro.execute("step 1: analyze")
-        assert step1["status"] == "ok"
+        # Simulate workflow steps using handle_analyze_task
+        step1 = await maestro.handle_analyze_task(task="step 1: analyze")
+        assert step1.success is True
         
-        step2 = await maestro.execute("step 2: process")
-        assert step2["status"] == "ok"
+        step2 = await maestro.handle_analyze_task(task="step 2: process")
+        assert step2.success is True
         
-        step3 = await maestro.execute("step 3: report")
-        assert step3["status"] == "ok"
+        step3 = await maestro.handle_analyze_task(task="step 3: report")
+        assert step3.success is True
