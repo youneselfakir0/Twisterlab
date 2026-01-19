@@ -217,33 +217,49 @@ Respond with: {{"category": "database|network|application|security|infrastructur
         keywords = []
         suggested_agents = ["classifier", "sentiment-analyzer"]
         
-        if any(kw in task_lower for kw in ["database", "sql", "postgres", "mysql", "query", "db"]):
+        # DATABASE tasks - use database agent for queries
+        if any(kw in task_lower for kw in ["database", "sql", "postgres", "mysql", "query", "db", "table", "connection pool"]):
             category = TaskCategory.DATABASE
             keywords = ["database", "sql"]
-            suggested_agents.extend(["monitoring", "real-desktop-commander"])
-        elif any(kw in task_lower for kw in ["network", "connection", "timeout", "dns"]):
+            suggested_agents.extend(["database", "backup"])  # Use database agent, not desktop-commander
+        
+        # NETWORK tasks
+        elif any(kw in task_lower for kw in ["network", "connection", "timeout", "dns", "ping", "latency"]):
             category = TaskCategory.NETWORK
             keywords = ["network", "connectivity"]
             suggested_agents.extend(["monitoring", "browser"])
-        elif any(kw in task_lower for kw in ["security", "breach", "hack", "vulnerability"]):
+        
+        # SECURITY tasks
+        elif any(kw in task_lower for kw in ["security", "breach", "hack", "vulnerability", "attack", "intrusion"]):
             category = TaskCategory.SECURITY
             keywords = ["security", "threat"]
-            suggested_agents.extend(["backup", "monitoring"])
-        elif any(kw in task_lower for kw in ["server", "cpu", "memory", "disk", "crash"]):
+            suggested_agents.extend(["backup", "code-review"])
+        
+        # MONITORING/SYSTEM tasks - use desktop-commander with proper commands
+        elif any(kw in task_lower for kw in ["cpu", "memory", "disk", "uptime", "top", "ps", "df", "du", "system status", "metrics", "monitoring"]):
+            category = TaskCategory.MONITORING
+            keywords = ["monitoring", "system"]
+            suggested_agents.extend(["monitoring", "real-desktop-commander"])
+        
+        # INFRASTRUCTURE tasks
+        elif any(kw in task_lower for kw in ["server", "crash", "restart", "deploy", "kubernetes", "pod", "container"]):
             category = TaskCategory.INFRASTRUCTURE
             keywords = ["infrastructure", "server"]
             suggested_agents.extend(["monitoring", "real-desktop-commander"])
-        elif any(kw in task_lower for kw in ["app", "application", "error", "bug", "500", "404"]):
+        
+        # APPLICATION tasks
+        elif any(kw in task_lower for kw in ["app", "application", "error", "bug", "500", "404", "api", "endpoint"]):
             category = TaskCategory.APPLICATION
             keywords = ["application", "error"]
             suggested_agents.extend(["browser", "monitoring"])
         
+        # Priority detection
         priority = TaskPriority.MEDIUM
-        if any(kw in task_lower for kw in ["urgent", "critical", "down", "crash", "emergency"]):
+        if any(kw in task_lower for kw in ["urgent", "critical", "down", "crash", "emergency", "outage", "!!!"]):
             priority = TaskPriority.CRITICAL
-        elif any(kw in task_lower for kw in ["important", "high", "production"]):
+        elif any(kw in task_lower for kw in ["important", "high", "production", "asap"]):
             priority = TaskPriority.HIGH
-        elif any(kw in task_lower for kw in ["minor", "low", "when possible"]):
+        elif any(kw in task_lower for kw in ["minor", "low", "when possible", "nice to have"]):
             priority = TaskPriority.LOW
         
         return {"category": category, "priority": priority, "suggested_agents": list(set(suggested_agents)), "keywords": keywords, "source": "rules"}
@@ -255,12 +271,37 @@ Respond with: {{"category": "database|network|application|security|infrastructur
             {"order": 2, "agent": "classifier", "capability": "classify_ticket", "params": {"ticket_text": task}, "purpose": "Categorize issue"},
         ]
         
+        # Add category-specific steps with proper agents and commands
         if category == TaskCategory.DATABASE:
-            steps.append({"order": 3, "agent": "real-desktop-commander", "capability": "execute_command", "params": {"device_id": "db-server", "command": "pg_stat_activity"}, "purpose": "Check database"})
+            # Use database agent for DB operations (safe SQL queries)
+            steps.append({"order": 3, "agent": "database", "capability": "db_health", "params": {}, "purpose": "Check database health"})
+            steps.append({"order": 4, "agent": "backup", "capability": "create_backup", "params": {"service_name": "database"}, "purpose": "Create safety backup"})
+        
+        elif category == TaskCategory.MONITORING:
+            # Use monitoring agent and desktop-commander with SAFE commands
+            steps.append({"order": 3, "agent": "monitoring", "capability": "collect_metrics", "params": {}, "purpose": "Collect system metrics"})
+            steps.append({"order": 4, "agent": "real-desktop-commander", "capability": "execute_command", "params": {"command": "uptime"}, "purpose": "Check system uptime"})
+        
+        elif category == TaskCategory.INFRASTRUCTURE:
+            # Use monitoring and safe system commands
+            steps.append({"order": 3, "agent": "monitoring", "capability": "collect_metrics", "params": {}, "purpose": "Collect metrics"})
+            steps.append({"order": 4, "agent": "real-desktop-commander", "capability": "execute_command", "params": {"command": "df -h"}, "purpose": "Check disk usage"})
+        
         elif category == TaskCategory.APPLICATION:
+            # Use browser for health checks
             steps.append({"order": 3, "agent": "browser", "capability": "browse", "params": {"url": "http://localhost:8000/health"}, "purpose": "Check app health"})
         
-        steps.append({"order": len(steps) + 1, "agent": "resolver", "capability": "resolve_ticket", "params": {"ticket_id": "TKT-AUTO", "resolution_note": "Auto-resolved by Maestro"}, "purpose": "Mark resolved"})
+        elif category == TaskCategory.SECURITY:
+            # Use backup and code-review for security incidents
+            steps.append({"order": 3, "agent": "backup", "capability": "create_backup", "params": {"service_name": "security-snapshot"}, "purpose": "Emergency backup"})
+            steps.append({"order": 4, "agent": "code-review", "capability": "security_scan", "params": {"code": "# Security incident check"}, "purpose": "Security scan"})
+        
+        elif category == TaskCategory.NETWORK:
+            # Use monitoring and browser for network issues
+            steps.append({"order": 3, "agent": "monitoring", "capability": "collect_metrics", "params": {}, "purpose": "Check network metrics"})
+        
+        # Always end with resolution
+        steps.append({"order": len(steps) + 1, "agent": "resolver", "capability": "resolve_ticket", "params": {"ticket_id": "TKT-AUTO", "resolution_note": f"Auto-resolved by Maestro ({category.value})"}, "purpose": "Mark resolved"})
         
         return {"agents": list(set(s["agent"] for s in steps)), "steps": steps, "estimated_duration_sec": len(steps) * 5}
 
