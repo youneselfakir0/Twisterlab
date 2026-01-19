@@ -1,160 +1,59 @@
-# 🌀 TwisterLab - GitHub Copilot Instructions
+# 🌀 TwisterLab - AI Agent Instructions
 
-## 🎯 MISSION DU PROJET
-**Automatisation complète du support technique via agents IA autonomes**
+## Project Overview
+**Multi-agent platform automating technical support**: tickets → analysis → resolution → prevention.
+Maestro (LLM orchestrator) coordinates 10 specialized agents via MCP (Model Context Protocol).
 
-TwisterLab = Plateforme multi-agents qui :
-- Reçoit tickets support → Analyse → Recherche solutions → Applique fixes → Prévient récidives
-- Agents autonomes orchestrés par un "cerveau" IA (Maestro)
-- Monitoring prédictif pour prévenir incidents AVANT qu'ils arrivent
-- Cible : PME qui veulent support technique 24/7 intelligent
-
-## 🧠 ARCHITECTURE - Comment Ça Marche
-
+## Architecture
 ```
-[TICKET] "Base de données lente"
-    ↓
-🧠 MAESTRO (Cerveau LLM) - Analyse + Dispatche
-    ├─ 😊 SentimentAnalyzer → Urgence client
-    ├─ 🏷️ Classifier → Catégorise problème
-    ├─ 📊 Monitoring → Collecte métriques
-    ├─ 🌐 Browser → Recherche solutions web
-    ├─ 💻 DesktopCommander → Exécute commandes
-    ├─ ✅ Resolver → Applique solution
-    └─ 💾 Backup → Sécurise avant action
-    ↓
-[RÉSOLU] + Monitoring préventif
+TICKET → FastAPI → Maestro → Agents (Sentiment, Classifier, Monitoring, Browser, Commander, Resolver, Backup, Sync, CodeReview)
 ```
 
-**9 Agents Actifs** (dans `src/twisterlab/agents/real/`)
-1. RealMaestroAgent - Orchestrateur intelligent (À IMPLÉMENTER COMPLÈTEMENT)
-2. SentimentAnalyzerAgent - Détecte urgence
-3. RealClassifierAgent - Catégorise tickets
-4. RealMonitoringAgent - Santé système
-5. RealBrowserAgent - Recherche web (Playwright)
-6. RealDesktopCommanderAgent - Exécution commandes
-7. RealResolverAgent - Marque résolu
-8. RealBackupAgent - Sécurise données
-9. RealSyncAgent - Synchro systèmes
+**Key paths:**
+- `src/twisterlab/agents/real/` - 10 production agents (TwisterAgent-based)
+- `src/twisterlab/agents/core/base.py` - Base classes: `TwisterAgent`, `AgentCapability`, `AgentResponse`
+- `src/twisterlab/agents/registry.py` - Singleton `AgentRegistry` with flexible lookup
+- `src/twisterlab/api/main.py` - FastAPI app entry point
+- `src/twisterlab/database/session.py` - Async SQLAlchemy sessions
 
-## 🔧 STACK TECHNIQUE
+## Critical Patterns
 
-**Core**
-- Python 3.11+ | FastAPI async | SQLAlchemy async
-- PostgreSQL (asyncpg) | Redis cache
-- Playwright (browser automation)
-
-**Infrastructure**
-- Docker (images 265MB optimisées)
-- Kubernetes (k3s/minikube/cloud)
-- Prometheus + Grafana monitoring
-
-**IA/LLM**
-- MCP (Model Context Protocol)
-- Ollama (local) ou Claude (API)
-- Agents capability-based
-
-## ⚠️ PIÈGES CRITIQUES
-
-### ❌ ERREUR FATALE #1 - Database
+### ⚠️ Database - ALWAYS Async
 ```python
-# ❌ CRASH L'APP
+# ❌ BREAKS THE APP
 from sqlalchemy import create_engine
 DATABASE_URL = "postgresql://..."
 
-# ✅ OBLIGATOIRE
+# ✅ REQUIRED
 from sqlalchemy.ext.asyncio import create_async_engine
 DATABASE_URL = "postgresql+asyncpg://..."
+
+# Import session correctly
+from twisterlab.database.session import AsyncSessionLocal, get_db
 ```
 
-### ❌ ERREUR FATALE #2 - Pydantic
+### ⚠️ Pydantic v2
 ```python
-# ❌ Pydantic v1 (obsolète)
+# ❌ Old syntax
 model.dict()
-
-# ✅ Pydantic v2
+# ✅ Correct
 model.model_dump()
 ```
 
-### ✅ Patterns Corrects
+### Agent Lookup (flexible matching)
 ```python
-# Import session
-from twisterlab.database.session import AsyncSessionLocal, get_db
-
-# Tests avec markers
-@pytest.mark.asyncio
-@pytest.mark.unit
-async def test_something(): ...
-
-# Agent lookup flexible
-registry.get_agent("classifier")           # ✅
-registry.get_agent("real-classifier")      # ✅
-registry.get_agent("RealClassifierAgent")  # ✅
+from twisterlab.agents.registry import agent_registry
+agent = agent_registry.get_agent("classifier")        # Works
+agent = agent_registry.get_agent("real-classifier")  # Works
+agent = agent_registry.get_agent("monitoring")       # Works (fuzzy)
 ```
 
-## 📁 STRUCTURE CLÉS
+## Creating a New Agent
 
-```
-src/twisterlab/
-├── agents/
-│   ├── real/              # 9 agents autonomes
-│   ├── core/base.py       # Classes de base (TwisterAgent, CoreAgent)
-│   ├── registry.py        # Singleton registry
-│   └── mcp/               # Serveur MCP
-├── api/
-│   ├── main.py            # FastAPI app
-│   └── routes_mcp_real.py # 39+ endpoints MCP
-└── database/session.py    # Async sessions
+1. **Scaffold**: `python scripts/new_agent_scaffold.py --name MyAgent`
 
-tests/
-├── unit/                  # Tests rapides isolés
-├── integration/           # Tests multi-composants
-└── e2e/                   # Tests Playwright
-
-k8s/
-├── base/                  # ConfigMaps, Secrets
-├── deployments/           # Deployments par service
-└── monitoring/            # Prometheus/Grafana
-
-docs/                      # Docs complètes
-deploy/docker/             # Dockerfiles
-scripts/                   # DevOps tools
-```
-
-## 🚀 COMMANDES RAPIDES
-
-```bash
-# Dev local
-uvicorn src.twisterlab.api.main:app --reload --port 8000
-
-# Tests
-pytest tests/unit -v                   # Unitaires
-pytest tests/integration -v            # Intégration
-$env:E2E='1'; pytest -m e2e -v        # E2E
-
-# Linting (obligatoire!)
-ruff check src tests
-black src tests
-
-# Docker
-docker-compose up -d                   # Stack complète
-docker-compose logs -f api
-
-# K8s
-kubectl apply -f k8s/base/ k8s/deployments/
-kubectl get pods -n twisterlab
-```
-
-## 🎓 CRÉER UN NOUVEL AGENT
-
-### 1. Scaffold
-```bash
-python scripts/new_agent_scaffold.py --name MyAgent
-```
-
-### 2. Implémenter (Template)
+2. **Implement** (`src/twisterlab/agents/real/my_agent.py`):
 ```python
-# src/twisterlab/agents/real/my_agent.py
 from twisterlab.agents.core.base import (
     TwisterAgent, AgentCapability, AgentResponse,
     CapabilityType, CapabilityParam, ParamType
@@ -167,210 +66,97 @@ class MyAgent(TwisterAgent):
     
     @property
     def description(self) -> str:
-        return "Description claire de ce que fait l'agent"
+        return "What the agent does"
     
     def get_capabilities(self) -> list[AgentCapability]:
         return [
             AgentCapability(
-                name="do_action",
+                name="action_name",
                 description="Action description",
-                handler="handle_do_action",
+                handler="handle_action",
                 capability_type=CapabilityType.ACTION,
-                params=[
-                    CapabilityParam("input", ParamType.STRING, "Description", required=True)
-                ]
+                params=[CapabilityParam("input", ParamType.STRING, "Description", required=True)]
             )
         ]
     
-    async def handle_do_action(self, input: str) -> AgentResponse:
-        # Logique ici
+    async def handle_action(self, input: str) -> AgentResponse:
         return AgentResponse(success=True, data={"result": input})
 ```
 
-### 3. Enregistrer
-```python
-# src/twisterlab/agents/registry.py
-from twisterlab.agents.real.my_agent import MyAgent
+3. **Register** in `src/twisterlab/agents/registry.py` → `initialize_agents()`
 
-class AgentRegistry:
-    def initialize_agents(self):
-        my_agent = MyAgent()
-        self._agents = {
-            # ...autres...
-            my_agent.name.lower(): my_agent,
-        }
+4. **Test** (`tests/unit/test_my_agent.py`):
+```python
+pytestmark = pytest.mark.unit
+
+class TestMyAgent:
+    @pytest.fixture
+    def agent(self):
+        return MyAgent()
+
+    @pytest.mark.asyncio
+    async def test_action(self, agent):
+        result = await agent.handle_action("test")
+        assert result.success is True
 ```
 
-### 4. Endpoint MCP
-```python
-# src/twisterlab/api/routes_mcp_real.py
-@router.post("/do_action")
-async def do_action(request: ActionRequest):
-    agent = agent_registry.get_agent("my-agent")
-    result = await agent.handle_do_action(request.input)
-    return MCPResponse(status="ok" if result.success else "error", data=result.data)
+## Development Commands
+
+```powershell
+# Local dev
+$env:PYTHONPATH="src"; uvicorn twisterlab.api.main:app --reload --port 8000
+
+# Tests (use markers: unit, integration, e2e)
+pytest tests/unit -v
+pytest tests/integration -v
+$env:E2E='1'; pytest -m e2e -v
+
+# Linting (required before PR)
+ruff check src tests; black src tests
+
+# Docker
+docker-compose -f docker-compose.production.yml up -d
+docker-compose logs -f api
+
+# Kubernetes
+kubectl apply -f k8s/base/ k8s/deployments/
+kubectl get pods -n twisterlab
 ```
 
-### 5. Tests
-```python
-# tests/unit/test_my_agent.py
-@pytest.mark.asyncio
-@pytest.mark.unit
-async def test_my_agent_success():
-    agent = MyAgent()
-    result = await agent.handle_do_action("test")
-    assert result.success is True
+## API Endpoints
+- `/health`, `/ready` - K8s probes
+- `/metrics` - Prometheus
+- `/docs` - Swagger UI
+- `/api/v1/mcp/tools/*` - MCP agent endpoints
+- `/api/v1/agents` - List all agents
+
+## Code Standards
+- **Async everywhere** - All I/O operations
+- **Type hints** - Strict typing with `-> AgentResponse`
+- **Error handling** - Return `AgentResponse(success=False, error=str(e))`
+- **Logging** - Use `logger.info(f"🚀 {self.name}: {action}")`
+
+## Commit Format
+```
+feat(maestro): implement LLM decision engine
+fix(browser): handle timeout gracefully
+test(agents): add classifier edge cases
 ```
 
-## 🎯 PRIORITÉS ACTUELLES
-
-### 🔴 URGENT
-1. **Implémenter RealMaestroAgent complet** - Le cerveau orchestrateur
-2. **Démo end-to-end** - Scénario "Database lente" → Résolution auto
-3. **Documentation visuelle** - Diagrammes architecture + vidéos
-
-### 🟡 IMPORTANT
-4. Agent prédictif ML (prévenir pannes)
-5. Dashboard Grafana custom
-6. Tests E2E automatisés
-
-## 🛡️ SÉCURITÉ
-
+## Environment Variables
 ```bash
-# ❌ JAMAIS commit
-.env
-*.key
-secrets.yaml (non-template)
-
-# ✅ Variables critiques
-DATABASE_URL=postgresql+asyncpg://...  # Async!
-REDIS_URL=redis://...
-SECRET_KEY=<random>
+DATABASE_URL=postgresql+asyncpg://...  # MUST be asyncpg
+REDIS_URL=redis://localhost:6379
 OLLAMA_BASE_URL=http://localhost:11434
 PYTHONPATH=src
 ```
 
-## 📊 MONITORING
-
-```python
-# Métriques Prometheus custom
-from prometheus_client import Counter, Histogram
-
-agent_calls = Counter('agent_calls_total', 'Total calls', ['agent_name'])
-agent_duration = Histogram('agent_duration_seconds', 'Duration', ['agent_name'])
-
-# Endpoints
-/health      # Santé API
-/metrics     # Prometheus
-/docs        # Swagger
-```
-
-## 💡 GUIDELINES COPILOT
-
-### Avant de Générer du Code
-1. ✅ Aligné avec la vision (support technique automatisé) ?
-2. ✅ Aide vraiment à résoudre des tickets ?
-3. ✅ Complexité justifiée ?
-4. ✅ Code existant réutilisable ?
-
-### Patterns à Privilégier
-```python
-# Async partout
-async def process(): ...
-
-# Type hints stricts
-def func(data: dict[str, Any]) -> AgentResponse: ...
-
-# Error handling explicite
-try:
-    result = await agent.execute()
-except Exception as e:
-    logger.error(f"Failed: {e}")
-    return AgentResponse(success=False, error=str(e))
-
-# Logging informatif
-logger.info(f"🚀 {self.name} starting: {task_id}")
-```
-
-### Format Commits
-```bash
-feat(maestro): implement LLM decision engine
-fix(browser): handle timeout gracefully
-docs(readme): add architecture diagrams
-test(e2e): add ticket resolution scenario
-refactor(agents): unify error handling
-```
-
-### Checklist PR
-- [ ] Tests passent
-- [ ] Linting OK (ruff + black)
-- [ ] Docs mises à jour
-- [ ] CHANGELOG enrichi
-- [ ] Pas de secrets
-- [ ] Tests agents individuels
-
-## 🎬 EXEMPLE COMPLET
-
-**Scénario**: "Application web ne répond plus"
-
-```python
-# 1. Sentiment → urgence=HIGH
-sentiment = await sentiment_agent.analyze("ne répond plus depuis 10 minutes")
-
-# 2. Classifier → category=APP/WEB_SERVER
-category = await classifier.classify("application web ne répond plus")
-
-# 3. Maestro dispatche
-maestro_plan = {
-    "agents": ["monitoring", "browser"],
-    "actions": ["check_status", "test_endpoint"]
-}
-
-# 4. Monitoring détecte
-status = await monitoring.check_server_status()
-# → nginx_status=DOWN
-
-# 5. Browser confirme
-test = await browser.browse("https://app.example.com")
-# → status=502
-
-# 6. Maestro décide
-decision = {"solution": "restart_nginx", "confidence": 0.95}
-
-# 7. DesktopCommander exécute
-result = await desktop_commander.execute("systemctl restart nginx")
-
-# 8. Verification
-verify = await browser.browse("https://app.example.com")
-# → status=200 ✅
-
-# 9. Resolver marque résolu
-await resolver.resolve_ticket("TICKET-123", "Nginx restarted - 2m34s")
-
-# 10. Monitoring continue
-await monitoring.set_alert("nginx_health_check", interval="1m")
-```
-
-**Résultat**: Ticket résolu en <3min, client satisfait, prévention future activée
-
-## 📖 DOCUMENTATION CLÉS
-
-- **README.md** - Vue d'ensemble
-- **QUICKSTART.md** - Démarrage rapide
-- **docs/architecture/** - Diagrammes
-- **docs/agents/** - Guide par agent
-- **DEPLOYMENT.md** - Guide déploiement
-
-## 🌟 PHILOSOPHIE
-
-1. **Simplicité > Complexité**
-2. **Autonomie des Agents** - Chaque agent indépendant
-3. **Orchestration Intelligente** - Maestro coordonne
-4. **Observabilité Totale** - Tout loggé/mesuré
-5. **Production-Ready** - Déployable immédiatement
-
-**Ce Projet Prouve**: Qu'on peut piloter l'IA pour résoudre de vrais problèmes en production.
-
----
-
-🌀 **TwisterLab** - L'IA qui travaille pour nous, pas l'inverse.
+## Key Files Reference
+| Purpose | File |
+|---------|------|
+| Agent base class | `src/twisterlab/agents/core/base.py` |
+| Agent registry | `src/twisterlab/agents/registry.py` |
+| DB session | `src/twisterlab/database/session.py` |
+| API main | `src/twisterlab/api/main.py` |
+| Pytest config | `pytest.ini` |
+| Example agent | `src/twisterlab/agents/real/real_monitoring_agent.py`

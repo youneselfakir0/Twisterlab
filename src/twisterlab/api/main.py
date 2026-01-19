@@ -146,7 +146,7 @@ Rate limiting is enforced at {RATE_LIMIT_PER_MINUTE} requests per minute per IP 
 ### CORS
 Cross-origin requests are restricted to configured origins only.
     """,
-    version="3.2.0",
+    version="3.5.0",
     openapi_tags=OPENAPI_TAGS,
     docs_url="/docs",
     redoc_url="/redoc",

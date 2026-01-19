@@ -195,7 +195,7 @@ class UnifiedMCPServer:
         self._tool_router = ToolRouter(self._agent_registry)
         
         self.name = "twisterlab-mcp-unified"
-        self.version = "3.2.0"
+        self.version = "3.5.0"
     
     def get_server_info(self) -> dict:
         """Get server information."""

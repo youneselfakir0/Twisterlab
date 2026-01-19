@@ -3,11 +3,18 @@ Unit tests for MCP routes - testing real routes from routes/mcp.py
 Tests endpoints that are actually mounted in main.py
 """
 
+import os
 import pytest
 from httpx import AsyncClient, ASGITransport
 
 # Mark all tests as unit tests
 pytestmark = pytest.mark.unit
+
+# Skip integration tests if DB is not available (for unit test runs)
+skip_if_no_db = pytest.mark.skipif(
+    os.getenv("DATABASE_URL", "").startswith("sqlite") or not os.getenv("DATABASE_URL"),
+    reason="Database not available for unit tests"
+)
 
 
 @pytest.fixture
@@ -276,6 +283,7 @@ class TestClassifyTicketEndpoint:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    @skip_if_no_db
     async def test_classify_ticket_software(self, async_client):
         """Test ticket classification for software issues."""
         response = await async_client.post(
@@ -290,6 +298,7 @@ class TestClassifyTicketEndpoint:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    @skip_if_no_db
     async def test_classify_ticket_hardware(self, async_client):
         """Test ticket classification for hardware issues."""
         response = await async_client.post(
@@ -303,6 +312,7 @@ class TestClassifyTicketEndpoint:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    @skip_if_no_db
     async def test_classify_ticket_network(self, async_client):
         """Test ticket classification for network issues."""
         response = await async_client.post(
@@ -352,6 +362,7 @@ class TestMonitorSystemHealthEndpoint:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    @skip_if_no_db
     async def test_monitor_health_all_checks(self, async_client):
         """Test monitoring with all checks enabled."""
         response = await async_client.post(
@@ -370,6 +381,7 @@ class TestMonitorSystemHealthEndpoint:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
+    @skip_if_no_db
     async def test_monitor_health_minimal(self, async_client):
         """Test monitoring with minimal checks."""
         response = await async_client.post(

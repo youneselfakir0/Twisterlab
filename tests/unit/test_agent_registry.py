@@ -44,6 +44,9 @@ class TestAgentRegistry:
             mock_agent = MagicMock()
             mock_agent.name = "TestAgent"
             registry._agents = {"testagent": mock_agent}
+            # Also populate _lookup_index which is used by get_agent()
+            registry._lookup_index = {"testagent": mock_agent}
+            registry._agent_list = [mock_agent]
             
             assert registry.get_agent("testagent") == mock_agent
             assert registry.get_agent("TestAgent") == mock_agent
@@ -53,8 +56,11 @@ class TestAgentRegistry:
         with patch.object(AgentRegistry, 'initialize_agents') as mock_init:
             registry = AgentRegistry()
             mock_agent = MagicMock()
-            mock_agent.name = "MonitoringAgent"
+            mock_agent.name = "monitoring"
             registry._agents = {"monitoring": mock_agent}
+            # Also populate _lookup_index and _agent_list for fuzzy matching
+            registry._lookup_index = {"monitoring": mock_agent, "monitoringagent": mock_agent}
+            registry._agent_list = [mock_agent]
             
             # Cases handled by normalizer logic
             assert registry.get_agent("monitoring-agent") == mock_agent

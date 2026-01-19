@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # Initialize FastAPI application
-app = FastAPI(title="TwisterLab MCP Server", version="3.2.1")
+app = FastAPI(title="TwisterLab MCP Server", version="3.5.0")
 
 # Security configuration via environment variables
 ALLOWED_ORIGINS = os.getenv(
