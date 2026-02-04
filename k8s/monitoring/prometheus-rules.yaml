@@ -1,0 +1,141 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  twisterlab-alerts.yml: |
+    groups:
+      - name: twisterlab_mcp
+        interval: 30s
+        rules:
+          # MCP Server Health
+          - alert: MCPServerDown
+            expr: up{job="mcp-unified"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              service: mcp
+            annotations:
+              summary: "MCP Server is down"
+              description: "MCP Unified server has been down for more than 1 minute"
+          
+          # Agent Errors
+          - alert: HighAgentErrorRate
+            expr: rate(agent_errors_total[5m]) > 0.1
+            for: 5m
+            labels:
+              severity: warning
+              service: mcp
+            annotations:
+              summary: "High agent error rate detected"
+              description: "Agent error rate is {{ $value }} errors/sec"
+          
+          - alert: CriticalAgentErrors
+            expr: increase(agent_errors_total[1h]) > 10
+            for: 5m
+            labels:
+              severity: critical
+              service: mcp
+            annotations:
+              summary: "Critical: Multiple agent errors"
+              description: "{{ $value }} agent errors in the last hour"
+          
+          # Tool Execution Issues
+          - alert: ToolExecutionFailures
+            expr: rate(tool_execution_errors_total[5m]) > 0.05
+            for: 5m
+            labels:
+              severity: warning
+              service: mcp
+            annotations:
+              summary: "Tool execution failures detected"
+              description: "Tool failure rate: {{ $value }} failures/sec"
+          
+          # System Resources
+          - alert: HighMemoryUsage
+            expr: process_resident_memory_bytes{job="mcp-unified"} > 500000000
+            for: 5m
+            labels:
+              severity: warning
+              service: mcp
+            annotations:
+              summary: "MCP Server high memory usage"
+              description: "Memory usage is {{ $value | humanize }}B"
+          
+          - alert: HighCPUUsage
+            expr: rate(process_cpu_seconds_total{job="mcp-unified"}[5m]) > 0.8
+            for: 5m
+            labels:
+              severity: warning
+              service: mcp
+            annotations:
+              summary: "MCP Server high CPU usage"
+              description: "CPU usage is {{ $value | humanizePercentage }}"
+      
+      - name: twisterlab_infrastructure
+        interval: 30s
+        rules:
+          # Pod Health
+          - alert: PodNotReady
+            expr: kube_pod_status_phase{namespace="twisterlab",phase!="Running"} == 1
+            for: 5m
+            labels:
+              severity: warning
+              service: kubernetes
+            annotations:
+              summary: "Pod {{ $labels.pod }} not ready"
+              description: "Pod in namespace {{ $labels.namespace }} is in {{ $labels.phase }} state"
+          
+          - alert: PodCrashLooping
+            expr: rate(kube_pod_container_status_restarts_total{namespace="twisterlab"}[15m]) > 0
+            for: 5m
+            labels:
+              severity: critical
+              service: kubernetes
+            annotations:
+              summary: "Pod {{ $labels.pod }} crash looping"
+              description: "Pod has restarted {{ $value }} times in 15 minutes"
+          
+          # Database
+          - alert: PostgreSQLDown
+            expr: up{job="postgres-exporter"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              service: database
+            annotations:
+              summary: "PostgreSQL is down"
+              description: "PostgreSQL database has been unreachable for 2 minutes"
+          
+          # Redis
+          - alert: RedisDown
+            expr: up{job="redis-exporter"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              service: cache
+            annotations:
+              summary: "Redis is down"
+              description: "Redis cache has been unreachable for 2 minutes"
+          
+          # Node Resources
+          - alert: NodeDiskPressure
+            expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+            for: 5m
+            labels:
+              severity: critical
+              service: kubernetes
+            annotations:
+              summary: "Node {{ $labels.node }} has disk pressure"
+              description: "Node is running out of disk space"
+          
+          - alert: NodeMemoryPressure
+            expr: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+            for: 5m
+            labels:
+              severity: warning
+              service: kubernetes
+            annotations:
+              summary: "Node {{ $labels.node }} has memory pressure"
+              description: "Node is running low on memory"

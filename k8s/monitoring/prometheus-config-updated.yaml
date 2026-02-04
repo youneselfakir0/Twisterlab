@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'twisterlab'
+        env: 'production'
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ['alertmanager.monitoring.svc.cluster.local:9093']
+
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+
+    scrape_configs:
+      # Prometheus self-monitoring
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+        metrics_path: /metrics
+
+      # TwisterLab API - Kubernetes Service
+      - job_name: 'twisterlab-api'
+        static_configs:
+          - targets: ['twisterlab-api.twisterlab.svc.cluster.local:8000']
+            labels:
+              service: 'twisterlab-api'
+              environment: 'production'
+        metrics_path: /metrics
+        scheme: http
+
+      # MCP Unified - Kubernetes Service  
+      - job_name: 'mcp-unified'
+        static_configs:
+          - targets: ['mcp-unified.twisterlab.svc.cluster.local:8080']
+            labels:
+              service: 'mcp'
+              environment: 'production'
+        metrics_path: /metrics
+        scheme: http
+
+      # PostgreSQL Exporter
+      - job_name: 'postgres-exporter'
+        static_configs:
+          - targets: ['postgres-exporter.twisterlab.svc.cluster.local:9187']
+            labels:
+              service: 'database'
+              environment: 'production'
+
+      # Redis Exporter
+      - job_name: 'redis-exporter'
+        static_configs:
+          - targets: ['redis-exporter.twisterlab.svc.cluster.local:9121']
+            labels:
+              service: 'cache'
+              environment: 'production'

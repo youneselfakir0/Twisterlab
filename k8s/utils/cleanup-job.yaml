@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: disk-cleanup
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      containers:
+      - name: cleanup
+        image: ubuntu:22.04
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "=== Starting Disk Cleanup ==="
+          date
+          
+          # Cleanup container images with crictl
+          echo ""
+          echo "1. Pruning unused container images with crictl..."
+          chroot /host /usr/local/bin/k3s crictl rmi --prune 2>&1 || true
+          
+          # Cleanup old journal logs
+          echo ""
+          echo "2. Vacuuming journal logs (keep 7 days)..."
+          chroot /host journalctl --vacuum-time=7d 2>&1 || true
+          
+          # Cleanup apt cache
+          echo ""
+          echo "3. Cleaning apt cache..."
+          chroot /host apt-get clean 2>&1 || true
+          
+          # Cleanup tmp files older than 7 days
+          echo ""
+          echo "4. Cleaning old tmp files..."
+          find /host/tmp -type f -mtime +7 -delete 2>&1 || true
+          find /host/var/tmp -type f -mtime +7 -delete 2>&1 || true
+          
+          # Cleanup containerd images (different from crictl)
+          echo ""
+          echo "5. Checking containerd disk usage..."
+          chroot /host /usr/local/bin/k3s ctr images ls -q 2>&1 | head -20 || true
+          
+          # Show disk usage after cleanup
+          echo ""
+          echo "=== Disk Usage After Cleanup ==="
+          df -h /host | grep -E "Filesystem|/dev"
+          
+          echo ""
+          echo "=== Disk Cleanup Complete ==="
+          date
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: host
+          mountPath: /host
+      volumes:
+      - name: host
+        hostPath:
+          path: /
+      restartPolicy: Never
+  backoffLimit: 1

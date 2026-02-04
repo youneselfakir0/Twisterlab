@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  twisterlab-alerts.yml: |
+    groups:
+      - name: twisterlab_mcp
+        interval: 30s
+        rules:
+          # TEST ALERT - Low threshold to trigger firing
+          - alert: HighMemoryUsage
+            expr: process_resident_memory_bytes{job="mcp-unified"} > 1000
+            for: 30s
+            labels:
+              severity: warning
+              service: mcp
+            annotations:
+              summary: "MCP Server high memory usage (TEST)"
+              description: "Memory usage is {{ $value | humanize }}B"
+          
+          # Other critical alerts kept
+          - alert: MCPServerDown
+            expr: up{job="mcp-unified"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              service: mcp
+            annotations:
+              summary: "MCP Server is down"
+              description: "MCP Unified server has been down for more than 1 minute"
