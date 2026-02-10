@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: node-debugger
+  namespace: twisterlab
+spec:
+  hostPID: true
+  hostNetwork: true
+  containers:
+  - name: node-debugger
+    image: alpine
+    command: ["sleep", "infinity"]
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: host
+      mountPath: /host
+    - name: transfer
+      mountPath: /transfer
+  volumes:
+  - name: host
+    hostPath:
+      path: /
+  - name: transfer
+    hostPath:
+      path: /tmp

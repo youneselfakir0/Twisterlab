@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: node-cleaner-aggressive
+  namespace: kube-system
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      hostPID: true
+      hostNetwork: true
+      containers:
+      - name: cleaner
+        image: alpine:3.18
+        command: 
+        - "nsenter"
+        - "-t"
+        - "1"
+        - "-m"
+        - "-u"
+        - "-n"
+        - "-i"
+        - "--"
+        - "sh"
+        - "-c"
+        - |
+          echo "Starting AGGRESSIVE cleanup on host..."
+          
+          echo "1. Cleaning Containerd images..."
+          crictl rmi --prune
+          
+          echo "2. Cleaning Docker (if present)..."
+          if command -v docker >/dev/null; then
+            docker system prune -af --volumes
+          else
+            echo "Docker not found, skipping."
+          fi
+          
+          echo "3. Cleaning Journal logs (>2d)..."
+          journalctl --vacuum-time=2d || rm -rf /var/log/journal/*/*@*.journal
+          
+          echo "4. Cleaning Apt cache..."
+          rm -rf /var/cache/apt/archives/*.deb
+          
+          echo "5. Cleaning /tmp..."
+          find /tmp -type f -atime +10 -delete
+          
+          echo "Cleanup complete. Disk usage:"
+          df -h /
+        securityContext:
+          privileged: true
+      restartPolicy: Never

@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: node-cleaner
+  namespace: kube-system
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    spec:
+      hostPID: true
+      hostNetwork: true
+      containers:
+      - name: cleaner
+        image: alpine:3.18
+        command: ["nsenter", "-t", "1", "-m", "-u", "-n", "-i", "--", "sh", "-c", "crictl rmi --prune || docker system prune -af"]
+        securityContext:
+          privileged: true
+      restartPolicy: Never
