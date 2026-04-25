@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="TwisterLab Mission Control - AI Agent Orchestration Platform"/>
+<title>TwisterLab - Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/index.css?v=6" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  /* Local overrides for financial visibility */
+  .v-up { color: var(--green) !important; }
+  .v-down { color: var(--red) !important; }
+  .tr-row:hover { background: rgba(0, 212, 255, 0.05) !important; }
+  .btn-halt { background: var(--red); color: #fff; border: none; padding: 4px 10px; font-size: 10px; font-weight: 700; border-radius: 4px; cursor: pointer; letter-spacing: 0.05em; transition: 0.2s; }
+  .btn-halt:hover { background: #ff4d4d; box-shadow: 0 0 10px rgba(255, 59, 48, 0.4); }
+  .btn-live { background: linear-gradient(135deg, #ff9f0a, #ff3b3b); border: none; color: #fff; padding: 4px 8px; font-size: 9px; font-weight: 700; border-radius: 4px; cursor: pointer; }
+  .btn-live:hover { opacity: 0.9; transform: scale(1.05); }
+  .live-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; background: rgba(255, 159, 10, 0.1); border: 1px solid rgba(255, 159, 10, 0.3); color: #ff9f0a; border-radius: 4px; font-size: 9px; font-weight: 700; }
+  .tr-live-panel { border-top: 2px solid #ff9f0a; background: linear-gradient(180deg, rgba(255, 159, 10, 0.05) 0%, transparent 100%); }
+  .live-kpi-val { font-family: var(--mono); font-size: 14px; font-weight: 700; color: #fff; }
+  .live-kpi-lbl { font-size: 9px; color: var(--t3); text-transform: uppercase; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <!-- TOP BAR -->
+  <header id="top">
+    <div class="logo">
+      <div class="logo-icon">💠</div>
+      <span class="logo-name">TWISTERLAB</span>
+      <span class="logo-ver">v3.8.2</span>
+    </div>
+    <div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>
+    <div class="top-stat">
+      <span class="dot" id="gdot"></span>
+      <span id="gstat" style="color:var(--cyan)">TWISTERLAB CENTRE</span>
+    </div>
+    <div class="sep"></div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font-size:10px;color:var(--t3);font-family:var(--mono)">CLUSTER: 192.168.0.30</span>
+      <button class="btn-halt" id="killSwitch" onclick="triggerGlobalKill()">🚨 HALT SYSTEM</button>
+      <div class="top-clock" id="clk">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav id="side">
+    <span class="nsec">Operations</span>
+    <div class="ni-sc-row">
+      <button class="ni on" data-v="ov" style="flex:1"><span class="ic">🧭</span><span>Mission Control</span></button>
+      <span class="ni-sc" onclick="location.hash='#trading'" title="Trading Space">📈</span>
+    </div>
+    <button class="ni" data-v="ag"><span class="ic">🤖</span><span>Agents</span><span class="nb g" id="agentBadge">11</span></button>
+    <button class="ni" data-v="ma"><span class="ic">🧠</span><span>Maestro</span></button>
+    <button class="ni" data-v="inf"><span class="ic">📡</span><span>Infrastructure</span></button>
+    <span class="nsec">Workspace</span>
+    <button class="ni" data-v="n8"><span class="ic">⚡</span><span>n8n Workflows</span><span class="nb o">LIVE</span></button>
+    <button class="ni" data-v="no"><span class="ic">📓</span><span>Knowledge Base</span><span class="nb c">NOTION</span></button>
+    <div class="sfooter"><b id="aonline">--</b> agents online</div>
+  </nav>
+
+  <!-- MAIN -->
+  <main id="main">
+
+    <!-- ====== OVERVIEW ====== -->
+    <div class="view on" id="view-ov">
+      <div class="sub-nav">
+        <div class="sub-tab on" id="tab-system" onclick="routeTo('system')">System Monitoring</div>
+        <div class="sub-tab" id="tab-trading" onclick="routeTo('trading')">Trading Intelligence</div>
+      </div>
+
+      <!-- SYSTEM SUB-VIEW -->
+      <div id="sub-view-system" class="sub-view on">
+        <div class="krow">
+          <div class="kcard">
+            <div class="klbl">CPU Usage</div>
+            <div class="kval c" id="kpu">--%</div>
+            <div class="ksub" id="kpu-sub">📡</div>
+          </div>
+          <div class="kcard">
+            <div class="klbl">RAM Usage</div>
+            <div class="kval p" id="kram">--%</div>
+            <div class="ksub" id="kram-sub">📡</div>
+          </div>
+          <div class="kcard">
+            <div class="klbl">Services Up</div>
+            <div class="kval g" id="kact">--</div>
+            <div class="ksub" id="kact-sub">Scanning...</div>
+          </div>
+          <div class="kcard">
+            <div class="klbl">API Latency</div>
+            <div class="kval o" id="klat">--ms</div>
+            <div class="ksub" id="klat-sub">Measuring...</div>
+          </div>
+        </div>
+        <div class="g2">
+          <div class="panel">
+            <div class="ph"><span class="pi">🛡️</span><span class="pt">Service Core</span><span class="pbadge" id="svc-badge"></span></div>
+            <div class="pb">
+              <table class="stbl">
+                <thead><tr><th>Service</th><th>Status</th></tr></thead>
+                <tbody id="mtbody"><tr><td colspan="2" style="color:var(--t3);text-align:center;padding:16px;font-size:11px">Scanning...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="ph"><span class="pi">📝</span><span class="pt">Live Events</span></div>
+            <div class="pb"><div class="sbox" id="slog"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRADING SUB-VIEW -->
+      <div id="sub-view-trading" class="sub-view">
+        <div id="risk-alert-hub"></div>
+        <div class="krow">
+          <div class="kcard">
+            <div class="klbl">Total Net PnL</div>
+            <div class="kval g" id="tr-pnl">--</div>
+            <div class="ksub">Cumulative Gain</div>
+          </div>
+          <div class="kcard">
+            <div class="klbl">Win Rate</div>
+            <div class="kval g" id="tr-win">--%</div>
+            <div class="ksub" id="tr-win-sub">Success Rate</div>
+          </div>
+          <div class="kcard">
+            <div class="klbl">Profit Factor</div>
+            <div class="kval p" id="tr-pf">--</div>
+            <div class="ksub">Gross Gain / Loss</div>
+          </div>
+          <div class="kcard">
+            <div class="klbl">Expectancy</div>
+            <div class="kval o" id="tr-exp">--</div>
+            <div class="ksub">Avg PnL / Trade</div>
+          </div>
+          <div class="kcard">
+            <div class="klbl">Portfolio Exposure</div>
+            <div class="kval c" id="tr-exposure">-- USDT</div>
+            <div class="ksub"><div class="metric-bar" style="height:4px;margin-top:4px;white-space:nowrap" id="tr-exposure-sub">OF $50 LIMIT</div><div class="metric-bar-fill" id="tr-exposure-bar" style="height:2px;background:var(--cyan);width:0%"></div></div>
+          </div>
+        </div>
+
+        <!-- LIVE PERFORMANCE MATRIX (Phase 9 Final) -->
+        <div class="krow" style="margin-bottom:14px">
+           <div class="kcard" style="border-left: 3px solid var(--green)">
+             <div class="klbl">Realized PnL</div>
+             <div class="kval" id="live-realized">0.00</div>
+             <div class="ksub">Total Booked (USD)</div>
+           </div>
+           <div class="kcard" style="border-left: 3px solid var(--cyan)">
+             <div class="klbl">Unrealized PnL</div>
+             <div class="kval" id="live-unrealized">0.00</div>
+             <div class="ksub">Floating P&L</div>
+           </div>
+           <div class="kcard" style="border-left: 3px solid var(--purple)">
+             <div class="klbl">Daily Net PnL</div>
+             <div class="kval" id="live-daily">0.00</div>
+             <div class="ksub">Today's Performance</div>
+           </div>
+           <div class="kcard" style="border-left: 3px solid var(--orange)">
+             <div class="klbl">Live Win Rate</div>
+             <div class="kval" id="live-win">0%</div>
+             <div class="ksub" id="live-win-count">0 Trades</div>
+           </div>
+        </div>
+
+        <div class="krow" style="margin-bottom:14px">
+           <div class="kcard" style="border-left: 3px solid #ff9f0a">
+             <div class="klbl">Profit Factor</div>
+             <div class="kval" id="live-pf">0.00</div>
+             <div class="ksub">Gross Gain/Loss Ratio</div>
+           </div>
+           <div class="kcard" style="border-left: 3px solid #60a5fa">
+             <div class="klbl">Avg Duration</div>
+             <div class="kval" id="live-dur">0m</div>
+             <div class="ksub">Entry to Exit Time</div>
+           </div>
+           <div class="kcard" style="border-left: 3px solid var(--red)">
+             <div class="klbl">Max Drawdown</div>
+             <div class="kval" id="live-dd">0.00</div>
+             <div class="ksub">Realized Peak-to-Trough</div>
+           </div>
+           <div class="kcard" style="display:flex;flex-direction:column;justify-content:center;padding:10px 14px">
+             <div class="klbl" style="margin-bottom:6px">Exit Reasons Distribution</div>
+             <div id="exit-reason-bar" style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,0.05)">
+               <!-- Segmented bar will be injected here -->
+             </div>
+             <div id="exit-reason-legend" style="display:flex;gap:8px;margin-top:6px;font-size:8px;color:var(--t3);text-transform:uppercase"></div>
+           </div>
+        </div>
+
+        <!-- LIVE GATEWAY STATUS (PHASE 6) -->
+        <div class="panel tr-live-panel" style="margin-bottom:14px">
+          <div class="ph" style="padding:10px 14px">
+            <span class="pi">🛡️</span><span class="pt" style="color:#ff9f0a">Live Execution Gateway</span>
+            <div class="live-badge"><span class="pdot" style="background:#ff9f0a"></span>SEMI-AUTOMATED</div>
+            <button class="btn bg" onclick="fetchLiveStatus()" style="margin-left:auto;padding:2px 8px;font-size:10px">🔄 Sync Balances</button>
+          </div>
+          <div class="pb" style="display:flex;gap:20px;padding:12px 20px">
+            <div style="display:flex;flex-direction:column"><span class="live-kpi-lbl">Total Balance</span><span class="live-kpi-val" id="live-bal">-- USDT</span></div>
+            <div style="display:flex;flex-direction:column"><span class="live-kpi-lbl">Max Risk / Trade</span><span class="live-kpi-val" style="color:var(--cyan)">$5.00</span></div>
+            <div style="display:flex;flex-direction:column"><span class="live-kpi-lbl">Gateway Health</span><span class="live-kpi-val" style="color:var(--green)">CONNECTED</span></div>
+            <div style="display:flex;flex-direction:column"><span class="live-kpi-lbl">Infra Guard</span><span class="live-kpi-val" id="infra-guard-status" style="color:var(--green)">PROTECTED</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;min-width:80px">
+                <span class="live-kpi-lbl">Live Feed</span>
+                <div style="display:flex;align-items:center;gap:5px">
+                    <span class="pdot" style="background:var(--green);box-shadow:0 0 5px var(--green);animation: pulse 1s infinite"></span>
+                    <span class="live-kpi-val" style="color:var(--t3);font-size:9px">STREAMING</span>
+                </div>
+            </div>
+            <div style="flex:1;display:flex;align-items:center;justify-content:flex-end">
+               <div id="live-audit-status" style="font-size:9px;color:var(--t3);font-family:var(--mono)">Last Audit: <span id="last-audit-time">Never</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STRATEGY SCANNER MATRIX (PHASE 11) -->
+        <div class="panel" style="margin-bottom:14px;background:rgba(255,255,255,0.02)">
+          <div class="ph" style="padding:10px 14px">
+            <span class="pi">🛸</span><span class="pt">Strategy Scanner Matrix</span>
+            <div class="live-badge" style="background:rgba(0,255,255,0.1);color:var(--cyan)"><span class="pdot" style="background:var(--cyan)"></span>PARALLEL ACTIVE</div>
+          </div>
+          <div class="pb" style="padding:12px 14px;display:flex;gap:12px;overflow-x:auto" id="scanner-matrix-body">
+            <!-- Scanners will be injected here as mini-cards -->
+            <div style="color:var(--t3);font-size:10px">Initializing background scans...</div>
+          </div>
+        </div>
+
+        <!-- CUMULATIVE PnL CHART PANEL (fixed wrapper) -->
+        <div class="panel chart-panel" style="margin-bottom:14px">
+          <div class="ph">
+            <span class="pi">📈</span><span class="pt">Cumulative Performance</span>
+            <div class="n8n-actions">
+              <select class="ds" style="font-size:10px;margin-right:8px" id="tr-strategy" onchange="fetchTradingStats()">
+                <option value="">All Strategies</option>
+                <option value="scalp_v1">Scalp V1 (EMA/RSI)</option>
+                <option value="trend_following_v1">Trend Following V1</option>
+                <option value="pullback_v1">Pullback V1 (EMA 20)</option>
+                <option value="mean_reversion_v1">Mean Reversion V1 (BB)</option>
+              </select>
+              <select class="ds" style="font-size:10px" id="tr-range" onchange="fetchTradingStats()">
+                <option value="7">Last 7 Days</option>
+                <option value="30" selected>Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+              </select>
+            </div>
+            <span id="chart-last-updated" style="margin-left:auto;font-size:9px;color:var(--t3);font-family:var(--mono)"></span>
+          </div>
+          <div class="pb" style="padding:8px 10px 10px">
+            <canvas id="pnlChart"></canvas>
+          </div>
+        </div>
+
+        <div class="tr-grid">
+          <div class="panel tr-table-panel">
+            <div class="ph"><span class="pi">🚀</span><span class="pt">Active Paper Trades</span><span class="pbadge" id="tr-active-cnt"></span></div>
+            <div class="pb">
+              <table class="stbl">
+                <thead><tr><th>Symbol</th><th>Side</th><th>Entry</th><th>SL / TP</th><th>Action</th></tr></thead>
+                <tbody id="tr-active-body"><tr><td colspan="5" style="text-align:center;color:var(--t3);padding:20px">No active trades</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel tr-table-panel">
+            <div class="ph">
+              <span class="pi">📡</span><span class="pt">Recent Signals</span>
+              <div class="n8n-actions">
+                <label style="font-size:10px;color:var(--t3);display:flex;align-items:center;gap:5px;cursor:pointer">
+                  <input type="checkbox" id="tr-show-all" onchange="fetchTradingStats()"> All
+                </label>
+              </div>
+            </div>
+            <div class="pb">
+              <table class="stbl">
+                <thead><tr><th>Time</th><th>Pair</th><th>Signal</th><th>Conf</th><th>Rationale</th><th>Execution</th></tr></thead>
+                <tbody id="tr-sig-body"><tr><td colspan="6" style="text-align:center;color:var(--t3);padding:20px">Loading signals...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- LIVE ORDERS PANEL -->
+          <div class="panel tr-table-panel">
+            <div class="ph"><span class="pi">🧾</span><span class="pt">Recent Live Orders</span><span class="pbadge" style="background:#ff9f0a">Live</span></div>
+            <div class="pb">
+              <table class="stbl">
+                <thead><tr><th>Time</th><th>Pair</th><th>Side</th><th>Entry</th><th>SL/TP</th><th>TSL</th><th>Status</th><th>PnL</th><th>Reason</th></tr></thead>
+                <tbody id="live-orders-body">
+                  <tr><td colspan="7" style="text-align:center;color:var(--t3);padding:20px">No live orders recorded</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== AGENTS ====== -->
+    <div class="view" id="view-ag">
+      <div class="panel">
+        <div class="ph"><span class="pi">🤖</span><span class="pt">Agent Registry</span><span class="pbadge" id="ag-count"></span></div>
+        <div class="pb"><div class="g-auto" id="agrid"></div></div>
+      </div>
+    </div>
+
+    <!-- ====== MAESTRO ====== -->
+    <div class="view" id="view-ma" style="flex-direction:row;gap:14px">
+      <div class="panel" style="width:190px;flex-shrink:0">
+        <div class="ph"><span class="pi">📜</span><span class="pt">Archive</span></div>
+        <div class="pb" id="mhist" style="font-family:var(--mono);font-size:10px;display:flex;flex-direction:column;gap:3px"></div>
+      </div>
+      <div style="flex:1.2;display:flex;flex-direction:column;gap:14px">
+        <div class="panel">
+          <div class="ph"><span class="pi">🧠</span><span class="pt">Mission Dispatch</span><span class="pbadge" id="mbadge">IDLE</span></div>
+          <div class="pb">
+            <textarea class="dta" id="minput" rows="3" placeholder="Describe your mission goal..."></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+              <select class="ds" id="mmode"><option value="orchestrate">Live Dispatch</option><option value="dry_run">Dry Run</option></select>
+              <button class="btn bp" id="dbtn" onclick="dispatch()">🚀 Send</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="flex:1;min-height:160px">
+          <div class="ph"><span class="pi">📋</span><span class="pt">Mission Logs</span></div>
+          <div class="pb"><div class="sbox" id="mout" style="max-height:220px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:var(--t3);font-size:11px"><span style="font-size:24px;margin-bottom:8px;opacity:0.5">🧠</span>Waiting for mission dispatch...</div></div>
+        </div>
+      </div>
+      <div class="panel" style="flex:1">
+        <div class="ph"><span class="pi">💬</span><span class="pt">Cortex AI</span>
+          <select id="cortex-model" class="ds" style="margin-left:8px;padding:2px 6px;font-size:9px;max-width:120px" title="Modèle LLM"></select>
+          <button class="btn bg" onclick="doClearChat()" style="margin-left:auto;padding:2px 8px;font-size:10px;border-radius:4px;opacity:0.8">🗑 Reset</button>
+        </div>
+        <div class="pb" style="display:flex;flex-direction:column;height:100%;gap:10px">
+          <div id="cchat" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:80px"></div>
+          <div style="display:flex;gap:8px;border-top:1px solid var(--border);padding-top:10px;flex-shrink:0">
+            <input type="text" id="chat-in" placeholder="Ask Cortex anything..." style="flex:1;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:6px;color:#fff;padding:8px 12px;font-size:12px;font-family:var(--sans);outline:none" onkeydown="if(event.key==='Enter')sendChat()"/>
+            <button class="btn bp" onclick="sendChat()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== INFRASTRUCTURE ====== -->
+    <div class="view" id="view-inf">
+      <div class="g3">
+        <div class="panel">
+          <div class="ph"><span class="pi">🖥️</span><span class="pt">CPU</span></div>
+          <div class="pb">
+            <div class="metric-big">
+              <div class="metric-val-big c" id="mcpu">--%</div>
+              <div class="metric-lbl-big">Processor Load</div>
+              <div class="metric-bar-big"><div class="metric-bar-fill" id="bcpu-bar" style="background:linear-gradient(90deg,var(--cyan),var(--purple))"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="pi">💾</span><span class="pt">Memory</span></div>
+          <div class="pb">
+            <div class="metric-big">
+              <div class="metric-val-big p" id="mram">--%</div>
+              <div class="metric-lbl-big" id="mram-sub">RAM</div>
+              <div class="metric-bar-big"><div class="metric-bar-fill" id="bram-bar" style="background:linear-gradient(90deg,var(--purple),#60a5fa)"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span class="pi">💿</span><span class="pt">Disk</span></div>
+          <div class="pb">
+            <div class="metric-big">
+              <div class="metric-val-big o" id="mdsk">--%</div>
+              <div class="metric-lbl-big" id="mdsk-sub">Storage</div>
+              <div class="metric-bar-big"><div class="metric-bar-fill" id="bdsk-bar" style="background:linear-gradient(90deg,var(--orange),var(--yellow))"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="pi">🛡️</span><span class="pt">Service Health</span><span class="pbadge" id="svc-count-badge">Scanning...</span></div>
+        <div class="pb">
+          <table class="stbl">
+            <thead><tr><th></th><th>Service</th><th>Port</th><th>Status</th></tr></thead>
+            <tbody id="svctbody"><tr><td colspan="4" style="color:var(--t3);text-align:center;padding:20px;font-size:11px">Scanning services...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ====== N8N WORKFLOWS ====== -->
+    <div class="fullh" id="view-n8">
+      <div class="panel" style="flex:1;overflow:hidden">
+        <div class="n8n-hero">
+          <div style="font-size:22px">⚡</div>
+          <div>
+            <div class="n8n-title"><span class="dot" id="n8dot"></span>n8n Workflow Engine</div>
+            <div id="n8nEngineStatus" style="font-size:11px;color:var(--t3);margin-top:2px;font-family:var(--mono)">Connecting...</div>
+          </div>
+          <div class="n8n-actions">
+            <button class="btn bg" onclick="fetchN8nWorkflows()" style="font-size:11px;padding:5px 12px">🔄 Refresh</button>
+            <a href="http://192.168.0.30:5678" target="_blank" class="btn bc" style="font-size:11px;padding:5px 12px">🔗 Open n8n</a>
+          </div>
+        </div>
+        <div class="n8n-stat-row">
+          <div class="n8n-stat"><div class="n8n-stat-val c" id="n8n-total">--</div><div class="n8n-stat-lbl">Workflows</div></div>
+          <div class="n8n-stat"><div class="n8n-stat-val g" id="n8n-active">--</div><div class="n8n-stat-lbl">Active</div></div>
+          <div class="n8n-stat"><div class="n8n-stat-val p" id="n8n-execs">--</div><div class="n8n-stat-lbl">Executions</div></div>
+        </div>
+        <div style="display:flex;flex:1;overflow:hidden">
+          <div class="wflow-list" id="n8n-workflows" style="flex:1;border-right:1px solid var(--border)">
+            <div class="wflow-empty"><span style="font-size:28px">⚡</span>Loading workflows...</div>
+          </div>
+          <div style="width:280px;display:flex;flex-direction:column;flex-shrink:0">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)">Recent Executions</div>
+            <div id="n8n-executions" style="flex:1;overflow-y:auto">
+              <div class="wflow-empty"><span>📭</span>No executions</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== NOTION SPACE ====== -->
+    <div class="view" id="view-no">
+      <div class="panel" style="flex:1">
+        <div class="ph">
+          <span class="pi">📓</span><span class="pt">Knowledge Base</span>
+          <div class="n8n-actions">
+            <button class="btn bg" onclick="fetchNotionPages()" style="font-size:11px;padding:5px 12px">🔄 Refresh</button>
+            <a href="https://www.notion.so" target="_blank" class="btn bc" style="font-size:11px;padding:5px 12px">🔗 Open Notion</a>
+          </div>
+        </div>
+        <div class="n8n-stat-row">
+          <div class="n8n-stat"><div class="n8n-stat-val c" id="no-pages-count">--</div><div class="n8n-stat-lbl">Total Pages</div></div>
+          <div class="n8n-stat"><div class="n8n-stat-val g" id="no-missions-count">--</div><div class="n8n-stat-lbl">Mission Reports</div></div>
+          <div class="n8n-stat"><div class="n8n-stat-val p">LIVE</div><div class="n8n-stat-lbl">Sync Status</div></div>
+        </div>
+        <div style="display:flex;flex:1;overflow:hidden">
+          <div class="wflow-list" id="notion-pages" style="flex:1;border-right:1px solid var(--border)">
+            <div class="wflow-empty"><span style="font-size:28px">📓</span>Synchronizing with Notion...</div>
+          </div>
+          <div style="width:320px;display:flex;flex-direction:column;flex-shrink:0;background:rgba(0,0,0,.1)">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t2)">Recent Reports</div>
+            <div id="notion-reports" style="flex:1;overflow-y:auto">
+              <div class="wflow-empty"><span>📂</span>No reports yet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+
+// ===================== NAV & ROUTING =====================
+const $=id=>document.getElementById(id);
+
+function routeTo(target) {
+  // Handle sidebar buttons
+  const isInternal = ['system', 'trading'].includes(target);
+  const viewId = isInternal ? 'ov' : target;
+  
+  // Primary Navigation
+  document.querySelectorAll('.ni').forEach(x => {
+    x.classList.toggle('on', x.dataset.v === viewId);
+  });
+  document.querySelectorAll('.view,.fullh').forEach(v => {
+    v.classList.toggle('on', v.id === 'view-' + viewId);
+  });
+
+  // Internal Sub-Navigation (Centre)
+  if (isInternal) {
+    document.querySelectorAll('.sub-tab').forEach(t => {
+      t.classList.toggle('on', t.id === 'tab-' + target);
+    });
+    document.querySelectorAll('.sub-view').forEach(v => {
+      v.classList.toggle('on', v.id === 'sub-view-' + target);
+    });
+    if (target === 'trading') fetchTradingStats();
+  }
+
+  // Service-specific initializations
+  if (target === 'n8') fetchN8nWorkflows();
+  if (target === 'inf') fetchServices();
+  if (target === 'no') fetchNotionPages();
+}
+
+document.querySelectorAll('.ni').forEach(b => {
+  b.onclick = () => {
+    if (b.dataset.v === 'ov') {
+      routeTo('system');
+      location.hash = '#system';
+    } else {
+      routeTo(b.dataset.v);
+      location.hash = '#' + b.dataset.v;
+    }
+  };
+});
+
+window.onhashchange = () => {
+  const h = location.hash.replace('#', '');
+  if (h) routeTo(h);
+};
+
+// ===================== HELPERS =====================
+function setEl(id,txt){const e=$(id);if(e)e.textContent=txt;}
+function setW(id,pct){const e=$(id);if(e)e.style.width=Math.min(100,Math.max(0,pct))+'%';}
+
+// Relative timestamp: "just now", "3m ago", "2h ago"
+function timeAgo(isoStr) {
+  if (!isoStr) return '--';
+  const diff = Math.floor((Date.now() - new Date(isoStr)) / 1000);
+  if (diff < 5)  return 'just now';
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+// Safe array guard — API error responses return {error:...} objects
+function safeArr(v) { return Array.isArray(v) ? v : []; }
+
+// ===================== LOGGING =====================
+const L=$('slog');
+function log(m,t='i'){
+  if(!L)return;
+  const d=document.createElement('div');d.className='ll';
+  d.innerHTML=`<span class="ts">${new Date().toLocaleTimeString()}</span><span class="lt ${t}">${m}</span>`;
+  L.appendChild(d);if(L.children.length>60)L.removeChild(L.firstChild);L.scrollTop=L.scrollHeight;
+}
+
+// ===================== TELEMETRY =====================
+async function fetchTele(){
+  const t0=performance.now();
+  try{
+    const r=await fetch('/api/dashboard/telemetry',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const rtt=Math.round(performance.now()-t0);
+    const raw=await r.json();let d={};
+    if(raw.content?.[0]?.text)d=JSON.parse(raw.content[0].text);
+    const sys=d.services?.system||{};
+    // Backend returns agents as {total, initialized, status} registry object — not an array
+    const agentsObj=d.agents||{};
+    const agentTotal = agentsObj.total ?? agentsObj.initialized ?? 0;
+
+    // Metrics
+    const cpu=sys.cpu_percent||0;
+    const mem=sys.memory_percent||0;
+    const disk=sys.disk_percent||0;
+    const memUsed=(sys.memory_used_gb||0).toFixed(1);
+    const memTotal=(sys.memory_total_gb||0).toFixed(1);
+
+    // KPI Update
+    setEl('kpu',Math.round(cpu)+'%');setW('bpu',cpu);
+    setEl('kram',Math.round(mem)+'%');
+    if(+memTotal>0)setEl('kram-sub',`${memUsed} / ${memTotal} GB`);
+    setW('bram',mem);
+    setEl('klat',rtt+'ms');
+    const latPct=Math.min(100,rtt/5);setW('blat',latPct);
+
+    // Agents — use real count from registry, 0 means API not yet warm
+    if(agentTotal>0){
+      setEl('aonline',agentTotal);
+      setEl('agentBadge',agentTotal);
+      setEl('ag-count',agentTotal+' agents');
+    }
+
+    // Infra view
+    setEl('mcpu',Math.round(cpu)+'%');setEl('mram',Math.round(mem)+'%');setEl('mdsk',Math.round(disk)+'%');
+    if(+memTotal>0)setEl('mram-sub',`${memUsed} / ${memTotal} GB`);
+    const bcpu=$('bcpu-bar');if(bcpu)bcpu.style.width=cpu+'%';
+    const bram=$('bram-bar');if(bram)bram.style.width=mem+'%';
+    const bdsk=$('bdsk-bar');if(bdsk)bdsk.style.width=disk+'%';
+
+    // Log latency if high
+    if(rtt>1000)log(`High API latency: ${rtt}ms`,'w');
+
+  }catch(e){log('Telemetry error: '+e.message,'e');}
+}
+setInterval(fetchTele,8000);fetchTele();
+
+// ===================== SERVICES =====================
+async function fetchServices(){
+  try{
+    const r=await fetch('/api/dashboard/services');
+    const d=await r.json();
+    const svcs=d.services||[];
+    const up=svcs.filter(s=>s.status==='up').length;
+    setEl('kact',`${up}/${svcs.length}`);
+    setEl('kact-sub',`${up} healthy`);
+    setW('bact',(up/Math.max(svcs.length,1))*100);
+    setEl('svc-badge',`${up}/${svcs.length} UP`);
+    setEl('svc-count-badge',`${up}/${svcs.length} UP`);
+    const mkPill=(s)=>s==='up'?'<span class="pill u"><span class="pdot"></span>UP</span>':s==='degraded'?'<span class="pill w"><span class="pdot"></span>DEGRADED</span>':'<span class="pill d"><span class="pdot"></span>DOWN</span>';
+    const emojis={up:'🟢',degraded:'🟡',down:'🔴'};
+    const tbl=$('svctbody');
+    if(tbl)tbl.innerHTML=svcs.map(s=>`<tr class="srow"><td style="font-size:14px;padding-left:10px">${emojis[s.status]||'❓'}</td><td class="plat" style="color:var(--t1)">${s.name}</td><td><span class="ptag">:${s.port}</span></td><td>${mkPill(s.status)}</td></tr>`).join('');
+    const ov=$('mtbody');
+    if(ov)ov.innerHTML=svcs.map(s=>`<tr class="srow"><td style="color:var(--t2)">${s.name}</td><td>${mkPill(s.status)}</td></tr>`).join('');
+  }catch(e){console.warn('Services probe failed',e);}
+}
+setInterval(fetchServices,20000);fetchServices();
+
+// ===================== N8N WORKFLOWS =====================
+async function fetchN8nWorkflows(){
+  const wfEl=$('n8n-workflows');
+  const exEl=$('n8n-executions');
+  const statEl=$('n8nEngineStatus');
+  const dot=$('n8dot');
+  try{
+    const r=await fetch('/api/dashboard/n8n');
+    const d=await r.json();
+    if(d.status==='offline'){
+      if(dot)dot.className='dot err';
+      if(statEl)statEl.textContent='ENGINE OFFLINE';
+      if(wfEl)wfEl.innerHTML='<div class="wflow-empty"><span style="font-size:28px">🔴</span>n8n engine is unreachable</div>';
+      return;
+    }
+    if(dot)dot.className='dot';
+    if(statEl)statEl.textContent='ENGINE ONLINE';
+    setEl('n8n-total',d.workflows.length);
+    setEl('n8n-active',d.workflows.filter(w=>w.active).length);
+    setEl('n8n-execs',d.executions.length);
+    // Render
+    if(wfEl){
+      if(d.workflows.length===0){
+        wfEl.innerHTML='<div class="wflow-empty"><span style="font-size:28px">📭</span>No workflows found</div>';
+      }else{
+        wfEl.innerHTML=d.workflows.map(w=>`
+          <div class="wflow-item">
+            <div class="wflow-dot ${w.active?'on':'off'}"></div>
+            <div style="flex:1;min-width:0">
+              <div class="wflow-name">${w.name||'Unnamed'}</div>
+              <div class="wflow-meta">${(w.nodes||[]).length} nodes</div>
+            </div>
+            <span class="tag ${w.active?'tg':'tr'}">${w.active?'LIVE':'OFF'}</span>
+          </div>`).join('');
+      }
+    }
+  }catch(e){
+    if(dot)dot.className='dot err';
+    console.error('n8n fetch error',e);
+  }
+}
+
+// ===================== MAESTRO DISPATCH =====================
+const mout=$('mout');
+function mlog(m,t='i'){
+  const d=document.createElement('div');d.className='ll';
+  d.innerHTML=`<span class="ts">${new Date().toLocaleTimeString()}</span> <span class="lt ${t}">${m}</span>`;
+  if(mout.innerText.includes('Waiting for mission')) mout.innerHTML = '';
+  mout.appendChild(d);mout.scrollTop=mout.scrollHeight;
+}
+
+async function dispatch(){
+  const task=$('minput').value.trim();if(!task)return;
+  const btn=$('dbtn'),badge=$('mbadge');
+  btn.disabled=true;badge.textContent='RUNNING';
+  mlog('🚀 Mission: '+task,'i');
+  try{
+    const r=await fetch('/api/tools/maestro_orchestrate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({arguments:{task}})});
+    const res=await r.json();
+    mlog('✅ Mission complete','s');
+    badge.textContent='DONE';
+    fetchHistory();
+  }catch(e){mlog('❌ '+e.message,'e');badge.textContent='ERROR';}
+  finally{btn.disabled=false;}
+}
+
+// ===================== HISTORY =====================
+async function fetchHistory(){
+  try{
+    const r=await fetch('/api/dashboard/history',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const d=await r.json();
+    const hl=$('mhist');if(!hl)return;
+    const items=d.data||[];
+    hl.innerHTML=items.map(m=>`<div style="padding:6px 10px;border-bottom:1px solid var(--border);font-size:10px"><div style="color:var(--cyan)">${(m.task||'Mission').slice(0,30)}</div><div style="color:var(--t3);font-size:9px">${new Date(m.timestamp).toLocaleString()}</div></div>`).join('');
+  }catch(e){}
+}
+
+// ===================== CORTEX CHAT =====================
+function appendBubble(type,html,save=true){
+  const b=document.createElement('div');b.className=`chat-bubble ${type==='human'?'bg':'bp'}`;
+  b.style.alignSelf=type==='human'?'flex-end':'flex-start';b.dataset.type=type;b.innerHTML=html;
+  const c=$('cchat');c.appendChild(b);c.scrollTop=c.scrollHeight;
+  if(save)saveChat();
+}
+function sendChat(){const i=$('chat-in'),t=i.value.trim();if(!t)return;appendBubble('human',t);i.value='';askCortex(t);}
+function doClearChat(){localStorage.removeItem('twister_chat_v4');const c=$('cchat');if(c)c.innerHTML='';}
+function saveChat(){const m=Array.from(document.querySelectorAll('.chat-bubble')).map(b=>({type:b.dataset.type,html:b.innerHTML})).slice(-50);localStorage.setItem('twister_chat_v4',JSON.stringify(m));}
+function loadChat(){try{const l=localStorage.getItem('twister_chat_v4');if(l){JSON.parse(l).forEach(m=>appendBubble(m.type,m.html,false));}}catch(e){}}
+async function loadModels(){
+  try{
+    const r=await fetch('/api/dashboard/cortex/models');
+    const d=await r.json();
+    const sel=$('cortex-model');if(!sel)return;
+    sel.innerHTML=(d.models||['llama3.2:1b']).map(m=>`<option value="${m}">${m}</option>`).join('');
+  }catch(e){}
+}
+async function askCortex(txt){
+  try{
+    const r=await fetch('/api/dashboard/cortex',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:txt})});
+    const d=await r.json();
+    appendBubble('ai',d.content?.[0]?.text||'Done');
+  }catch(e){appendBubble('ai','Error connecting to Cortex');}
+}
+
+// ===================== AGENTS =====================
+async function loadAgents(){
+  try{
+    const r=await fetch('/api/dashboard/agents');
+    const d=await r.json();
+    const agents=d.agents||[];
+    setEl('aonline',agents.length);
+    setEl('agentBadge',agents.length);
+    setEl('ag-count',agents.length+' agents');
+    const g=$('agrid');if(!g)return;
+    g.innerHTML=agents.map(a=>`<div class="acard"><div class="adot"></div><div class="ae">🤖</div><div class="an">${a.name}</div></div>`).join('');
+  }catch(e){}
+}
+
+// ===================== NOTION =====================
+async function fetchNotionPages(){
+  const pgEl=$('notion-pages');
+  try{
+    const r=await fetch('/api/dashboard/notion');
+    const d=await r.json();
+    const pages = d.data || [];
+    setEl('no-pages-count', pages.length);
+    if(pages.length === 0){
+      pgEl.innerHTML='<div class="wflow-empty">No pages found</div>';
+    } else {
+      pgEl.innerHTML = pages.map(p => `<div class="wflow-item"><div style="flex:1"><div>${p.title}</div><div class="wflow-meta">${p.type}</div></div><a href="${p.url}" target="_blank" class="tag tc">View</a></div>`).join('');
+    }
+  }catch(e){}
+}
+
+// ===================== TRADING INTELLIGENCE =====================
+let pnlChart = null;
+let _lastTradingFetch = null; // Cache for timeAgo refresh
+
+async function fetchTradingStats() {
+  const range    = ($('tr-range')    || {}).value || '30';
+  const showAll  = ($('tr-show-all') || {}).checked || false;
+  const strategy = ($('tr-strategy') || {}).value || '';
+
+  const base  = '/api/v1/trader/dashboard';
+  const query = `?strategy=${strategy}`;
+
+  // allSettled: each request is independent — one failure won't cascade
+  const results = await Promise.allSettled([
+    fetch(`${base}/overview${query}`).then(r => r.json()),                         // [0] ov
+    fetch(`${base}/equity${query}&days=${range}`).then(r => r.json()),             // [1] eq
+    fetch(`${base}/signals${query}&limit=20&include_no_trade=${showAll}`).then(r => r.json()), // [2] sig
+    fetch(`${base}/trades/active`).then(r => r.json()),                            // [3] act
+    fetch(`/api/v1/trader/live/orders?strategy=${strategy}`).then(r => r.json()), // [4] live
+    fetch(`/api/v1/trader/live/analytics/profit?strategy=${strategy}`).then(r => r.json()) // [5] prof
+  ]);
+
+  // Extract fulfilled values; rejected → null (render guards handle null)
+  const val = i => results[i].status === 'fulfilled' ? results[i].value : null;
+  const [ov, eq, sig, act, live, prof] = [val(0), val(1), val(2), val(3), val(4), val(5)];
+
+  // Log any partial failures without blocking the page
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      const names = ['overview','equity','signals','active','live-orders','analytics'];
+      log(`Trading fetch failed [${names[i]}]: ${r.reason?.message || r.reason}`, 'w');
+    }
+  });
+
+  renderTradingOverview(ov);
+  renderTradingChart(eq);
+  renderTradingTables(sig, act);
+  renderLiveOrders(live);
+  renderLiveAnalytics(prof);
+  fetchLiveStatus();
+
+  // Update last-fetched timestamp in chart header
+  const updEl = $('chart-last-updated');
+  if (updEl) updEl.textContent = 'Updated ' + timeAgo(new Date().toISOString());
+}
+
+function renderLiveAnalytics(p) {
+  // Guard against API error responses
+  if (!p || p.error) return;
+
+  const setPnl = (id, val) => {
+    const el = $(id);
+    if (!el) return;
+    const n = val ?? 0;
+    el.textContent = (n >= 0 ? '+' : '') + n.toFixed(3);
+    el.className = 'kval ' + (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
+  };
+
+  setPnl('live-realized',  p.realized_pnl_total ?? 0);
+  setPnl('live-unrealized', p.unrealized_pnl_total ?? 0);
+  setPnl('live-daily',      p.daily_pnl ?? 0);
+
+  setEl('live-win', ((p.win_rate ?? 0)).toFixed(1) + '%');
+  setEl('live-win-count', `${p.win_count ?? 0} Wins / ${p.trade_count_total ?? 0} Total`);
+
+  setEl('live-pf',  ((p.profit_factor    ?? 0)).toFixed(2));
+  setEl('live-dur', ((p.avg_duration_mins ?? 0)).toFixed(1) + 'm');
+  setEl('live-dd',  ((p.max_drawdown      ?? 0)).toFixed(2));
+
+  renderExitBreakdown(p.exit_reasons || {});
+}
+
+function renderExitBreakdown(counts) {
+  const bar = $('exit-reason-bar');
+  const legend = $('exit-reason-legend');
+  if(!bar || !legend) return;
+  
+  const total = Object.values(counts).reduce((a,b) => a+b, 0);
+  if(total === 0) {
+    bar.innerHTML = '';
+    legend.innerHTML = 'NO DATA';
+    return;
+  }
+  
+  const colors = {
+    'tsl_exit': '#00d1ff',
+    'sl_hit': '#ff453a',
+    'tp_hit': '#30d158',
+    'manual': '#bf5af2',
+    'unknown': 'var(--t3)'
+  };
+  
+  let barHtml = '';
+  let legendHtml = '';
+  
+  for(const [reason, count] of Object.entries(counts)) {
+    const pct = (count / total) * 100;
+    const color = colors[reason.toLowerCase()] || colors.unknown;
+    barHtml += `<div style="width:${pct}%;background:${color};height:100%" title="${reason}: ${count}"></div>`;
+    legendHtml += `<div style="display:flex;align-items:center;gap:3px"><span style="width:6px;height:6px;background:${color};border-radius:50%"></span> ${reason.replace('_',' ')}</div>`;
+  }
+  
+  bar.innerHTML = barHtml;
+  legend.innerHTML = legendHtml;
+}
+
+function renderTradingOverview(d) {
+  // Guard against API error responses
+  if (!d || d.error) return;
+
+  const wr = d.win_rate ?? 0;
+  const pf = d.profit_factor ?? 0;
+  const ex = d.expectancy ?? 0;
+  const pnl = d.total_net_pnl ?? 0;
+
+  setEl('tr-win', wr.toFixed(1) + '%');
+  setEl('tr-win-sub', (d.total_trades || 0) + ' trades');
+  setEl('tr-pf', pf.toFixed(2));
+  setEl('tr-exp', (ex >= 0 ? '+' : '') + ex.toFixed(3));
+
+  const pnlEl = $('tr-pnl');
+  if (pnlEl) {
+    pnlEl.textContent = (pnl >= 0 ? '+' : '') + pnl.toFixed(2);
+    pnlEl.className = 'kval ' + (pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : 'g');
+  }
+
+  setEl('tr-active-cnt', (d.active_trades || 0) + ' OPEN');
+}
+
+function renderTradingChart(curve) {
+  const canvas = $('pnlChart');
+  if (!canvas) return;
+
+  // Robust guard: need at least 2 data points for a meaningful line chart
+  const curveArr = Array.isArray(curve) ? curve : [];
+  if (curveArr.length < 2) {
+    // Show placeholder instead of an invisible/broken chart
+    if (pnlChart) { pnlChart.destroy(); pnlChart = null; }
+    const pb = canvas.parentElement;
+    const emptyMsg = pb.querySelector('.chart-empty');
+    if (!emptyMsg) {
+      canvas.style.display = 'none';
+      const el = document.createElement('div');
+      el.className = 'chart-empty';
+      el.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);font-size:12px;gap:8px';
+      el.innerHTML = '<span style="font-size:28px;opacity:0.3">📉</span>No trade history in selected range';
+      pb.appendChild(el);
+    }
+    return;
+  }
+
+  // Remove placeholder if data returned
+  const emptyMsg = canvas.parentElement.querySelector('.chart-empty');
+  if (emptyMsg) emptyMsg.remove();
+  canvas.style.display = '';
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const labels = curveArr.map(p => new Date(p.timestamp).toLocaleDateString());
+  const data   = curveArr.map(p => p.pnl);
+
+  // Color gradient: green if net positive, red if negative
+  const netPnl = data[data.length - 1] || 0;
+  const lineColor = netPnl >= 0 ? '#30d158' : '#ff453a';
+  const fillColor = netPnl >= 0 ? 'rgba(48, 209, 88, 0.08)' : 'rgba(255, 69, 58, 0.08)';
+
+  if (pnlChart) {
+    pnlChart.data.labels = labels;
+    pnlChart.data.datasets[0].data = data;
+    pnlChart.data.datasets[0].borderColor = lineColor;
+    pnlChart.data.datasets[0].backgroundColor = fillColor;
+    pnlChart.update('none'); // skip animation on refresh
+  } else {
+    pnlChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Net PnL (USD)',
+          data,
+          fill: true,
+          borderColor: lineColor,
+          backgroundColor: fillColor,
+          tension: 0.35,
+          pointRadius: curveArr.length > 30 ? 0 : 2,  // hide dots for dense data
+          pointHoverRadius: 4,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(12,18,32,0.95)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: 'rgba(255,255,255,0.5)',
+            bodyColor: '#fff',
+            callbacks: {
+              label: ctx => ` ${ctx.parsed.y >= 0 ? '+' : ''}${ctx.parsed.y.toFixed(3)} USD`
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: 'rgba(255,255,255,0.35)', font: { size: 9 }, maxTicksLimit: 8 }
+          },
+          y: {
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: {
+              color: 'rgba(255,255,255,0.35)', font: { size: 9 },
+              callback: v => (v >= 0 ? '+' : '') + v.toFixed(2)
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+function renderTradingTables(signals, active) {
+  const sBody = $('tr-sig-body');
+  const aBody = $('tr-active-body');
+  const sigArr = safeArr(signals);
+  const actArr = safeArr(active);
+
+  if (sigArr.length === 0) {
+    sBody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:28px"><div style="font-size:20px;margin-bottom:6px;opacity:0.3">📡</div><div style="color:var(--t3);font-size:11px">No signals generated yet</div></td></tr>';
+  } else {
+    sBody.innerHTML = sigArr.map(s => {
+      const dirClass = s.direction === 'LONG' ? 'tg' : s.direction === 'SHORT' ? 'tr' : 'tc';
+      const confClass = (s.confidence || 0) >= 0.75 ? 'conf-high' : 'conf-med';
+      const execBtn = s.direction !== 'NO_TRADE'
+        ? `<button class="btn-live" onclick="approveLiveTrade(${s.id})">APPROVE LIVE</button>`
+        : '<span style="color:var(--t3);font-size:10px">—</span>';
+      return `
+      <tr class="srow tr-row">
+        <td style="font-size:10px;color:var(--t3)" title="${s.timestamp}">${timeAgo(s.timestamp)}</td>
+        <td class="plat">${s.symbol}</td>
+        <td><span class="tag ${dirClass}">${s.direction}</span></td>
+        <td><span class="conf-badge ${confClass}">${Math.round((s.confidence||0)*100)}%</span></td>
+        <td style="font-size:11px;color:var(--t2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.rationale||''}">${s.rationale||'—'}</td>
+        <td>${execBtn}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  if (actArr.length === 0) {
+    aBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:28px"><div style="font-size:20px;margin-bottom:6px;opacity:0.3">🚀</div><div style="color:var(--t3);font-size:11px">No open paper trades</div></td></tr>';
+  } else {
+    aBody.innerHTML = actArr.map(a => `
+    <tr class="srow tr-row">
+      <td class="plat">${a.symbol}</td>
+      <td><span class="tag ${a.side==='BUY'?'tg':'tr'}">${a.side}</span></td>
+      <td style="font-family:var(--mono)">${(a.entry_price||0).toFixed(2)}</td>
+      <td style="font-size:10px;color:var(--t3)">${(a.sl||0).toFixed(2)} / ${(a.tp||0).toFixed(2)}</td>
+      <td><button class="btn-close" onclick="closeTrade(${a.id})">CLOSE</button></td>
+    </tr>`).join('');
+  }
+}
+
+function renderLiveOrders(orders) {
+  const body = $('live-orders-body');
+  if (!body) return;
+  const ordArr = safeArr(orders);
+
+  if (ordArr.length === 0) {
+    body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:28px"><div style="font-size:20px;margin-bottom:6px;opacity:0.3">🧾</div><div style="color:var(--t3);font-size:11px">No live orders recorded</div></td></tr>';
+    return;
+  }
+
+  body.innerHTML = ordArr.map(o => {
+    const isTslActive = o.trailing_sl_trigger !== null && o.trailing_sl_trigger !== undefined;
+    const isLong = (o.side || '').toUpperCase() === 'BUY' || (o.side || '').toUpperCase() === 'LONG';
+    const isProtected = o.stop_loss && o.price_filled
+      ? (isLong ? o.stop_loss > o.price_filled : o.stop_loss < o.price_filled)
+      : false;
+
+    const tslStatus = isTslActive
+      ? `<span class="status-indicator tsl">Active</span>`
+      : `<span style="opacity:0.25;font-size:8px;color:var(--t3)">PENDING</span>`;
+    const slClass = isProtected ? 't-profit' : '';
+    const slText = o.stop_loss ? (+o.stop_loss).toFixed(2) : '--';
+    const exposureIndicator = o.is_active
+      ? `<span class="pdot" style="background:var(--green)"></span>`
+      : `<span class="pdot" style="background:var(--t3)"></span>`;
+
+    const pnl = o.realized_pnl || 0;
+    const pnlPct = (o.realized_pnl_pct || 0) * 100;
+    const pnlClass = pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : '';
+    const pnlText = o.status === 'closed'
+      ? `<span class="${pnlClass}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(3)} <span style="font-size:9px;opacity:0.7">(${pnlPct.toFixed(2)}%)</span></span>`
+      : '<span style="color:var(--t3)">—</span>';
+    const reasonText = o.exit_reason
+      ? `<span class="tag" style="border-radius:4px;font-size:9px">${o.exit_reason.toUpperCase()}</span>`
+      : '<span style="color:var(--t3)">—</span>';
+    const pillClass = o.status === 'filled' ? 'u' : o.status === 'rejected' ? 'd' : 'w';
+
+    return `
+      <tr class="srow tr-row">
+        <td style="font-size:9px;color:var(--t3)" title="${o.created_at}">${timeAgo(o.created_at)}</td>
+        <td class="plat">${o.symbol}</td>
+        <td><span class="tag ${isLong ? 'tg' : 'tr'}">${o.side}</span></td>
+        <td style="font-family:var(--mono)">${o.price_filled ? (+o.price_filled).toFixed(2) : '—'}</td>
+        <td style="font-family:var(--mono);font-size:10px" class="${slClass}">${slText}</td>
+        <td>${tslStatus}</td>
+        <td><span class="pill ${pillClass}">${exposureIndicator} ${(o.status || 'unknown').toUpperCase()}</span></td>
+        <td style="font-family:var(--mono);font-size:10px">${pnlText}</td>
+        <td>${reasonText}</td>
+      </tr>`;
+  }).join('');
+}
+
+async function fetchLiveStatus() {
+    const balEl = $('live-bal');
+    try {
+        const r = await fetch('/api/v1/trader/live/balance');
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const d = await r.json();
+        // BalanceResponse uses .total map — guard against missing key
+        const usdt = d?.total?.USDT ?? d?.USDT ?? 0;
+        if (balEl) {
+            balEl.textContent = usdt.toFixed(2) + ' USDT';
+            balEl.style.color = '';  // reset any OFFLINE red color
+        }
+        setEl('last-audit-time', new Date().toLocaleTimeString());
+    } catch(e) {
+        if (balEl) {
+            balEl.textContent = 'OFFLINE';
+            balEl.style.color = 'var(--red)';
+        }
+        log('Exchange gateway offline: ' + e.message, 'w');
+    }
+}
+
+async function approveLiveTrade(id) {
+    if(!confirm("APPROVE LIVE EXECUTION?\n\nThis will send a REAL order to the exchange using the $5 safety cap.")) return;
+    
+    showToast(`Initiating LIVE order for #${id}...`, 'info');
+    try {
+        const r = await fetch(`/api/v1/trader/live/approve/${id}`, { method: 'POST' });
+        const d = await r.json();
+        
+        if(d.status === 'filled') {
+            showToast(`LIVE ORDER FILLED: ${d.amount} ${d.symbol} @ ${d.price_filled}`, 'success');
+            fetchTradingStats();
+        } else {
+            showToast(`Order ${d.status}: ${d.error_message || 'Unknown issue'}`, 'warning');
+        }
+    } catch(e) {
+        showToast(`Execution failed: ${e.message}`, 'error');
+    }
+}
+
+async function fetchRiskAlerts() {
+    const hub = $('risk-alert-hub');
+    if(!hub) return;
+    try {
+        const r = await fetch('/api/v1/trader/live/risk-status');
+        const d = await r.json();
+        
+        // Update Exposure KPI from structured response
+        setEl('tr-exposure', d.exposure_total.toFixed(2) + ' USDT');
+        const expPct = (d.exposure_total / d.exposure_limit) * 100;
+        const bar = $('tr-exposure-bar');
+        if(bar) {
+            bar.style.width = Math.min(100, expPct) + '%';
+            bar.style.background = expPct > 90 ? 'var(--red)' : expPct > 70 ? 'var(--orange)' : 'var(--cyan)';
+        }
+
+        renderRiskAlerts(d.alerts);
+    } catch(e) { console.error('Risk status fetch failed', e); }
+}
+
+function renderRiskAlerts(alerts) {
+    const hub = $('risk-alert-hub');
+    if(!hub) return;
+    
+    // Track previous alert count for "Resolved" logic
+    const prevCount = hub.dataset.count || 0;
+    hub.dataset.count = alerts.length;
+
+    if(!alerts || alerts.length === 0) {
+        if (prevCount > 0) {
+            hub.innerHTML = `
+                <div class="risk-banner resolved">
+                    <span class="icon">✅</span>
+                    <div class="toast-msg">All risk conditions resolved. Operating within safe limits.</div>
+                </div>
+            `;
+            setTimeout(() => { if(hub.dataset.count == 0) hub.innerHTML = ''; }, 5000);
+        } else {
+            hub.innerHTML = '';
+        }
+        return;
+    }
+
+    hub.innerHTML = alerts.map(a => {
+        const icon = a.level === 'CRITICAL' ? '🚨' : '⚠️';
+        return `
+            <div class="risk-banner ${a.level.toLowerCase()}">
+                <span class="icon">${icon}</span>
+                <div class="toast-msg"><b>${a.level}:</b> ${a.message}</div>
+                ${a.action_id === 'halt' ? `<button class="action-btn" onclick="triggerGlobalKill()">HALT SYSTEM</button>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function renderScannerMatrix(scans) {
+    const body = $('scanner-matrix-body');
+    if(!body) return;
+    if(!scans || scans.length === 0) {
+        body.innerHTML = '<div style="color:var(--t3);font-size:10px">No active scanners found.</div>';
+        return;
+    }
+    body.innerHTML = scans.map(s => {
+        const stratName = s.strategy.replace('_v1', '').toUpperCase();
+        const autoBadge = s.auto_pilot ? '<span style="font-size:7px;background:var(--purple);color:white;padding:1px 3px;border-radius:2px;margin-left:auto">AUTO</span>' : '';
+        return `
+            <div class="kcard" style="min-width:140px;padding:8px 12px;border-bottom: 2px solid var(--cyan)">
+                <div style="display:flex;align-items:center;margin-bottom:4px">
+                    <div style="font-size:8px;color:var(--cyan);text-transform:uppercase;letter-spacing:0.5px">${stratName}</div>
+                    ${autoBadge}
+                </div>
+                <div class="klbl" style="font-size:12px;display:flex;align-items:center;gap:6px">
+                    <span style="font-family:var(--mono)">${s.symbol}</span>
+                    <span class="pdot" style="background:var(--green);width:4px;height:4px;box-shadow:0 0 4px var(--green)"></span>
+                </div>
+                <div class="ksub">${s.timeframe} Interval</div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function fetchInfraAudit() {
+    try {
+        const r = await fetch('/api/v1/trader/live/infra/audit');
+        const d = await r.json();
+        const guardEl = $('infra-guard-status');
+        if (guardEl) {
+            if (d.circuit_breaker === "OPEN") {
+                guardEl.innerText = "HALTED (DRIFT)";
+                guardEl.style.color = "var(--red)";
+            } else {
+                guardEl.innerText = "PROTECTED";
+                guardEl.style.color = "var(--green)";
+            }
+        }
+    } catch(e) { console.error('Failed to fetch infra audit', e); }
+}
+
+async function fetchScannerStatus() {
+    try {
+        const r = await fetch('/api/v1/trader/live/scanner/status');
+        const d = await r.json();
+        renderScannerMatrix(d);
+    } catch(e) { console.error('Failed to fetch scanner status', e); }
+}
+
+async function triggerGlobalKill() {
+    if(!confirm("🚨 EMERGENCY KILL SWITCH 🚨\n\nAre you sure you want to cancel all open orders and halt the gateway?")) return;
+    showToast("EMERGENCY HALT COMMAND SENT", "error");
+    try {
+        const r = await fetch('/api/v1/trader/live/halt', { method: 'POST' });
+        const d = await r.json();
+        showToast(`SYSTEM HALTED: ${d.message || 'Exposure Reset'}`, "error");
+        fetchTradingStats();
+        fetchRiskAlerts();
+    } catch(e) {
+        showToast(`Kill Switch failed: ${e.message}`, "error");
+    }
+}
+
+async function closeTrade(id) {
+    if(!confirm("Close this paper trade? (Simulation Only)")) return;
+    try {
+        const r = await fetch('/api/tools/execute_command', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({command: `python scripts/close_trade_remote.py ${id}`})
+        });
+        showToast(`Closing trade ${id}...`, 'info');
+        setTimeout(fetchTradingStats, 1500);
+    } catch(e) { showToast('Error closing trade: ' + e.message, 'error'); }
+}
+
+// ===================== TOAST SYSTEM =====================
+function showToast(msg, type = 'info', duration = 4000) {
+  const container = $('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const icons = { info: 'ℹ️', success: '✅', error: '🚨', warning: '⚠️' };
+  toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 320);
+  }, duration);
+}
+
+// ===================== CLOCK =====================
+function updateClock() {
+  const clk = $('clk');
+  if (clk) clk.textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===================== INIT =====================
+window.onload=()=>{
+  loadChat();
+  fetchHistory();
+  loadAgents();
+  loadModels();
+  setInterval(loadAgents, 60000);
+  setInterval(() => {
+    if ($('sub-view-trading').classList.contains('on')) {
+        fetchTradingStats();
+        fetchRiskAlerts();
+        fetchScannerStatus();
+        fetchInfraAudit();
+    }
+  }, 30000);
+  
+  // Initial Loads
+  fetchTradingStats();
+  fetchRiskAlerts();
+  fetchScannerStatus();
+  fetchInfraAudit();
+
+  // Initial routing
+  const h = location.hash.replace('#', '');
+  if (h) routeTo(h);
+  else routeTo('system');
+};
+</script>
+</body>
+</html>
