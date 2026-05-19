@@ -84,6 +84,7 @@ class RealMaestroAgent(CoreAgent):
         self._healing_history = {}    # {requirement: {"success": int, "fail": int}}
         self._failure_counts = {}     # {requirement: int}
         self._quarantined_until = {}  # {requirement: float}
+        self._resilience_mode = os.getenv("MAESTRO_RESILIENCE_MODE", "db_hybrid").lower()
 
     @property
     def name(self) -> str:
@@ -512,21 +513,29 @@ class RealMaestroAgent(CoreAgent):
                         logger.info(f"🚀 [maestro] Step {step_num} ({requirement}) Dynamic Params: {list(processed_params.keys())}")
 
                     # 3. EXECUTE THROUGH ADAPTER (WITH SELF-HEALING RETRIES, ADAPTIVE LIMITS, CIRCUIT BREAKERS)
-                    self._check_circuit_breaker(requirement)
+                    await self._check_circuit_breaker(requirement)
 
-                    max_retries = self._get_max_retries(requirement)
+                    max_retries = await self._get_max_retries(requirement)
                     attempt = 0
                     result = None
                     last_error_category = None
                     last_error_msg = None
+                    
+                    # Generate a unique task/mission identifier for idempotency
+                    mission_id = (context or {}).get("mission_id") or (context or {}).get("task_id") or "mission_unknown"
 
                     while attempt <= max_retries:
+                        # 3.1 Idempotency Key Generation
+                        import hashlib
+                        idempotency_raw = f"{mission_id}_{step_num}_{attempt}"
+                        request_id = hashlib.md5(idempotency_raw.encode()).hexdigest()
+
                         try:
-                            result = await adapter.call(requirement, **processed_params)
+                            result = await adapter.call(requirement, request_id=request_id, **processed_params)
                             if result.success:
                                 if attempt > 0 and last_error_category:
-                                    await self._record_healing_outcome(last_error_category, requirement, "success", last_error_msg, lookup_fn)
-                                self._reset_circuit_breaker(requirement)
+                                    await self._record_healing_outcome(last_error_category, requirement, "success", last_error_msg, lookup_fn, request_id=request_id)
+                                await self._reset_circuit_breaker(requirement)
                                 break
 
                             # Success is False, attempt self-healing
@@ -536,7 +545,7 @@ class RealMaestroAgent(CoreAgent):
                             heal_action = await self._attempt_self_healing(requirement, error_msg, processed_params, lookup_fn)
                             if not heal_action:
                                 if attempt > 0 and last_error_category:
-                                    await self._record_healing_outcome(last_error_category, requirement, "failed", last_error_msg, lookup_fn)
+                                    await self._record_healing_outcome(last_error_category, requirement, "failed", last_error_msg, lookup_fn, request_id=request_id)
                                 break  # No healing action matched, abort retries
 
                             attempt += 1
@@ -547,9 +556,9 @@ class RealMaestroAgent(CoreAgent):
                             last_error_category = self._diagnose_error_category(error_msg)
                             heal_action = await self._attempt_self_healing(requirement, error_msg, processed_params, lookup_fn)
                             if not heal_action:
-                                self._record_circuit_breaker_failure(requirement)
+                                await self._record_circuit_breaker_failure(requirement)
                                 if attempt > 0 and last_error_category:
-                                    await self._record_healing_outcome(last_error_category, requirement, "failed", last_error_msg, lookup_fn)
+                                    await self._record_healing_outcome(last_error_category, requirement, "failed", last_error_msg, lookup_fn, request_id=request_id)
                                 raise step_ex
 
                             attempt += 1
@@ -557,9 +566,9 @@ class RealMaestroAgent(CoreAgent):
 
                     # If execution finished with no result, build a default failed state
                     if not result or not result.success:
-                        self._record_circuit_breaker_failure(requirement)
+                        await self._record_circuit_breaker_failure(requirement)
                         if last_error_category:
-                            await self._record_healing_outcome(last_error_category, requirement, "failed", last_error_msg, lookup_fn)
+                            await self._record_healing_outcome(last_error_category, requirement, "failed", last_error_msg, lookup_fn, request_id=request_id)
                         if not result:
                             result = AgentResponse(success=False, error="Self-healing retries exhausted")
 
@@ -662,32 +671,138 @@ class RealMaestroAgent(CoreAgent):
             return "network"
         return "unknown"
 
-    def _check_circuit_breaker(self, requirement: str):
+    async def _check_circuit_breaker(self, requirement: str):
         import time
         now = time.time()
+        # 1. Protection mémoire immédiate (Hot Path)
         if requirement in self._quarantined_until and now < self._quarantined_until[requirement]:
             cooldown_remaining = int(self._quarantined_until[requirement] - now)
             raise Exception(
-                f"Capability '{requirement}' is quarantined due to repeated failures. Cooldown remaining: {cooldown_remaining}s."
+                f"Capability '{requirement}' is quarantined (local cache). Cooldown remaining: {cooldown_remaining}s."
             )
 
-    def _reset_circuit_breaker(self, requirement: str):
+        if self._resilience_mode == "memory_only":
+            return
+
+        # 2. Réhydratation à la demande depuis la DB (Méta-Résilience)
+        try:
+            from twisterlab.database.manager import db_manager
+            from twisterlab.database.models.resilience import CircuitBreaker
+            from sqlalchemy import select
+
+            async with db_manager.session() as session:
+                stmt = select(CircuitBreaker).where(
+                    CircuitBreaker.capability_name == requirement,
+                    CircuitBreaker.status == "quarantined",
+                    CircuitBreaker.quarantined_until > datetime.now(timezone.utc)
+                )
+                result = await session.execute(stmt)
+                cb = result.scalar_one_or_none()
+                if cb and cb.quarantined_until:
+                    # Remplir le cache local
+                    ts = cb.quarantined_until.replace(tzinfo=timezone.utc).timestamp()
+                    self._quarantined_until[requirement] = ts
+                    cooldown_remaining = int(ts - now)
+                    raise Exception(
+                        f"Capability '{requirement}' is quarantined (DB state rehydrated). Cooldown remaining: {cooldown_remaining}s."
+                    )
+        except Exception as e:
+            if "is quarantined" in str(e):
+                raise e
+            logger.debug(f"Failed to fetch circuit breaker status from DB: {e}. Relying on local RAM state.")
+
+    async def _reset_circuit_breaker(self, requirement: str):
         self._failure_counts[requirement] = 0
+        if self._resilience_mode == "memory_only":
+            return
 
-    def _record_circuit_breaker_failure(self, requirement: str):
+        try:
+            from twisterlab.database.manager import db_manager
+            from twisterlab.database.models.resilience import CircuitBreaker
+            async with db_manager.session() as session:
+                cb = await session.get(CircuitBreaker, requirement)
+                if cb:
+                    cb.consecutive_failures = 0
+                    cb.status = "active"
+                    cb.quarantined_until = None
+                    await session.commit()
+        except Exception as e:
+            logger.debug(f"Failed to reset circuit breaker in DB: {e}")
+
+    async def _record_circuit_breaker_failure(self, requirement: str):
         import time
+        from datetime import timedelta
         self._failure_counts[requirement] = self._failure_counts.get(requirement, 0) + 1
-        if self._failure_counts[requirement] >= 5:
-            self._quarantined_until[requirement] = time.time() + 300  # 5 minutes
-            logger.warning(f"⚠️ [CIRCUIT BREAKER] Capability '{requirement}' failed repeatedly (5+ times). Quarantined for 5 minutes!")
+        
+        if self._resilience_mode == "memory_only":
+            if self._failure_counts[requirement] >= 5:
+                self._quarantined_until[requirement] = time.time() + 300
+                logger.warning(f"⚠️ [CIRCUIT BREAKER] Capability '{requirement}' quarantined locally for 5 mins.")
+            return
 
-    def _get_max_retries(self, requirement: str) -> int:
+        try:
+            from twisterlab.database.manager import db_manager
+            from twisterlab.database.models.resilience import CircuitBreaker
+            async with db_manager.session() as session:
+                cb = await session.get(CircuitBreaker, requirement)
+                if not cb:
+                    cb = CircuitBreaker(capability_name=requirement)
+                    session.add(cb)
+                
+                cb.consecutive_failures += 1
+                cb.last_failure_at = datetime.now(timezone.utc)
+                
+                if cb.consecutive_failures >= 5:
+                    cb.status = "quarantined"
+                    cb.quarantine_count += 1
+                    # Exponential backoff: 30 * 2^(quarantine_count - 1), max 1800s
+                    cooldown_seconds = min(30 * (2 ** (cb.quarantine_count - 1)), 1800)
+                    cb.quarantined_until = datetime.now(timezone.utc) + timedelta(seconds=cooldown_seconds)
+                    
+                    self._quarantined_until[requirement] = cb.quarantined_until.replace(tzinfo=timezone.utc).timestamp()
+                    logger.warning(
+                        f"⚠️ [CIRCUIT BREAKER] Capability '{requirement}' quarantined in DB & RAM for {cooldown_seconds}s!"
+                    )
+                await session.commit()
+        except Exception as e:
+            logger.debug(f"Failed to record circuit breaker failure in DB: {e}. Falling back to local quarantine state.")
+            if self._failure_counts[requirement] >= 5:
+                self._quarantined_until[requirement] = time.time() + 300
+                logger.warning(f"⚠️ [CIRCUIT BREAKER] Capability '{requirement}' quarantined locally for 5 mins.")
+
+    async def _get_max_retries(self, requirement: str) -> int:
+        if self._resilience_mode == "memory_only":
+            history = self._healing_history.get(requirement, {"success": 0, "fail": 0})
+            total = history["success"] + history["fail"]
+            if total >= 5:
+                success_rate = history["success"] / total
+                if success_rate < 0.2:
+                    logger.info(f"📉 [ADAPTIVE RETRY] Memory healing success rate for '{requirement}' is low ({success_rate:.1%}). Reducing max retries to 1.")
+                    return 1
+            return 2
+
+        try:
+            from twisterlab.database.manager import db_manager
+            from twisterlab.database.models.resilience import CapabilityMetric
+            async with db_manager.session() as session:
+                metric = await session.get(CapabilityMetric, requirement)
+                if metric:
+                    total = metric.success_count + metric.failure_count
+                    if total >= 5:
+                        success_rate = metric.success_count / total
+                        if success_rate < 0.2:
+                            logger.info(f"📉 [ADAPTIVE RETRY] DB healing success rate for '{requirement}' is low ({success_rate:.1%}). Reducing max retries to 1.")
+                            return 1
+                        return 2
+        except Exception as e:
+            logger.debug(f"Failed to query database for adaptive retries: {e}. Falling back to memory history.")
+            
         history = self._healing_history.get(requirement, {"success": 0, "fail": 0})
         total = history["success"] + history["fail"]
         if total >= 5:
             success_rate = history["success"] / total
             if success_rate < 0.2:
-                logger.info(f"📉 [ADAPTIVE RETRY] Healing success rate for '{requirement}' is low ({success_rate:.1%}). Reducing max retries to 1.")
+                logger.info(f"📉 [ADAPTIVE RETRY] Memory healing success rate for '{requirement}' is low ({success_rate:.1%}). Reducing max retries to 1.")
                 return 1
         return 2
 
@@ -697,9 +812,9 @@ class RealMaestroAgent(CoreAgent):
         requirement: str, 
         status: str, 
         error_msg: str, 
-        lookup_fn: Optional[Callable[[str], Any]] = None
+        lookup_fn: Optional[Callable[[str], Any]] = None,
+        request_id: Optional[str] = None
     ):
-        # 1. Update internal statistics
         if requirement not in self._healing_history:
             self._healing_history[requirement] = {"success": 0, "fail": 0}
         
@@ -708,15 +823,42 @@ class RealMaestroAgent(CoreAgent):
         else:
             self._healing_history[requirement]["fail"] += 1
 
-        # 2. Record Prometheus metric
+        if self._resilience_mode == "memory_only":
+            try:
+                from twisterlab.monitoring_utils import record_healing_event
+                record_healing_event(category, requirement, status)
+            except ImportError:
+                pass
+            await self._archive_healing_event(requirement, category, error_msg, status == "success", lookup_fn, request_id)
+            return
+
+        try:
+            from twisterlab.database.manager import db_manager
+            from twisterlab.database.models.resilience import CapabilityMetric
+            async with db_manager.session() as session:
+                metric = await session.get(CapabilityMetric, requirement)
+                if not metric:
+                    metric = CapabilityMetric(capability_name=requirement)
+                    session.add(metric)
+                
+                if status == "success":
+                    metric.success_count += 1
+                else:
+                    metric.failure_count += 1
+                
+                total = metric.success_count + metric.failure_count
+                metric.current_success_rate = (metric.success_count / total) * 100.0
+                await session.commit()
+        except Exception as e:
+            logger.debug(f"Failed to write healing metrics to DB: {e}")
+
         try:
             from twisterlab.monitoring_utils import record_healing_event
             record_healing_event(category, requirement, status)
         except ImportError:
             pass
 
-        # 3. Log to ArchiveAgent
-        await self._archive_healing_event(requirement, category, error_msg, status == "success", lookup_fn)
+        await self._archive_healing_event(requirement, category, error_msg, status == "success", lookup_fn, request_id)
 
     async def _archive_healing_event(
         self, 
@@ -724,8 +866,27 @@ class RealMaestroAgent(CoreAgent):
         category: str, 
         error_msg: str, 
         success: bool,
-        lookup_fn: Optional[Callable[[str], Any]] = None
+        lookup_fn: Optional[Callable[[str], Any]] = None,
+        request_id: Optional[str] = None
     ):
+        if self._resilience_mode != "memory_only":
+            try:
+                from twisterlab.database.manager import db_manager
+                from twisterlab.database.models.resilience import HealingLog
+                async with db_manager.session() as session:
+                    log_record = HealingLog(
+                        capability_name=requirement,
+                        category=category,
+                        error_message=error_msg,
+                        success=success,
+                        request_id=request_id
+                    )
+                    session.add(log_record)
+                    await session.commit()
+            except Exception as e:
+                logger.debug(f"Failed to insert HealingLog record: {e}")
+
+
         try:
             archive_adapter = self._resolve_requirement_to_adapter("archive_mission", lookup_fn)
             if archive_adapter:
@@ -738,7 +899,8 @@ class RealMaestroAgent(CoreAgent):
                         "requirement": requirement,
                         "category": category,
                         "error": error_msg,
-                        "success": success
+                        "success": success,
+                        "request_id": request_id
                     }
                 )
                 logger.info(f"📁 [HEALING AUDIT] Logged healing trail for '{requirement}' via ArchiveAgent.")
