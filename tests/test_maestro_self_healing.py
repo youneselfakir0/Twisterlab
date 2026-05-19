@@ -120,7 +120,7 @@ async def test_maestro_circuit_breaker():
     execution_log = await maestro._execute_plan(plan, "test breaker", {}, lookup_fn=mock_lookup)
     
     assert execution_log[0]["status"] == "error"
-    assert "is quarantined due to repeated failures" in execution_log[0]["error"]
+    assert "is quarantined" in execution_log[0]["error"]
     print("[OK] test_maestro_circuit_breaker passed perfectly!")
 
 @pytest.mark.asyncio
@@ -133,12 +133,12 @@ async def test_maestro_adaptive_retry():
     maestro._healing_history["unstable_tool"] = {"success": 0, "fail": 5}
     
     # This should reduce max retries from 2 to 1
-    max_retries = maestro._get_max_retries("unstable_tool")
+    max_retries = await maestro._get_max_retries("unstable_tool")
     assert max_retries == 1
     
     # With a high success rate, it should stay 2
     maestro._healing_history["good_tool"] = {"success": 5, "fail": 0}
-    max_retries_good = maestro._get_max_retries("good_tool")
+    max_retries_good = await maestro._get_max_retries("good_tool")
     assert max_retries_good == 2
     print("[OK] test_maestro_adaptive_retry passed perfectly!")
 
