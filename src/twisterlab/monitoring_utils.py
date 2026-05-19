@@ -1,187 +1,137 @@
-import logging
+"""
+TwisterLab Monitoring Utilities
+Provides specialized Prometheus metrics for the Agent fleet and Orchestration layer.
+"""
 
-from prometheus_client import Counter, Gauge, Histogram
+import logging
+import time
+import functools
+import re
+from typing import Optional, Callable, Any
+
+try:
+    from prometheus_client import Counter, Histogram, Gauge
+except ImportError:
+    # Graceful fallback if prometheus_client is not installed
+    class MockMetric:
+        def labels(self, *args, **kwargs): return self
+        def inc(self, amount=1): pass
+        def observe(self, value): pass
+        def set(self, value): pass
+    
+    Counter = Histogram = Gauge = lambda *args, **kwargs: MockMetric()
 
 logger = logging.getLogger(__name__)
 
-# Guarded metric registration: attempt to create metrics and ignore if they're already registered.
+# --- METRIC DEFINITIONS ---
 
+# 1. Agent Resolution Metrics
+AGENT_RESOLUTION_TOTAL = Counter(
+    "twisterlab_agent_resolution_total",
+    "Total count of agent capability resolutions",
+    ["requirement", "agent", "status"] # status: success | failed | skipped
+)
 
-def _safe_gauge(name: str, documentation: str, **kwargs):
+# 2. Mission Performance Metrics
+MISSION_EXECUTION_SECONDS = Histogram(
+    "twisterlab_mission_duration_seconds",
+    "Duration of orchestrated missions in seconds",
+    ["category", "priority"],
+    buckets=(1, 2, 5, 10, 30, 60, 120, 300, 600)
+)
+
+# 3. Agent Execution Metrics (from Adapter)
+AGENT_EXECUTION_SECONDS = Histogram(
+    "twisterlab_agent_call_duration_seconds",
+    "Duration of individual agent tool calls in seconds",
+    ["agent", "tool"],
+    buckets=(0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0)
+)
+
+# 4. Agent Error Metrics
+AGENT_ERRORS_TOTAL = Counter(
+    "twisterlab_agent_errors_total",
+    "Total count of agent-specific failures",
+    ["agent", "error_code"]
+)
+
+# 5. Registry Health Gauge
+REGISTRY_AGENTS_ONLINE = Gauge(
+    "twisterlab_registry_agents_online",
+    "Number of agents currently initialized and online"
+)
+
+# 6. Self-Healing Events Counter
+HEALING_EVENTS_TOTAL = Counter(
+    "twisterlab_healing_events_total",
+    "Total count of self-healing events by category, capability requirement, and outcome status",
+    ["category", "requirement", "status"]
+)
+
+# --- UTILITY FUNCTIONS ---
+
+def record_resolution(requirement: str, agent: str, status: str):
+    """Logs an agent resolution event."""
     try:
-        return Gauge(name, documentation, **kwargs)
-    except ValueError:
-        # Already registered — fetch existing from the REGISTRY
-        logger.debug("Gauge %s already registered; reusing existing metric", name)
-        from prometheus_client import REGISTRY
-        for metric in REGISTRY.collect():
-            if metric.name == name:
-                return metric
-        return None
+        AGENT_RESOLUTION_TOTAL.labels(
+            requirement=requirement, 
+            agent=agent, 
+            status=status
+        ).inc()
+    except (AttributeError, RuntimeError) as e:
+        logger.debug(f"Failed to record resolution metric: {e}")
 
-
-def _safe_counter(name: str, documentation: str, **kwargs):
+def record_agent_error(agent: str, error_code: str):
+    """Logs an agent error event."""
     try:
-        return Counter(name, documentation, **kwargs)
-    except ValueError:
-        logger.debug("Counter %s already registered; reusing existing metric", name)
-        from prometheus_client import REGISTRY
-        for metric in REGISTRY.collect():
-            if metric.name == name:
-                return metric
-        return None
+        AGENT_ERRORS_TOTAL.labels(
+            agent=agent,
+            error_code=error_code
+        ).inc()
+    except (AttributeError, RuntimeError, KeyError) as e:
+        logger.debug(f"Failed to record error metric: {e}")
 
+def mission_timer(category: str, priority: str):
+    """Decorator or context manager to time a mission."""
+    return MISSION_EXECUTION_SECONDS.labels(category=category, priority=priority).time()
 
-def _safe_histogram(name: str, documentation: str, **kwargs):
+def agent_call_timer(agent: str, tool: str):
+    """Decorator or context manager to time an agent call."""
+    return AGENT_EXECUTION_SECONDS.labels(agent=agent, tool=tool).time()
+
+def update_registry_metrics(online_count: int):
+    """Updates the online agents gauge."""
     try:
-        return Histogram(name, documentation, **kwargs)
-    except ValueError:
-        logger.debug("Histogram %s already registered; reusing existing metric", name)
+        REGISTRY_AGENTS_ONLINE.set(online_count)
+    except (AttributeError, RuntimeError):
+        pass
+
+def record_healing_event(category: str, requirement: str, status: str):
+    """Logs a self-healing event."""
+    try:
+        HEALING_EVENTS_TOTAL.labels(
+            category=category,
+            requirement=requirement,
+            status=status
+        ).inc()
+    except (AttributeError, RuntimeError) as e:
+        logger.debug(f"Failed to record healing event metric: {e}")
+
+def get_metric_values() -> dict:
+    """Returns current metric values as a JSON-serializable dict."""
+    try:
         from prometheus_client import REGISTRY
+        results = {}
+        # Simple extraction of our custom metrics
         for metric in REGISTRY.collect():
-            if metric.name == name:
-                return metric
-        return None
+            if metric.name.startswith("twisterlab_"):
+                for sample in metric.samples:
+                    label_str = "-".join(sample.labels.values()) if sample.labels else "value"
+                    key = f"{sample.name}_{label_str}"
+                    results[key] = sample.value
+        return results
+    except (ImportError, AttributeError, RuntimeError):
+        return {}
 
-
-def register_standard_metrics():
-    """Register a small set of metrics used by TwisterLab in a safe way.
-
-    The function is idempotent and safe to call multiple times.
-    """
-    metrics = {}
-    
-    # Agent activity metrics
-    metrics["active_agents_count"] = _safe_gauge(
-        "active_agents_count", 
-        "Number of active agents",
-        labelnames=[]
-    )
-    
-    metrics["agent_calls_total"] = _safe_counter(
-        "agent_calls_total", 
-        "Total number of agent calls",
-        labelnames=["agent_name", "capability"]
-    )
-    
-    metrics["agent_errors_total"] = _safe_counter(
-        "agent_errors_total", 
-        "Total agent errors",
-        labelnames=["agent_name", "error_type"]
-    )
-    
-    metrics["agent_latency_seconds"] = _safe_histogram(
-        "agent_latency_seconds",
-        "Agent call latency in seconds",
-        labelnames=["agent_name", "capability"],
-        buckets=(0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
-    )
-    
-    # Maestro orchestration metrics
-    metrics["maestro_decisions_total"] = _safe_counter(
-        "maestro_decisions_total",
-        "Total decisions made by Maestro",
-        labelnames=["decision_type"]
-    )
-    
-    metrics["maestro_active_workflows"] = _safe_gauge(
-        "maestro_active_workflows",
-        "Number of active Maestro workflows"
-    )
-    
-    # Ticket/Incident metrics
-    metrics["tickets_resolved_total"] = _safe_counter(
-        "tickets_resolved_total",
-        "Total tickets resolved",
-        labelnames=["resolution_type", "agent_name"]
-    )
-    
-    metrics["ticket_resolution_time_seconds"] = _safe_histogram(
-        "ticket_resolution_time_seconds",
-        "Time to resolve tickets in seconds",
-        labelnames=["priority"],
-        buckets=(30, 60, 120, 300, 600, 1800, 3600, 7200)
-    )
-    
-    # Command execution metrics (DesktopCommander)
-    metrics["commands_executed_total"] = _safe_counter(
-        "commands_executed_total",
-        "Total commands executed",
-        labelnames=["command_type", "status"]
-    )
-    
-    return metrics
-
-
-# Global metrics registry for easy access
-_metrics_registry = None
-
-
-def get_metrics():
-    """Get or create the global metrics registry."""
-    global _metrics_registry
-    if _metrics_registry is None:
-        _metrics_registry = register_standard_metrics()
-    return _metrics_registry
-
-
-def record_agent_call(agent_name: str, capability: str, duration: float, success: bool = True, error_type: str = None):
-    """Record an agent call with timing and status."""
-    metrics = get_metrics()
-    
-    if metrics.get("agent_calls_total"):
-        metrics["agent_calls_total"].labels(agent_name=agent_name, capability=capability).inc()
-    
-    if metrics.get("agent_latency_seconds"):
-        metrics["agent_latency_seconds"].labels(agent_name=agent_name, capability=capability).observe(duration)
-    
-    if not success and error_type and metrics.get("agent_errors_total"):
-        metrics["agent_errors_total"].labels(agent_name=agent_name, error_type=error_type).inc()
-
-
-def record_ticket_resolved(resolution_type: str, agent_name: str, resolution_time: float, priority: str = "normal"):
-    """Record a resolved ticket."""
-    metrics = get_metrics()
-    
-    if metrics.get("tickets_resolved_total"):
-        metrics["tickets_resolved_total"].labels(resolution_type=resolution_type, agent_name=agent_name).inc()
-    
-    if metrics.get("ticket_resolution_time_seconds"):
-        metrics["ticket_resolution_time_seconds"].labels(priority=priority).observe(resolution_time)
-
-
-def record_command_executed(command_type: str, success: bool = True):
-    """Record a command execution."""
-    metrics = get_metrics()
-    status = "success" if success else "failure"
-    
-    if metrics.get("commands_executed_total"):
-        metrics["commands_executed_total"].labels(command_type=command_type, status=status).inc()
-
-
-def register_with_app(app):
-    # attach the register function to app for external use if needed
-    app.state.twisterlab_metrics = register_standard_metrics()
-    return app.state.twisterlab_metrics
-
-
-def get_metric_values(metric_names: list[str] | None = None) -> dict[str, float | None]:
-    """Return current metric values for requested metric names.
-
-    If metric_names is None, return all standard metrics registered by this module.
-    """
-    from prometheus_client import REGISTRY
-
-    metrics: dict[str, float | None] = {}
-    if metric_names is None:
-        metric_names = ["active_agents_count", "agent_errors_total"]
-
-    for name in metric_names:
-        try:
-            # REGISTRY.get_sample_value returns the latest value for the metric name
-            value = REGISTRY.get_sample_value(name)
-            # If no value (not yet sampled), but metric exists, return 0
-            metrics[name] = float(value) if value is not None else 0.0
-        except Exception:
-            metrics[name] = None
-    return metrics
+def register_with_app(app: Any):
+    pass
