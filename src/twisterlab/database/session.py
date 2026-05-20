@@ -1,17 +1,26 @@
 from __future__ import annotations
 
 import os
-
+import logging
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
-# Default to a shared in-memory SQLite database (safe for tests) unless overridden
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+logger = logging.getLogger(__name__)
+
+# Default to a local SQLite database for trader journaling
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///twisterlab_trader.db")
 if DATABASE_URL.startswith("postgres"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
 
-engine = create_async_engine(DATABASE_URL)
-AsyncSessionLocal = async_sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# STABILIZED ENGINE with pool_pre_ping and connection recycling
+engine = create_async_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    pool_size=10,
+    max_overflow=20
+)
+AsyncSessionLocal = async_sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
 
 
 class Base(DeclarativeBase):
@@ -23,10 +32,24 @@ async def get_db():
         yield db
 
 
-# Ensure models are imported and tables created at module import time to support test clients
 async def init_db():
     async with engine.begin() as conn:
-        # Import model modules so they register with Base
-        from twisterlab.database.models import agent as _agent_model  # noqa: F401
+        try:
+            from twisterlab.database.models import agent as _agent_model  # noqa: F401
+            await conn.run_sync(Base.metadata.create_all)
+        except Exception as e:
+            logger.error(f"Failed to initialize agent models: {e}")
+            
+        try:
+            from twisterlab.database.models import trading as _trading_model  # noqa: F401
+            await conn.run_sync(Base.metadata.create_all)
+        except ImportError:
+            logger.warning("Trading models not found, skipping table creation.")
+        except Exception as e:
+            logger.error(f"Failed to initialize trading models: {e}")
 
-        await conn.run_sync(Base.metadata.create_all)
+        try:
+            from twisterlab.database.models import resilience as _resilience_model  # noqa: F401
+            await conn.run_sync(Base.metadata.create_all)
+        except Exception as e:
+            logger.error(f"Failed to initialize resilience models: {e}")

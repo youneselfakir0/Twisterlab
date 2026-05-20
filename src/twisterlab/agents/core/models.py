@@ -9,9 +9,9 @@ from datetime import datetime, timezone
 from sqlalchemy import JSON, Column, DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import Float, Integer, String, Text
-from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+# Unified Base from Database Manager (Sprint B)
+from twisterlab.database.manager import Base
 
 
 class TicketStatus(str, enum.Enum):

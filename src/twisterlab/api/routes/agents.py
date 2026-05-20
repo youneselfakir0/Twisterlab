@@ -7,6 +7,36 @@ from twisterlab.storage.base import AgentRepo
 router = APIRouter()
 
 
+@router.get("/live")
+async def list_live_agents():
+    """Lists all agents from the in-memory registry (not DB repo)."""
+    try:
+        from twisterlab.agents.registry import get_agent_registry
+        registry = get_agent_registry()
+        agents_dict = registry.list_agents()
+        result = []
+        for name, meta in agents_dict.items():
+            if isinstance(meta, dict):
+                result.append({
+                    "name": meta.get("name", name),
+                    "description": meta.get("description", ""),
+                    "status": "online" if meta.get("initialized") else "registered",
+                    "capabilities": meta.get("capabilities", []),
+                    "tools": meta.get("capabilities", []),
+                })
+            else:
+                result.append({
+                    "name": name,
+                    "description": str(meta),
+                    "status": "registered",
+                    "capabilities": [],
+                    "tools": [],
+                })
+        return result
+    except Exception:
+        return []
+
+
 @router.post("/", response_model=AgentResponse, status_code=201)
 async def create_agent(agent: AgentCreate, repo: AgentRepo = Depends(get_agent_repo)):
     # Avoid creating duplicate agent with the same name - best-effort check for SQL backend

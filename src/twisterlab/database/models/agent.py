@@ -3,7 +3,8 @@ from __future__ import annotations
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ..session import Base
+# Unified Base from Database Manager (Sprint B)
+from twisterlab.database.manager import Base
 
 
 class Agent(Base):

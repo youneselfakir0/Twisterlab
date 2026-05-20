@@ -1,4 +1,4 @@
-﻿"""
+"""
 RealMonitoringAgent - Real System Metrics Collection.
 """
 
@@ -53,7 +53,7 @@ class RealMonitoringAgent(TwisterAgent):
             ),
         ]
 
-    async def handle_collect_metrics(self) -> AgentResponse:
+    async def handle_collect_metrics(self, detailed: bool = False) -> AgentResponse:
         if not PSUTIL_AVAILABLE:
             return AgentResponse(success=True, data={"cpu": 45.0, "memory": 60.0, "simulated": True})
         

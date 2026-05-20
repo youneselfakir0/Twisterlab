@@ -3,38 +3,42 @@
 # ============================================
 FROM python:3.11-slim AS builder
 
-# Install Poetry
-RUN pip install --no-cache-dir poetry==1.8.3
+# Install Poetry and build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && pip install --no-cache-dir poetry==1.8.3 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy only dependency files for better layer caching
+# Copy only dependency files
 COPY pyproject.toml ./
 
-# Configure Poetry to not create virtualenv (we're in a container)
-RUN poetry config virtualenvs.create false
-
-# Install dependencies (production only, no dev packages)
-RUN poetry install --no-root --only main --no-interaction --no-ansi
-
-# Install aiosqlite separately (needed for SQLite async support)
-RUN pip install --no-cache-dir aiosqlite==0.19.0
+# Configure Poetry
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-root --only main --no-interaction --no-ansi
 
 # ============================================
-# Stage 2: Runtime - Minimal production image
+# Stage 2: Runtime - Final Production Image
 # ============================================
 FROM python:3.11-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app/src
 
 WORKDIR /app
 
-# Install only runtime system dependencies (no gcc/build tools)
+# Install runtime system dependencies + Node.js (for OpenClaw)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    curl \
+    ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,35 +46,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Install Playwright system dependencies and Chromium browser
-# This installs required shared libraries and the browser binary
+# Install Playwright and Chromium
 RUN playwright install --with-deps chromium
 
-# Add build argument to invalidate cache for source code
-ARG CACHE_BUST=1
-RUN echo "Cache bust: $CACHE_BUST"
-
-# Copy application source code
+# Copy application source
 COPY ./src /app/src
-
-# Debug: verify the copied file has the right content
-RUN grep -n "from .routes" /app/src/twisterlab/api/main.py || echo "GREP FAILED"
-
-# Copy pyproject.toml for package installation
 COPY pyproject.toml ./
+COPY README.md ./
+COPY index.html ./
+COPY index.css ./
 
-# Install twisterlab package in editable mode
-RUN pip install --no-cache-dir -e .
+# Install the twisterlab package (non-editable for production)
+RUN pip install --no-cache-dir .
 
-# Create non-root user for security
+# Create non-root user
 RUN useradd -m -u 1000 twisterlab && \
     chown -R twisterlab:twisterlab /app
 
 USER twisterlab
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/').read()" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose port
 EXPOSE 8000

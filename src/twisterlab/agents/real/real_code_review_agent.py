@@ -12,6 +12,7 @@ from twisterlab.agents.core.base import (
     AgentResponse,
     CapabilityType
 )
+from twisterlab.services.analytics.code_review_orchestrator import CodeReviewOrchestrator
 
 class RealCodeReviewAgent(TwisterAgent):
     @property
@@ -20,7 +21,11 @@ class RealCodeReviewAgent(TwisterAgent):
 
     @property
     def description(self) -> str:
-        return "Analyzes code for potential issues and security vulnerabilities."
+        return "Coordinated Code Analysis & Remediation Platform (DevSecOps)."
+
+    def __init__(self, registry=None):
+        super().__init__(registry)
+        self.orchestrator = CodeReviewOrchestrator()
 
     def get_capabilities(self) -> List[AgentCapability]:
         return [
@@ -34,87 +39,38 @@ class RealCodeReviewAgent(TwisterAgent):
                     CapabilityParam("language", ParamType.STRING, "The programming language", required=False)
                 ]
             ),
-             AgentCapability(
-                name="security_scan",
-                description="Scan code for known security patterns (e.g., hardcoded secrets).",
-                handler="handle_security_scan",
+            AgentCapability(
+                name="deep_audit",
+                description="Executes a coordinated multi-agent analysis (Quality, Security, Arch).",
+                handler="handle_deep_audit",
                 capability_type=CapabilityType.QUERY,
                 params=[
-                    CapabilityParam("code", ParamType.STRING, "The code snippet to scan", required=True)
+                    CapabilityParam("code", ParamType.STRING, "The code snippet to audit", required=True),
+                    CapabilityParam("filename", ParamType.STRING, "Optional filename for context", required=False)
                 ]
             )
         ]
 
     async def handle_analyze(self, code: str, language: str = "python") -> AgentResponse:
-        """Simple heuristic-based analysis."""
-        issues = []
-        
-        if "print(" in code:
-            issues.append({"severity": "info", "message": "Discovered 'print' statement. Consider using logging."})
-        
-        if "TODO" in code:
-            issues.append({"severity": "low", "message": "Discovered TODO comment. Please address."})
-            
-        if "try:" in code and "except:" in code and "Exception" not in code:
-             issues.append({"severity": "medium", "message": "Bare 'except:' clause found. Catch specific exceptions."})
+        """Fallback to orchestrator for basic analysis."""
+        return await self.handle_deep_audit(code)
 
-        return AgentResponse(success=True, data={
-            "status": "completed",
-            "language": language, 
-            "issues_found": len(issues),
-            "issues": issues
-        })
+    async def handle_deep_audit(self, code: str, filename: str = "snippet.py") -> AgentResponse:
+        """Coordinated multi-agent analysis."""
+        try:
+            report = await self.orchestrator.full_review(code, filename)
+            return AgentResponse(success=True, data=report)
+        except Exception as e:
+            logger.error(f"CodeReview: Audit failed: {e}")
+            return AgentResponse(success=False, error=str(e))
 
     async def handle_security_scan(self, code: str) -> AgentResponse:
-        """Comprehensive security scan for common vulnerabilities."""
-        findings = []
-        
-        # Security patterns with their descriptions
-        SECURITY_PATTERNS = [
-            # Hardcoded secrets - assignment patterns
-            (r"(?i)(password|secret|api_?key|token|credentials?)\s*=\s*['\"][^'\"]+['\"]",
-             "high", "Potential hardcoded secret in assignment"),
-            
-            # Hardcoded secrets - comparison patterns (leaked in condition)
-            (r"(?i)(password|secret|pin|code)\s*==\s*['\"][^'\"]+['\"]",
-             "high", "Hardcoded credential in comparison - security vulnerability"),
-            
-            # SQL Injection risks
-            (r"(?i)(execute|query|cursor\.execute)\s*\([^)]*\+\s*[^\)]+\)|f['\"].*\{.*\}.*(?:SELECT|INSERT|UPDATE|DELETE)",
-             "critical", "Potential SQL injection - use parameterized queries"),
-            
-            # Dangerous functions
-            (r"\beval\s*\(", "critical", "Use of 'eval()' detected - code injection risk"),
-            (r"\bexec\s*\(", "critical", "Use of 'exec()' detected - code injection risk"),
-            (r"\b__import__\s*\(", "high", "Dynamic import detected - potential security issue"),
-            
-            # Insecure deserialization
-            (r"pickle\.loads?\(", "high", "Use of pickle - potential arbitrary code execution"),
-            (r"yaml\.load\s*\([^)]*\)", "high", "Use of yaml.load - use safe_load instead"),
-            
-            # Weak cryptography
-            (r"(?i)md5|sha1\s*\(", "medium", "Weak hash algorithm - use SHA-256 or better"),
-            
-            # Sensitive data exposure
-            (r"print\s*\([^)]*(?:password|secret|token|key)[^)]*\)",
-             "medium", "Potential sensitive data in print statement"),
-            
-            # Debug/development code
-            (r"DEBUG\s*=\s*True", "medium", "Debug mode enabled - disable in production"),
-        ]
-        
-        for pattern, severity, message in SECURITY_PATTERNS:
-            if match := re.search(pattern, code):
-                findings.append({
-                    "severity": severity,
-                    "message": message,
-                    "match": match.group(0)[:100]  # Truncate long matches
-                })
-        
-        status = "vulnerable" if findings else "secure"
-        
-        return AgentResponse(success=True, data={
-             "status": status,
-             "findings_count": len(findings),
-             "findings": findings
-        })
+        """Dedicated security scan."""
+        try:
+            findings = await self.orchestrator.security_advisor.analyze(code)
+            return AgentResponse(success=True, data={
+                "status": "vulnerable" if findings else "secure",
+                "findings": findings
+            })
+        except Exception as e:
+            return AgentResponse(success=False, error=str(e))

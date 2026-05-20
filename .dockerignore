@@ -23,6 +23,6 @@ scripts/
 docs/
 k8s/
 
-*.md
+# *.md
 LICENSE
 Makefile

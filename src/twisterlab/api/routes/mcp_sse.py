@@ -59,11 +59,11 @@ async def mcp_call_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     try:
         if name == "browse_web":
             agent = RealBrowserAgent()
-            result = await agent.execute({
-                "operation": "browse",
-                "url": args.get("url"),
-                "screenshot": args.get("screenshot", True)
-            })
+            result = await agent.execute(
+                "browse",
+                url=args.get("url"),
+                screenshot=args.get("screenshot", True)
+            )
             
             # Format for Claude
             content = []
@@ -90,14 +90,16 @@ async def mcp_call_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 
         elif name == "monitor_system_health":
             agent = RealMonitoringAgent()
-            result = await agent.execute({
-                "operation": "health_check",
-                "detailed": args.get("detailed", False)
-            })
-            return {
-                "content": [{"type": "text", "text": json.dumps(result, indent=2)}],
-                "isError": result.get("status") != "success"
-            }
+            result = await agent.execute(
+                "collect_metrics",
+                detailed=args.get("detailed", False)
+            )
+            if result.success:
+                import json
+                text = json.dumps(result.data, indent=2)
+                return {"content": [{"type": "text", "text": text}], "isError": False}
+            else:
+                return {"content": [{"type": "text", "text": f"Error: {result.error}"}], "isError": True}
 
         else:
             return {"content": [{"type": "text", "text": f"Unknown tool: {name}"}], "isError": True}
@@ -119,6 +121,41 @@ async def handle_sse(request: Request):
     SESSIONS[session_id] = queue
     
     logger.info(f"🔌 New MCP SSE connection: {session_id}")
+
+    pubsub_task = None
+
+    async def listen_to_redis(redis_client, s_id: str, q: asyncio.Queue):
+        pubsub = redis_client.pubsub()
+        channel_name = f"mcp_session:{s_id}"
+        await pubsub.subscribe(channel_name)
+        logger.info(f"📡 Subscribed to Redis PubSub channel: {channel_name} for SSE active stream")
+        try:
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    data = message["data"]
+                    if isinstance(data, bytes):
+                        data = data.decode("utf-8")
+                    logger.debug(f"📩 SSE PubSub message received: {data}")
+                    await q.put(data)
+        except asyncio.CancelledError:
+            pass
+        except Exception as ex:
+            logger.error(f"Error in SSE PubSub listener for {s_id}: {ex}")
+        finally:
+            await pubsub.unsubscribe(channel_name)
+            await pubsub.close()
+
+    try:
+        from twisterlab.api.auth import get_redis_client
+        redis_client = await get_redis_client()
+        await redis_client.ping()
+        # Keep track of active session in Redis with 1 hour TTL
+        await redis_client.setex(f"mcp_session_active:{session_id}", 3600, "1")
+        # Start background listener task for Redis pubsub
+        pubsub_task = asyncio.create_task(listen_to_redis(redis_client, session_id, queue))
+        logger.info(f"✅ Redis session registered & PubSub listener started for {session_id}")
+    except Exception as e:
+        logger.warning(f"⚠️ Redis unavailable for SSE, falling back to pure in-memory: {e}")
 
     async def event_generator():
         # 1. Send the 'endpoint' event pointing to the POST handler
@@ -142,8 +179,16 @@ async def handle_sse(request: Request):
         except asyncio.CancelledError:
             logger.info(f"SSE Disconnected: {session_id}")
         finally:
+            if pubsub_task:
+                pubsub_task.cancel()
             if session_id in SESSIONS:
                 del SESSIONS[session_id]
+            try:
+                from twisterlab.api.auth import get_redis_client
+                redis_client = await get_redis_client()
+                await redis_client.delete(f"mcp_session_active:{session_id}")
+            except Exception:
+                pass
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -152,7 +197,21 @@ async def handle_sse(request: Request):
 async def handle_messages(request: Request):
     """Handle JSON-RPC messages from Claude."""
     session_id = request.query_params.get("session_id")
-    if not session_id or session_id not in SESSIONS:
+    if not session_id:
+        return Response(status_code=400, content="Missing session_id")
+    
+    is_active = (session_id in SESSIONS)
+    redis_active = False
+    
+    try:
+        from twisterlab.api.auth import get_redis_client
+        redis_client = await get_redis_client()
+        redis_active = await redis_client.exists(f"mcp_session_active:{session_id}")
+    except Exception as e:
+        logger.debug(f"Redis check bypassed during message POST: {e}")
+
+    if not is_active and not redis_active:
+        logger.warning(f"❌ Session {session_id} not found in memory or Redis.")
         return Response(status_code=404, content="Session not found")
     
     try:
@@ -164,7 +223,25 @@ async def handle_messages(request: Request):
         
         response = None
         
-        if method == "notifications/initialized":
+        if method == "initialize":
+            params = body.get("params", {})
+            protocol_version = params.get("protocolVersion", "2025-11-25")
+            response = {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "protocolVersion": protocol_version,
+                    "capabilities": {
+                        "tools": {}
+                    },
+                    "serverInfo": {
+                        "name": "twisterlab-pro",
+                        "version": "5.0.3"
+                    }
+                }
+            }
+            
+        elif method == "notifications/initialized":
             # Just ack
             pass
             
@@ -189,8 +266,21 @@ async def handle_messages(request: Request):
             # But for RPC compliance, maybe error? Claude is permissive.
         
         if response:
-            queue = SESSIONS[session_id]
-            await queue.put(json.dumps(response))
+            # 1. Direct delivery: if the session is active on this pod, deliver immediately to local memory queue
+            if is_active:
+                queue = SESSIONS[session_id]
+                await queue.put(json.dumps(response))
+                logger.info(f"📤 Pushed response directly to local memory queue for session {session_id}")
+            
+            # 2. Redis broadcast (best effort): send to other pods via Redis PubSub
+            try:
+                from twisterlab.api.auth import get_redis_client
+                redis_client = await get_redis_client()
+                channel_name = f"mcp_session:{session_id}"
+                await redis_client.publish(channel_name, json.dumps(response))
+                logger.debug(f"📡 Broadcasted response to Redis PubSub channel: {channel_name}")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to broadcast to Redis PubSub: {e}")
             
         return Response(status_code=202)
         
