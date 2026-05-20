@@ -12,7 +12,11 @@ BOLD = "\033[1m"
 
 def print_header(title: str):
     print("\n" + "=" * 60)
-    print(f"{BOLD}{CYAN}  {title}{RESET}")
+    try:
+        print(f"{BOLD}{CYAN}  {title}{RESET}")
+    except UnicodeEncodeError:
+        cleaned = title.encode('ascii', 'ignore').decode('ascii')
+        print(f"{BOLD}{CYAN}  {cleaned}{RESET}")
     print("=" * 60)
 
 
@@ -32,7 +36,7 @@ def ask_bool(question: str, default: bool) -> bool:
 
 
 def run_onboard():
-    print_header("TwisterLab Onboarding Setup Wizard 🧠")
+    print_header("TwisterLab Onboarding Setup Wizard")
     print("This wizard will help you configure the core settings for TwisterLab.")
     print("Configurations will be saved to your local '.env' file.")
 
@@ -117,6 +121,9 @@ TRADING__MANUAL_APPROVAL_REQUIRED={str(manual_approval).lower()}
     env_path.write_text(env_content, encoding="utf-8")
 
     print("\n" + "=" * 60)
-    print(f"{BOLD}{GREEN}🎉 Configuration successfully saved to {env_path.absolute()}{RESET}")
+    try:
+        print(f"{BOLD}{GREEN}🎉 Configuration successfully saved to {env_path.absolute()}{RESET}")
+    except UnicodeEncodeError:
+        print(f"{BOLD}{GREEN}[OK] Configuration successfully saved to {env_path.absolute()}{RESET}")
     print(f"To verify your connection settings, run: {BOLD}twisterlab doctor{RESET}")
     print("=" * 60 + "\n")
