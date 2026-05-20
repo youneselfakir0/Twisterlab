@@ -40,7 +40,10 @@ def get_running_process():
 
 
 def start_gateway():
-    print(f"{BOLD}{CYAN}🚀 Starting TwisterLab Gateway Daemon...{RESET}")
+    try:
+        print(f"{BOLD}{CYAN}🚀 Starting TwisterLab Gateway Daemon...{RESET}")
+    except UnicodeEncodeError:
+        print(f"{BOLD}{CYAN}[START] Starting TwisterLab Gateway Daemon...{RESET}")
     
     proc = get_running_process()
     if proc:
@@ -90,16 +93,25 @@ def start_gateway():
     for _ in range(10):
         time.sleep(1.0)
         if is_port_in_use(8000):
-            print(f"{GREEN}✓ Gateway is ONLINE and listening on port 8000.{RESET}")
+            try:
+                print(f"{GREEN}✓ Gateway is ONLINE and listening on port 8000.{RESET}")
+            except UnicodeEncodeError:
+                print(f"{GREEN}[OK] Gateway is ONLINE and listening on port 8000.{RESET}")
             print(f"Logs are being written to {LOG_FILE.absolute()}")
             return
             
-    print(f"{RED}⚠ Warning: Gateway was spawned but is not responding on port 8000 yet.{RESET}")
+    try:
+        print(f"{RED}⚠ Warning: Gateway was spawned but is not responding on port 8000 yet.{RESET}")
+    except UnicodeEncodeError:
+        print(f"{RED}[WARNING] Gateway was spawned but is not responding on port 8000 yet.{RESET}")
     print(f"Please inspect the logs at {LOG_FILE.absolute()}")
 
 
 def stop_gateway():
-    print(f"{BOLD}{YELLOW}🛑 Stopping TwisterLab Gateway Daemon...{RESET}")
+    try:
+        print(f"{BOLD}{YELLOW}🛑 Stopping TwisterLab Gateway Daemon...{RESET}")
+    except UnicodeEncodeError:
+        print(f"{BOLD}{YELLOW}[STOP] Stopping TwisterLab Gateway Daemon...{RESET}")
     proc = get_running_process()
     if not proc:
         if is_port_in_use(8000):
@@ -127,7 +139,10 @@ def stop_gateway():
             print("Process did not exit. Forcing kill...")
             proc.kill()
             
-        print(f"{GREEN}✓ Gateway (PID: {pid}) stopped successfully.{RESET}")
+        try:
+            print(f"{GREEN}✓ Gateway (PID: {pid}) stopped successfully.{RESET}")
+        except UnicodeEncodeError:
+            print(f"{GREEN}[OK] Gateway (PID: {pid}) stopped successfully.{RESET}")
     except Exception as e:
         print(f"{RED}Error stopping process: {e}{RESET}")
     finally:
@@ -138,7 +153,10 @@ def stop_gateway():
 def show_status():
     proc = get_running_process()
     print("\n" + "=" * 60)
-    print(f"{BOLD}{CYAN}📊 TwisterLab Gateway Status{RESET}")
+    try:
+        print(f"{BOLD}{CYAN}📊 TwisterLab Gateway Status{RESET}")
+    except UnicodeEncodeError:
+        print(f"{BOLD}{CYAN}[Status] TwisterLab Gateway Status{RESET}")
     print("=" * 60)
     
     if proc:
