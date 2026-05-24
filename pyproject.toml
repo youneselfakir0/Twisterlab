@@ -23,7 +23,7 @@ opentelemetry-instrumentation = "^0.47b0"
 opentelemetry-instrumentation-fastapi = "^0.47b0"
 opentelemetry-exporter-jaeger = "^1.15.0"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
-cryptography = "^42.0.0"
+cryptography = "^46.0.5"
 playwright = "^1.40.0"
 mcp = "^1.0.0"
 
