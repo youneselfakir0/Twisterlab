@@ -36,8 +36,14 @@ export const useTelemetry = () => {
           const message = JSON.parse(event.data);
           
           setTelemetry(prev => {
-            // Keep only the latest 50 items
-            const newLogs = message.log ? [message.log, ...prev.logs].slice(0, 50) : prev.logs;
+            // Use logs array from message if present, otherwise fallback to appending single log
+            let newLogs = prev.logs;
+            if (message.logs && Array.isArray(message.logs)) {
+              newLogs = message.logs;
+            } else if (message.log) {
+              newLogs = [message.log, ...prev.logs].slice(0, 50);
+            }
+            
             const newSignals = message.signal ? [message.signal, ...prev.signals].slice(0, 50) : prev.signals;
             
             let newSocialEvents = prev.socialEvents;

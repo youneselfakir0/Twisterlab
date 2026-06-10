@@ -6,7 +6,6 @@ import { Cpu, Zap, Activity, ShieldCheck } from 'lucide-react';
 
 const CommandCenter = () => {
   const { telemetry, isConnected } = useTelemetry();
-  const [mcpLogs, setMcpLogs] = useState([]);
   const [agents, setAgents] = useState([]);
   const [lastUpdate, setLastUpdate] = useState('NEVER');
 
@@ -31,21 +30,6 @@ const CommandCenter = () => {
     };
     fetchAgents();
   }, []);
-
-  // Initialize logs with current time and sync with telemetry
-  useEffect(() => {
-    if (mcpLogs.length === 0) {
-      const now = new Date();
-      const formatTime = (date) => date.toLocaleTimeString([], { hour12: false });
-      
-      setMcpLogs([
-        { timestamp: formatTime(new Date(now.getTime() - 120000)), type: 'info', text: 'Kernel initialized. Transport: SSE' },
-        { timestamp: formatTime(new Date(now.getTime() - 115000)), type: 'info', text: `Fleet verified: ${telemetry.totalAgents || agents.length || 9} tactical units registered.` },
-        { timestamp: formatTime(new Date(now.getTime() - 10000)), type: 'tool', text: 'Call: monitoring_get_system_metrics' },
-        { timestamp: formatTime(now), type: 'result', text: `CPU: ${(telemetry.cpu || 0).toFixed(1)}%, RAM: ${(telemetry.ram || 0).toFixed(1)}%` },
-      ]);
-    }
-  }, [telemetry.cpu, telemetry.ram, telemetry.totalAgents, agents.length]);
 
   const displayAgents = agents.length > 0 ? agents : [
     { id: 'Maestro', name: 'Maestro', status: 'online' },
@@ -88,7 +72,7 @@ const CommandCenter = () => {
 
         {/* Matrix Terminal & Intel */}
         <div className="w-1/3 flex flex-col gap-6">
-          <MatrixTerminal logs={mcpLogs} />
+          <MatrixTerminal logs={telemetry.logs} />
           
           <div className="glass-panel p-5 relative overflow-hidden h-48">
             <div className="scanline" />

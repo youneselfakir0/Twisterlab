@@ -55,6 +55,33 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# --- LOG BUFFERING ---
+class LogBufferHandler(logging.Handler):
+    def __init__(self, capacity=50):
+        super().__init__()
+        self.buffer = []
+        self.capacity = capacity
+
+    def emit(self, record):
+        log_entry = {
+            "timestamp": time.strftime("%H:%M:%S", time.localtime(record.created)),
+            "type": self._get_type(record),
+            "text": record.getMessage()
+        }
+        self.buffer.append(log_entry)
+        if len(self.buffer) > self.capacity:
+            self.buffer.pop(0)
+
+    def _get_type(self, record):
+        if record.levelno >= logging.ERROR: return "error"
+        if "Call:" in record.msg or "Tool" in record.msg: return "tool"
+        if "Result:" in record.msg or "Return" in record.msg: return "result"
+        return "info"
+
+log_buffer = LogBufferHandler()
+logging.getLogger().addHandler(log_buffer)
+# ---------------------
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -151,7 +178,8 @@ async def telemetry_endpoint(websocket: WebSocket):
                 "agents": status["total"],
                 "active_agents": status["initialized"],
                 "status": "ONLINE" if status["initialized"] > 0 else "DEGRADED",
-                "metrics": metrics
+                "metrics": metrics,
+                "logs": log_buffer.buffer # Add buffered logs
             }
             
             await websocket.send_json(payload)
