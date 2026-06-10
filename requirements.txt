@@ -29,7 +29,6 @@ psycopg2-binary>=2.9.0
 passlib[bcrypt]>=1.7.4
 python-multipart>=0.0.6
 mcp>=1.0.0
-ccxt==4.5.50
 notion-client==2.2.1
 asyncpg==0.31.0
 numpy

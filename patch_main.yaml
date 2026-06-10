@@ -1,0 +1,20 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: twisterlab
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        volumeMounts:
+        - name: hotfix-volume
+          mountPath: /app/src/twisterlab/api/main.py
+          subPath: main.py
+        - name: hotfix-volume
+          mountPath: /app/src/twisterlab/api/routes/system.py
+          subPath: system.py
+      volumes:
+      - name: hotfix-volume
+        configMap:
+          name: twisterlab-api-hotfix

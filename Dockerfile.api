@@ -1,0 +1,35 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Core dependencies for the dashboard
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    pydantic \
+    pydantic-settings \
+    sqlalchemy \
+    asyncpg \
+    redis \
+    aiosqlite \
+    httpx \
+    requests \
+    psutil \
+    prometheus-client \
+    prometheus_fastapi_instrumentator \
+    python-jose[cryptography] \
+    passlib[bcrypt] \
+    websockets \
+    notion-client \
+    opentelemetry-api \
+    opentelemetry-sdk \
+    jinja2
+
+# Copy source code with correct structure
+COPY src/twisterlab/ ./twisterlab/
+
+# Set PYTHONPATH to the current directory so 'import twisterlab' works
+ENV PYTHONPATH=/app
+
+# Entry point using the modular main.py
+CMD ["uvicorn", "twisterlab.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

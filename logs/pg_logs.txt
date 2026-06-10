@@ -1,0 +1,33 @@
+﻿
+PostgreSQL Database directory appears to contain a database; Skipping initialization
+
+2026-03-18 00:47:20.288 UTC [1] LOG:  starting PostgreSQL 16.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+2026-03-18 00:47:20.288 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2026-03-18 00:47:20.288 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2026-03-18 00:47:20.826 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-03-18 00:47:21.365 UTC [29] LOG:  database system was interrupted; last known up at 2026-03-17 12:16:57 UTC
+2026-03-18 00:47:26.932 UTC [37] FATAL:  the database system is starting up
+2026-03-18 00:47:31.441 UTC [29] LOG:  syncing data directory (fsync), elapsed time: 10.04 s, current path: ./base/4/2683
+2026-03-18 00:47:31.931 UTC [43] FATAL:  the database system is starting up
+2026-03-18 00:47:36.924 UTC [51] FATAL:  the database system is starting up
+2026-03-18 00:47:41.397 UTC [29] LOG:  syncing data directory (fsync), elapsed time: 20.00 s, current path: ./base/1/3119
+2026-03-18 00:47:41.932 UTC [58] FATAL:  the database system is starting up
+2026-03-18 00:47:46.966 UTC [66] FATAL:  the database system is starting up
+2026-03-18 00:47:50.507 UTC [73] FATAL:  the database system is starting up
+2026-03-18 00:47:51.409 UTC [29] LOG:  syncing data directory (fsync), elapsed time: 30.01 s, current path: ./base/16384/175
+2026-03-18 00:47:51.904 UTC [80] FATAL:  the database system is starting up
+2026-03-18 00:47:56.928 UTC [87] FATAL:  the database system is starting up
+2026-03-18 00:48:00.505 UTC [94] FATAL:  the database system is starting up
+2026-03-18 00:48:01.422 UTC [29] LOG:  syncing data directory (fsync), elapsed time: 40.02 s, current path: ./base/5/2605
+2026-03-18 00:48:01.881 UTC [101] FATAL:  the database system is starting up
+2026-03-18 00:48:03.427 UTC [29] LOG:  database system was not properly shut down; automatic recovery in progress
+2026-03-18 00:48:03.618 UTC [29] LOG:  redo starts at 0/19DB180
+2026-03-18 00:48:03.618 UTC [29] LOG:  invalid record length at 0/19DB1B8: expected at least 24, got 0
+2026-03-18 00:48:03.618 UTC [29] LOG:  redo done at 0/19DB180 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.03 s
+2026-03-18 00:48:04.113 UTC [27] LOG:  checkpoint starting: end-of-recovery immediate wait
+2026-03-18 00:48:05.626 UTC [27] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.502 s, sync=0.176 s, total=1.619 s; sync files=2, longest=0.090 s, average=0.088 s; distance=0 kB, estimate=0 kB; lsn=0/19DB1B8, redo lsn=0/19DB1B8
+2026-03-18 00:48:05.767 UTC [1] LOG:  database system is ready to accept connections
+2026-03-18 00:48:21.036 UTC [140] FATAL:  password authentication failed for user "twisterlab"
+2026-03-18 00:48:21.036 UTC [140] DETAIL:  Connection matched file "/var/lib/postgresql/data/pg_hba.conf" line 128: "host all all all scram-sha-256"
+2026-03-18 00:48:21.039 UTC [139] FATAL:  password authentication failed for user "twisterlab"
+2026-03-18 00:48:21.039 UTC [139] DETAIL:  Connection matched file "/var/lib/postgresql/data/pg_hba.conf" line 128: "host all all all scram-sha-256"

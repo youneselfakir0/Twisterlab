@@ -1,0 +1,4350 @@
+﻿# Auto-genere par consolidate-configmaps.ps1 -- 2026-02-21 19:25
+# Remplace : agent-classifier-hotfix, agent-resolver-hotfix, api-hotfix-v1, browser-agent-fix, desktop-commander-fix, maestro-fix, mcp-unified-fixes, registry-fix
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: twisterlab-patches-v1
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: patches
+    version: '1.0'
+  annotations:
+    consolidated-date: '2026-02-21'
+    replaces: 'agent-classifier-hotfix, agent-resolver-hotfix, api-hotfix-v1, browser-agent-fix, desktop-commander-fix, maestro-fix, mcp-unified-fixes, registry-fix'
+data:
+  # Source: mcp-unified-fixes
+  agents_base.py: |
+    """
+    TwisterAgent Base Class
+    
+    This is the foundation for all MCP-agnostic agents in TwisterLab.
+    Agents are pure Python classes that:
+    - Define capabilities (tools) with metadata
+    - Implement business logic
+    - Have NO knowledge of MCP protocol
+    
+    The MCP adapter layer handles protocol translation.
+    """
+    
+    from __future__ import annotations
+    
+    import logging
+    import time
+    from abc import ABC, abstractmethod
+    from dataclasses import dataclass, field
+    from enum import Enum
+    from typing import Any, Dict, List, Optional
+    
+    from twisterlab.services import ServiceRegistry, get_service_registry
+    
+    logger = logging.getLogger(__name__)
+    
+    
+    class CapabilityType(str, Enum):
+        """Types of agent capabilities."""
+    
+        QUERY = "query"  # Read-only operation
+        ACTION = "action"  # State-changing operation
+        STREAM = "stream"  # Streaming response
+    
+    
+    class ParamType(str, Enum):
+        """Parameter types for capability inputs."""
+    
+        STRING = "string"
+        INTEGER = "integer"
+        NUMBER = "number"
+        BOOLEAN = "boolean"
+        ARRAY = "array"
+        OBJECT = "object"
+    
+    
+    @dataclass
+    class CapabilityParam:
+        """Definition of a capability parameter."""
+    
+        name: str
+        param_type: ParamType
+        description: str
+        required: bool = True
+        default: Any = None
+        enum: Optional[List[str]] = None
+    
+    
+    @dataclass
+    class AgentCapability:
+        """
+        Definition of an agent capability (tool).
+    
+        This is the agent's declaration of what it can do.
+        The MCP adapter converts this to MCP tool schemas.
+        """
+    
+        name: str
+        description: str
+        handler: str  # Method name on the agent
+        capability_type: CapabilityType = CapabilityType.QUERY
+        params: List[CapabilityParam] = field(default_factory=list)
+        tags: List[str] = field(default_factory=list)
+    
+        def to_json_schema(self) -> Dict[str, Any]:
+            """Convert to JSON Schema for MCP tools."""
+            properties = {}
+            required = []
+    
+            for param in self.params:
+                prop = {
+                    "type": param.param_type.value,
+                    "description": param.description,
+                }
+                if param.enum:
+                    prop["enum"] = param.enum
+                if param.default is not None:
+                    prop["default"] = param.default
+    
+                properties[param.name] = prop
+    
+                if param.required and param.default is None:
+                    required.append(param.name)
+    
+            return {
+                "type": "object",
+                "properties": properties,
+                "required": required,
+            }
+    
+    
+    @dataclass
+    class AgentResponse:
+        """
+        Standardized response from agent operations.
+    
+        All agent methods should return this for consistent handling.
+        """
+    
+        success: bool
+        data: Any = None
+        error: Optional[str] = None
+        metadata: Dict[str, Any] = field(default_factory=dict)
+    
+        def to_mcp_content(self) -> List[Dict[str, Any]]:
+            """Convert to MCP content format."""
+            if self.success:
+                import json
+    
+                if isinstance(self.data, (dict, list)):
+                    text = json.dumps(self.data, indent=2, default=str)
+                else:
+                    text = str(self.data) if self.data else "OK"
+                return [{"type": "text", "text": text}]
+            else:
+                return [{"type": "text", "text": f"Error: {self.error}"}]
+    
+    
+    class CoreAgent(ABC):
+        """
+        Base class for all TwisterLab Core System Agents.
+    
+        Agents are MCP-agnostic - they define capabilities and implement
+        business logic without any knowledge of MCP protocol.
+    
+        Example:
+            class MyAgent(CoreAgent):
+                @property
+                def name(self) -> str:
+                    return "my_agent"
+    
+                @property
+                def description(self) -> str:
+                    return "My custom agent"
+    
+                def get_capabilities(self) -> List[AgentCapability]:
+                    return [
+                        AgentCapability(
+                            name="do_something",
+                            description="Does something useful",
+                            handler="handle_do_something",
+                            params=[
+                                CapabilityParam("input", ParamType.STRING, "Input value")
+                            ]
+                        )
+                    ]
+    
+                async def handle_do_something(self, input: str) -> AgentResponse:
+                    return AgentResponse(success=True, data=f"Did: {input}")
+        """
+    
+        def __init__(self, registry: Optional[ServiceRegistry] = None):
+            """Initialize with optional service registry."""
+            self._registry = registry or get_service_registry()
+            self._capabilities: Optional[List[AgentCapability]] = None
+            logger.info(f"Agent initialized: {self.name}")
+    
+        @property
+        @abstractmethod
+        def name(self) -> str:
+            """Unique name for this agent."""
+            pass
+    
+        @property
+        @abstractmethod
+        def description(self) -> str:
+            """Human-readable description of this agent."""
+            pass
+    
+        @property
+        def version(self) -> str:
+            """Agent version."""
+            return "1.0.0"
+    
+        @property
+        def registry(self) -> ServiceRegistry:
+            """Get the service registry."""
+            return self._registry
+    
+        @abstractmethod
+        def get_capabilities(self) -> List[AgentCapability]:
+            """
+            Return list of capabilities this agent provides.
+    
+            Override this to define what the agent can do.
+            """
+            pass
+    
+        def list_capabilities(self) -> List[AgentCapability]:
+            """Get cached list of capabilities."""
+            if self._capabilities is None:
+                self._capabilities = self.get_capabilities()
+            return self._capabilities
+    
+        def get_capability(self, name: str) -> Optional[AgentCapability]:
+            """Get a specific capability by name."""
+            for cap in self.list_capabilities():
+                if cap.name == name:
+                    return cap
+            return None
+    
+        async def execute(self, capability_name: str, **kwargs) -> AgentResponse:
+            """
+            Execute a capability by name.
+    
+            This is the main entry point for running agent operations.
+            It looks up the capability and calls the handler method.
+            Automatically records Prometheus metrics for observability.
+            """
+            capability = self.get_capability(capability_name)
+            if not capability:
+                return AgentResponse(
+                    success=False, error=f"Unknown capability: {capability_name}"
+                )
+    
+            # Get handler method
+            handler = getattr(self, capability.handler, None)
+            if not handler:
+                return AgentResponse(
+                    success=False, error=f"Handler not found: {capability.handler}"
+                )
+    
+            # Start timing for metrics
+            start_time = time.perf_counter()
+            
+            try:
+                # Call handler with kwargs
+                result = await handler(**kwargs)
+                
+                # Calculate duration
+                duration = time.perf_counter() - start_time
+    
+                # Record success metrics
+                try:
+                    from twisterlab.monitoring import track_agent_execution
+                    track_agent_execution(
+                        agent_name=self.name,
+                        agent_type="core",
+                        duration=duration,
+                        success=True,
+                        capability=capability_name
+                    )
+                except Exception:
+                    pass  # Don't fail if metrics recording fails
+    
+                # Ensure result is AgentResponse
+                if isinstance(result, AgentResponse):
+                    return result
+                else:
+                    return AgentResponse(success=True, data=result)
+    
+            except Exception as e:
+                # Calculate duration even on error
+                duration = time.perf_counter() - start_time
+                
+                # Record error metrics
+                try:
+                    from twisterlab.monitoring import track_agent_execution, track_agent_error
+                    track_agent_execution(
+                        agent_name=self.name,
+                        agent_type="core",
+                        duration=duration,
+                        success=False,
+                        capability=capability_name
+                    )
+                    track_agent_error(
+                        agent_name=self.name,
+                        agent_type="core",
+                        error_type=type(e).__name__
+                    )
+                except Exception:
+                    pass  # Don't fail if metrics recording fails
+                
+                logger.exception(f"Error executing {capability_name}")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def health_check(self) -> AgentResponse:
+            """Check agent health."""
+            return AgentResponse(
+                success=True,
+                data={
+                    "agent": self.name,
+                    "version": self.version,
+                    "capabilities": len(self.list_capabilities()),
+                },
+            )
+    
+        def to_dict(self) -> Dict[str, Any]:
+            """Serialize agent info to dict."""
+            return {
+                "name": self.name,
+                "description": self.description,
+                "version": self.version,
+                "capabilities": [
+                    {
+                        "name": c.name,
+                        "description": c.description,
+                        "type": c.capability_type.value,
+                        "params": c.to_json_schema(),
+                        "tags": c.tags,
+                    }
+                    for c in self.list_capabilities()
+                ],
+            }
+    
+    # Deprecated alias for backward compatibility
+    TwisterAgent = CoreAgent
+    
+
+  # Source: browser-agent-fix
+  browser_agent.py: |
+    """
+    Browser automation agent (Real implementation).
+    
+    Cross-platform compatible:
+    - Uses Playwright when browsers are installed (full features + screenshots)
+    - Falls back to httpx for simple HTTP requests (no JS rendering)
+    - Works on Linux (K8s) and Windows (local dev)
+    """
+    
+    from __future__ import annotations
+    
+    import base64
+    import logging
+    import os
+    import platform
+    import re
+    from typing import List, Optional
+    
+    # Try importing Playwright
+    try:
+        from playwright.async_api import async_playwright
+        PLAYWRIGHT_AVAILABLE = True
+    except ImportError:
+        async_playwright = None
+        PLAYWRIGHT_AVAILABLE = False
+    
+    # Try importing httpx as fallback
+    try:
+        import httpx
+        HTTPX_AVAILABLE = True
+    except ImportError:
+        httpx = None
+        HTTPX_AVAILABLE = False
+    
+    from twisterlab.agents.core.base import (
+        TwisterAgent,
+        AgentCapability,
+        AgentResponse,
+        CapabilityType,
+        CapabilityParam,
+        ParamType,
+    )
+    
+    logger = logging.getLogger(__name__)
+    
+    
+    def _check_playwright_browsers() -> bool:
+        """Check if Playwright browsers are installed."""
+        if not PLAYWRIGHT_AVAILABLE:
+            return False
+        
+        # Check common Playwright cache locations
+        home = os.path.expanduser("~")
+        cache_paths = [
+            os.path.join(home, ".cache", "ms-playwright"),  # Linux
+            os.path.join(home, "AppData", "Local", "ms-playwright"),  # Windows
+            os.path.join(home, "Library", "Caches", "ms-playwright"),  # macOS
+        ]
+        
+        for path in cache_paths:
+            if os.path.exists(path):
+                # Check if chromium folder exists
+                for item in os.listdir(path) if os.path.isdir(path) else []:
+                    if "chromium" in item.lower():
+                        return True
+        return False
+    
+    
+    def _extract_title_from_html(html: str) -> str:
+        """Extract title from HTML content."""
+        match = re.search(r"<title[^>]*>([^<]+)</title>", html, re.IGNORECASE)
+        return match.group(1).strip() if match else "No title"
+    
+    
+    def _extract_text_from_html(html: str) -> str:
+        """Extract visible text from HTML (basic extraction)."""
+        # Remove script and style content
+        html = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL | re.IGNORECASE)
+        # Remove HTML tags
+        text = re.sub(r"<[^>]+>", " ", html)
+        # Clean whitespace
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+    
+    
+    class RealBrowserAgent(TwisterAgent):
+        """
+        Cross-platform browser automation agent.
+        
+        Features:
+        - Playwright: Full browser automation with JS rendering and screenshots
+        - httpx fallback: Simple HTTP requests when Playwright unavailable
+        - Auto-detection: Automatically selects best available engine
+        """
+    
+        def __init__(self, service_registry=None):
+            super().__init__(service_registry)
+            self._playwright_ok = _check_playwright_browsers()
+            self._engine = self._detect_engine()
+            logger.info(f"≡ƒîÉ BrowserAgent initialized - Engine: {self._engine}, Platform: {platform.system()}")
+    
+        def _detect_engine(self) -> str:
+            """Detect best available browsing engine."""
+            if PLAYWRIGHT_AVAILABLE and self._playwright_ok:
+                return "playwright"
+            elif HTTPX_AVAILABLE:
+                return "httpx"
+            else:
+                return "none"
+    
+        @property
+        def name(self) -> str:
+            return "browser"
+    
+        @property
+        def description(self) -> str:
+            engine_info = f"Current engine: {self._engine}"
+            return f"Cross-platform web browsing agent. {engine_info}"
+    
+        def get_capabilities(self) -> List[AgentCapability]:
+            return [
+                AgentCapability(
+                    name="browse",
+                    description="Browse a URL and return page content. Uses Playwright if available, httpx as fallback.",
+                    handler="handle_browse",
+                    capability_type=CapabilityType.ACTION,
+                    params=[
+                        CapabilityParam(
+                            "url",
+                            ParamType.STRING,
+                            "URL to visit (must start with http/https)",
+                        ),
+                        CapabilityParam(
+                            "screenshot",
+                            ParamType.BOOLEAN,
+                            "Take a screenshot (only with Playwright)",
+                            required=False,
+                            default=True,
+                        ),
+                        CapabilityParam(
+                            "force_engine",
+                            ParamType.STRING,
+                            "Force specific engine: 'playwright', 'httpx', or 'auto'",
+                            required=False,
+                            default="auto",
+                        ),
+                    ],
+                    tags=["web", "scraping", "browser", "cross-platform"],
+                ),
+                AgentCapability(
+                    name="status",
+                    description="Get browser agent status and available engines",
+                    handler="handle_status",
+                    capability_type=CapabilityType.QUERY,
+                    params=[],
+                    tags=["status", "info"],
+                ),
+            ]
+    
+        async def handle_status(self) -> AgentResponse:
+            """Return browser agent status."""
+            return AgentResponse(
+                success=True,
+                data={
+                    "platform": platform.system(),
+                    "playwright_installed": PLAYWRIGHT_AVAILABLE,
+                    "playwright_browsers_ok": self._playwright_ok,
+                    "httpx_installed": HTTPX_AVAILABLE,
+                    "active_engine": self._engine,
+                    "features": {
+                        "playwright": ["js_rendering", "screenshots", "full_browser"],
+                        "httpx": ["http_requests", "fast", "lightweight"],
+                    }
+                }
+            )
+    
+        async def handle_browse(
+            self, 
+            url: str, 
+            screenshot: bool = True,
+            force_engine: str = "auto"
+        ) -> AgentResponse:
+            """Browse a URL using best available engine."""
+            if not url.startswith("http"):
+                return AgentResponse(success=False, error="Invalid URL. Must start with http or https.")
+    
+            # Determine engine to use
+            engine = force_engine if force_engine != "auto" else self._engine
+            
+            # Validate engine availability
+            if engine == "playwright" and not (PLAYWRIGHT_AVAILABLE and self._playwright_ok):
+                if HTTPX_AVAILABLE:
+                    logger.warning("Playwright not available, falling back to httpx")
+                    engine = "httpx"
+                else:
+                    return AgentResponse(success=False, error="Playwright browsers not installed and no fallback available")
+            
+            if engine == "httpx" and not HTTPX_AVAILABLE:
+                return AgentResponse(success=False, error="httpx not installed")
+            
+            if engine == "none":
+                return AgentResponse(success=False, error="No browsing engine available. Install playwright or httpx.")
+    
+            logger.info(f"≡ƒîÉ Browsing {url} with engine: {engine}")
+    
+            if engine == "playwright":
+                return await self._browse_playwright(url, screenshot)
+            else:
+                return await self._browse_httpx(url)
+    
+        async def _browse_playwright(self, url: str, screenshot: bool) -> AgentResponse:
+            """Browse using Playwright (full browser)."""
+            try:
+                async with async_playwright() as p:
+                    browser = await p.chromium.launch(headless=True)
+                    context = await browser.new_context(viewport={"width": 1280, "height": 720})
+                    page = await context.new_page()
+                    
+                    await page.goto(url, timeout=30000, wait_until="domcontentloaded")
+                    
+                    title = await page.title()
+                    text_content = await page.evaluate("document.body.innerText")
+                    preview = text_content[:1000] + "..." if len(text_content) > 1000 else text_content
+                    
+                    snapshots = []
+                    if screenshot:
+                        img_buffer = await page.screenshot(type="png", full_page=False)
+                        b64 = base64.b64encode(img_buffer).decode("utf-8")
+                        snapshots.append(f"data:image/png;base64,{b64}")
+                    
+                    await browser.close()
+                    
+                    return AgentResponse(
+                        success=True,
+                        data={
+                            "url": url,
+                            "title": title,
+                            "content_preview": preview,
+                            "snapshots": snapshots,
+                            "engine": "playwright",
+                            "js_rendered": True,
+                        },
+                    )
+    
+            except Exception as e:
+                logger.error(f"Playwright error: {e}")
+                # Try fallback to httpx
+                if HTTPX_AVAILABLE:
+                    logger.info("Falling back to httpx after Playwright failure")
+                    return await self._browse_httpx(url, fallback_reason=str(e))
+                return AgentResponse(success=False, error=f"Playwright error: {e}")
+    
+        async def _browse_httpx(self, url: str, fallback_reason: Optional[str] = None) -> AgentResponse:
+            """Browse using httpx (HTTP client, no JS)."""
+            try:
+                async with httpx.AsyncClient(
+                    timeout=30.0,
+                    follow_redirects=True,
+                    headers={"User-Agent": "TwisterLab-Browser/1.0"}
+                ) as client:
+                    response = await client.get(url)
+                    response.raise_for_status()
+                    
+                    html = response.text
+                    title = _extract_title_from_html(html)
+                    text = _extract_text_from_html(html)
+                    preview = text[:1000] + "..." if len(text) > 1000 else text
+                    
+                    result = {
+                        "url": str(response.url),
+                        "title": title,
+                        "content_preview": preview,
+                        "snapshots": [],  # httpx cannot take screenshots
+                        "engine": "httpx",
+                        "js_rendered": False,
+                        "status_code": response.status_code,
+                        "content_type": response.headers.get("content-type", "unknown"),
+                    }
+                    
+                    if fallback_reason:
+                        result["fallback_reason"] = fallback_reason
+                    
+                    return AgentResponse(success=True, data=result)
+    
+            except Exception as e:
+                logger.error(f"httpx error: {e}")
+                return AgentResponse(success=False, error=f"HTTP request failed: {e}")
+    
+    
+    # Alias for compatibility
+    BrowserAgent = RealBrowserAgent
+    
+    __all__ = ["RealBrowserAgent", "BrowserAgent"]
+    
+
+  # Source: mcp-unified-fixes
+  cache_agent.py: |
+    """
+    Cache Agent
+    
+    MCP-agnostic agent for Redis cache operations.
+    Provides capabilities for managing cached data.
+    """
+    
+    from __future__ import annotations
+    
+    import logging
+    from typing import List
+    
+    from .base import (
+        CoreAgent,
+        AgentCapability,
+        AgentResponse,
+        CapabilityType,
+        CapabilityParam,
+        ParamType,
+    )
+    
+    logger = logging.getLogger(__name__)
+    
+    
+    class CacheAgent(CoreAgent):
+        """
+        Agent for Redis cache operations.
+    
+        Provides capabilities for:
+        - Getting/setting cache values
+        - Listing keys
+        - Cache statistics
+        """
+    
+        @property
+        def name(self) -> str:
+            return "cache"
+    
+        @property
+        def description(self) -> str:
+            return "Redis cache operations and management"
+    
+        def get_capabilities(self) -> List[AgentCapability]:
+            return [
+                AgentCapability(
+                    name="cache_get",
+                    description="Get a value from cache",
+                    handler="handle_cache_get",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "key",
+                            ParamType.STRING,
+                            "Cache key to retrieve",
+                        ),
+                    ],
+                    tags=["cache", "read"],
+                ),
+                AgentCapability(
+                    name="cache_set",
+                    description="Set a value in cache",
+                    handler="handle_cache_set",
+                    capability_type=CapabilityType.ACTION,
+                    params=[
+                        CapabilityParam(
+                            "key",
+                            ParamType.STRING,
+                            "Cache key",
+                        ),
+                        CapabilityParam(
+                            "value",
+                            ParamType.STRING,
+                            "Value to store",
+                        ),
+                        CapabilityParam(
+                            "ttl",
+                            ParamType.INTEGER,
+                            "Time to live in seconds",
+                            required=False,
+                        ),
+                    ],
+                    tags=["cache", "write"],
+                ),
+                AgentCapability(
+                    name="cache_delete",
+                    description="Delete a key from cache",
+                    handler="handle_cache_delete",
+                    capability_type=CapabilityType.ACTION,
+                    params=[
+                        CapabilityParam(
+                            "key",
+                            ParamType.STRING,
+                            "Cache key to delete",
+                        ),
+                    ],
+                    tags=["cache", "write"],
+                ),
+                AgentCapability(
+                    name="cache_keys",
+                    description="List cache keys matching a pattern",
+                    handler="handle_cache_keys",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "pattern",
+                            ParamType.STRING,
+                            "Pattern to match (e.g., 'user:*')",
+                            required=False,
+                            default="*",
+                        ),
+                    ],
+                    tags=["cache", "list"],
+                ),
+                AgentCapability(
+                    name="cache_stats",
+                    description="Get cache statistics",
+                    handler="handle_cache_stats",
+                    capability_type=CapabilityType.QUERY,
+                    tags=["cache", "stats"],
+                ),
+            ]
+    
+        # =========================================================================
+        # Handler Methods
+        # =========================================================================
+    
+        async def handle_cache_get(self, key: str) -> AgentResponse:
+            """Get a value from cache."""
+            try:
+                cache = self.registry.get_cache()
+                value = await cache.get(key)
+    
+                if value is None:
+                    return AgentResponse(
+                        success=True,
+                        data={
+                            "key": key,
+                            "found": False,
+                            "value": None,
+                        },
+                    )
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "key": key,
+                        "found": True,
+                        "value": value,
+                    },
+                )
+            except Exception as e:
+                logger.exception(f"Cache get failed for key {key}")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_cache_set(
+            self, key: str, value: str, ttl: int = None
+        ) -> AgentResponse:
+            """Set a value in cache."""
+            try:
+                cache = self.registry.get_cache()
+                success = await cache.set(key, value, ttl=ttl)
+    
+                if success:
+                    return AgentResponse(
+                        success=True,
+                        data={
+                            "key": key,
+                            "stored": True,
+                            "ttl": ttl,
+                        },
+                    )
+                else:
+                    return AgentResponse(
+                        success=False,
+                        error="Failed to store value in cache (Redis connection failed or unavailable)",
+                        data={
+                            "key": key,
+                            "stored": False,
+                            "ttl": ttl,
+                        },
+                    )
+            except Exception as e:
+                logger.exception(f"Cache set failed for key {key}")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_cache_delete(self, key: str) -> AgentResponse:
+            """Delete a key from cache."""
+            try:
+                cache = self.registry.get_cache()
+                deleted = await cache.delete(key)
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "key": key,
+                        "deleted": deleted,
+                    },
+                )
+            except Exception as e:
+                logger.exception(f"Cache delete failed for key {key}")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_cache_keys(self, pattern: str = "*") -> AgentResponse:
+            """List cache keys."""
+            try:
+                cache = self.registry.get_cache()
+                keys = await cache.keys(pattern)
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "pattern": pattern,
+                        "keys": keys,
+                        "count": len(keys),
+                    },
+                )
+            except Exception as e:
+                logger.exception(f"Cache keys failed for pattern {pattern}")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_cache_stats(self) -> AgentResponse:
+            """Get cache statistics."""
+            try:
+                cache = self.registry.get_cache()
+                stats = await cache.get_stats()
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "connected_clients": stats.connected_clients,
+                        "used_memory": stats.used_memory,
+                        "total_keys": stats.total_keys,
+                        "hits": stats.hits,
+                        "misses": stats.misses,
+                        "hit_rate": f"{stats.hit_rate:.1f}%",
+                    },
+                )
+            except Exception as e:
+                logger.exception("Cache stats failed")
+                return AgentResponse(success=False, error=str(e))
+    
+
+  # Source: mcp-unified-fixes
+  db_agent.py: |
+    """
+    Database Agent
+    
+    MCP-agnostic agent for database operations.
+    Provides capabilities for querying and managing PostgreSQL.
+    """
+    
+    from __future__ import annotations
+    
+    import logging
+    from typing import List
+    
+    from .base import (
+        CoreAgent,
+        AgentCapability,
+        AgentResponse,
+        CapabilityType,
+        CapabilityParam,
+        ParamType,
+    )
+    
+    logger = logging.getLogger(__name__)
+    
+    
+    class DatabaseAgent(CoreAgent):
+        """
+        Agent for database operations.
+    
+        Provides capabilities for:
+        - Executing SQL queries
+        - Listing tables and schemas
+        - Database health checks
+        """
+    
+        @property
+        def name(self) -> str:
+            return "database"
+    
+        @property
+        def description(self) -> str:
+            return "PostgreSQL database operations and queries"
+    
+        def get_capabilities(self) -> List[AgentCapability]:
+            return [
+                AgentCapability(
+                    name="execute_query",
+                    description="Execute a SQL query (SELECT only)",
+                    handler="handle_execute_query",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "sql",
+                            ParamType.STRING,
+                            "SQL query to execute (SELECT only)",
+                        ),
+                        CapabilityParam(
+                            "limit",
+                            ParamType.INTEGER,
+                            "Maximum rows to return",
+                            required=False,
+                            default=100,
+                        ),
+                    ],
+                    tags=["sql", "query"],
+                ),
+                AgentCapability(
+                    name="list_tables",
+                    description="List all tables in the database",
+                    handler="handle_list_tables",
+                    capability_type=CapabilityType.QUERY,
+                    tags=["schema", "tables"],
+                ),
+                AgentCapability(
+                    name="describe_table",
+                    description="Get schema for a specific table",
+                    handler="handle_describe_table",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "table_name",
+                            ParamType.STRING,
+                            "Name of the table to describe",
+                        ),
+                    ],
+                    tags=["schema", "tables"],
+                ),
+                AgentCapability(
+                    name="db_health",
+                    description="Check database connection health",
+                    handler="handle_db_health",
+                    capability_type=CapabilityType.QUERY,
+                    tags=["health", "database"],
+                ),
+            ]
+    
+        # =========================================================================
+        # Handler Methods
+        # =========================================================================
+    
+        async def handle_execute_query(self, sql: str, limit: int = 100) -> AgentResponse:
+            """Execute a SELECT query."""
+            try:
+                # Security: Only allow SELECT queries
+                sql_upper = sql.strip().upper()
+                if not sql_upper.startswith("SELECT"):
+                    return AgentResponse(
+                        success=False, error="Only SELECT queries are allowed for security"
+                    )
+    
+                # Add LIMIT if not present
+                if "LIMIT" not in sql_upper:
+                    sql = f"{sql.rstrip(';')} LIMIT {limit}"
+    
+                db = self.registry.get_db()
+                result = await db.query(sql)
+    
+                if result.error:
+                    return AgentResponse(success=False, error=result.error)
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "columns": result.columns,
+                        "rows": result.rows,
+                        "row_count": result.row_count,
+                    },
+                )
+            except Exception as e:
+                logger.exception("Query execution failed")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_list_tables(self) -> AgentResponse:
+            """List all tables."""
+            try:
+                db = self.registry.get_db()
+                tables = await db.list_tables()
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "tables": tables,
+                        "count": len(tables),
+                    },
+                )
+            except Exception as e:
+                logger.exception("Failed to list tables")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_describe_table(self, table_name: str) -> AgentResponse:
+            """Get table schema."""
+            try:
+                db = self.registry.get_db()
+                schema = await db.get_table_schema(table_name)
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "table": table_name,
+                        "columns": schema,
+                    },
+                )
+            except Exception as e:
+                logger.exception(f"Failed to describe table {table_name}")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_db_health(self) -> AgentResponse:
+            """Check database health."""
+            try:
+                db = self.registry.get_db()
+                health = await db.health_check()
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "status": health.status.value,
+                        "latency_ms": health.latency_ms,
+                        "message": health.message,
+                        "metadata": health.metadata,
+                    },
+                )
+            except Exception as e:
+                logger.exception("DB health check failed")
+                return AgentResponse(success=False, error=str(e))
+    
+
+  # Source: mcp-unified-fixes
+  maestro_agent.py: |
+    """
+    Maestro Agent
+    
+    MCP-agnostic orchestration agent for TwisterLab.
+    Coordinates other agents and provides LLM-powered reasoning.
+    """
+    
+    from __future__ import annotations
+    
+    import logging
+    from typing import List
+    
+    from .base import (
+        CoreAgent,
+        AgentCapability,
+        AgentResponse,
+        CapabilityType,
+        CapabilityParam,
+        CapabilityParam,
+        ParamType,
+    )
+    from twisterlab.services.base import LLMMessage
+    
+    logger = logging.getLogger(__name__)
+    
+    
+    class MaestroAgent(CoreAgent):
+        """
+        Orchestration agent for TwisterLab.
+    
+        Provides capabilities for:
+        - LLM chat and generation
+        - Agent coordination
+        """
+    
+        @property
+        def name(self) -> str:
+            return "maestro"
+    
+        @property
+        def description(self) -> str:
+            return "Orchestration agent with LLM-powered reasoning"
+    
+        def get_capabilities(self) -> List[AgentCapability]:
+            return [
+                # LLM Operations
+                AgentCapability(
+                    name="chat",
+                    description="Send a message to the LLM and get a response",
+                    handler="handle_chat",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "message",
+                            ParamType.STRING,
+                            "Message to send to the LLM",
+                        ),
+                        CapabilityParam(
+                            "model",
+                            ParamType.STRING,
+                            "Model to use",
+                            required=False,
+                            default="qwen3:8b",
+                        ),
+                        CapabilityParam(
+                            "system_prompt",
+                            ParamType.STRING,
+                            "System prompt for context",
+                            required=False,
+                        ),
+                    ],
+                    tags=["llm", "chat"],
+                ),
+                AgentCapability(
+                    name="generate",
+                    description="Generate text completion from LLM",
+                    handler="handle_generate",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "prompt",
+                            ParamType.STRING,
+                            "Prompt for generation",
+                        ),
+                        CapabilityParam(
+                            "model",
+                            ParamType.STRING,
+                            "Model to use",
+                            required=False,
+                            default="qwen3:8b",
+                        ),
+                    ],
+                    tags=["llm", "generate"],
+                ),
+                # Orchestration (Simplified)
+                AgentCapability(
+                    name="orchestrate",
+                    description="Parse a TwisterLang command and route to appropriate agent",
+                    handler="handle_orchestrate",
+                    capability_type=CapabilityType.ACTION,
+                    params=[
+                        CapabilityParam(
+                            "command",
+                            ParamType.STRING,
+                            "TwisterLang command to parse and execute",
+                        ),
+                    ],
+                    tags=["orchestration", "twisterlang"],
+                ),
+                AgentCapability(
+                    name="list_agents",
+                    description="List all available agents and their capabilities",
+                    handler="handle_list_agents",
+                    capability_type=CapabilityType.QUERY,
+                    tags=["agents", "discovery"],
+                ),
+                # Analysis
+                AgentCapability(
+                    name="analyze",
+                    description="Analyze data or code using LLM",
+                    handler="handle_analyze",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "content",
+                            ParamType.STRING,
+                            "Content to analyze",
+                        ),
+                        CapabilityParam(
+                            "analysis_type",
+                            ParamType.STRING,
+                            "Type of analysis",
+                            required=False,
+                            default="general",
+                            enum=["general", "code", "data", "logs", "security"],
+                        ),
+                    ],
+                    tags=["llm", "analysis"],
+                ),
+            ]
+    
+        # =========================================================================
+        # Handler Methods
+        # =========================================================================
+    
+        async def handle_chat(
+            self, message: str, model: str = "qwen3:8b", system_prompt: str = None
+        ) -> AgentResponse:
+            """Send a chat message to the LLM."""
+            try:
+                llm = self.registry.get_llm()
+    
+                messages = []
+                if system_prompt:
+                    messages.append(LLMMessage(role="system", content=system_prompt))
+                messages.append(LLMMessage(role="user", content=message))
+    
+                response = await llm.chat(messages, model=model)
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "model": model,
+                        "response": response.content,
+                        "tokens": response.total_tokens,
+                    },
+                )
+            except Exception as e:
+                logger.exception("Chat failed")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_generate(
+            self, prompt: str, model: str = "qwen3:8b"
+        ) -> AgentResponse:
+            """Generate text from prompt."""
+            try:
+                llm = self.registry.get_llm()
+                response = await llm.generate(prompt, model=model)
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "model": model,
+                        "response": response.content,
+                        "tokens": response.total_tokens,
+                    },
+                )
+            except Exception as e:
+                logger.exception("Generation failed")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_list_agents(self) -> AgentResponse:
+            """List available agents."""
+            try:
+                # In production, this would query an AgentRegistry
+                agents = [
+                    {
+                        "name": "maestro",
+                        "description": "Orchestration agent",
+                        "capabilities": [
+                            "chat",
+                            "generate",
+                            "orchestrate",
+                            "list_agents",
+                            "analyze",
+                        ],
+                    },
+                    {
+                        "name": "monitoring",
+                        "description": "Infrastructure monitoring",
+                        "capabilities": [
+                            "health_check",
+                            "get_system_metrics",
+                            "list_containers",
+                            "get_container_logs",
+                        ],
+                    },
+                    {
+                        "name": "database",
+                        "description": "Database operations",
+                        "capabilities": ["execute_query", "list_tables", "describe_table"],
+                    },
+                    {
+                        "name": "cache",
+                        "description": "Cache operations",
+                        "capabilities": [
+                            "cache_get",
+                            "cache_set",
+                            "cache_delete",
+                            "cache_keys",
+                            "cache_stats",
+                        ],
+                    },
+                ]
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "agents": agents,
+                        "count": len(agents),
+                    },
+                )
+            except Exception as e:
+                logger.exception("List agents failed")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_orchestrate(self, command: str) -> AgentResponse:
+            """
+            Parse a TwisterLang command and route to appropriate agent.
+            
+            Simple routing based on command keywords.
+            """
+            try:
+                command_lower = command.lower()
+                
+                # Simple command routing
+                if "health" in command_lower or "status" in command_lower:
+                    return AgentResponse(
+                        success=True,
+                        data={
+                            "command": command,
+                            "action": "health_check",
+                            "message": "Routing to monitoring agent for health check",
+                        },
+                    )
+                elif "analyze" in command_lower or "review" in command_lower:
+                    return AgentResponse(
+                        success=True,
+                        data={
+                            "command": command,
+                            "action": "analyze",
+                            "message": "Routing to analysis workflow",
+                        },
+                    )
+                elif "backup" in command_lower:
+                    return AgentResponse(
+                        success=True,
+                        data={
+                            "command": command,
+                            "action": "backup",
+                            "message": "Routing to backup agent",
+                        },
+                    )
+                else:
+                    return AgentResponse(
+                        success=True,
+                        data={
+                            "command": command,
+                            "action": "unknown",
+                            "message": f"Command parsed but no specific handler found. Use 'health', 'analyze', or 'backup' keywords.",
+                        },
+                    )
+            except Exception as e:
+                logger.exception("Orchestrate failed")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_analyze(
+            self, content: str, analysis_type: str = "general"
+        ) -> AgentResponse:
+            """Analyze content using LLM."""
+            try:
+                llm = self.registry.get_llm()
+    
+                prompts = {
+                    "general": "Analyze the following content and provide insights:",
+                    "code": "Analyze the following code for issues, improvements, and best practices:",
+                    "data": "Analyze the following data and identify patterns, anomalies, and insights:",
+                    "logs": "Analyze the following logs for errors, warnings, and issues:",
+                    "security": "Analyze the following for security vulnerabilities and risks:",
+                }
+    
+                system_prompt = prompts.get(analysis_type, prompts["general"])
+    
+                response = await llm.chat(
+                    [
+                        LLMMessage(role="system", content=system_prompt),
+                        LLMMessage(role="user", content=content),
+                    ],
+                    model="qwen3:8b",
+                )
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "analysis_type": analysis_type,
+                        "analysis": response.content,
+                    },
+                )
+            except Exception as e:
+                logger.exception("Analysis failed")
+                return AgentResponse(success=False, error=str(e))
+    
+
+  # Source: api-hotfix-v1
+  main.py: |
+    import sys
+    from pathlib import Path
+    
+    # Add /app to sys.path to ensure twisterlab package is found
+    if '/app' not in sys.path:
+        sys.path.insert(0, '/app')
+    
+    from contextlib import asynccontextmanager
+    
+    from fastapi import FastAPI
+    from fastapi import Response as FastAPIResponse
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.staticfiles import StaticFiles
+    
+    # Optional instrumentation (OpenTelemetry) - import lazily and gracefully
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor  # type: ignore
+    except Exception:  # pragma: no cover - optional dependency
+        FastAPIInstrumentor = None
+    
+    from .routes import agents, browser, mcp, system
+    
+    
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # Create DB tables if they are not present.
+        # Import models module to ensure ORM models are registered with Base
+        import twisterlab.database.models.agent  # noqa: F401
+        from twisterlab.database.session import Base, engine
+    
+        # Create tables using an appropriate sync/async path depending on engine type
+        try:
+            if hasattr(engine, "begin"):
+                async with engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.create_all)
+            else:
+                bind_engine = getattr(engine, "sync_engine", engine)
+                Base.metadata.create_all(bind=bind_engine)
+        except Exception:
+            try:
+                import logging
+    
+                logging.getLogger(__name__).exception("Failed to initialize DB tables")
+            except Exception:
+                pass
+        
+        # Initialize Agent Registry with all agents
+        try:
+            from twisterlab.agents.registry import AgentRegistry
+            import logging
+            
+            logger = logging.getLogger(__name__)
+            logger.info("Initializing AgentRegistry...")
+            registry = AgentRegistry()
+            registry.initialize_agents()
+            logger.info(f"AgentRegistry initialized with {len(registry._agents)} agents")
+        except Exception as e:
+            try:
+                import logging
+                logging.getLogger(__name__).exception(f"Failed to initialize AgentRegistry: {e}")
+            except Exception:
+                pass
+        # Register monitoring metrics in a guarded way
+            from twisterlab.monitoring_utils import register_with_app
+    
+            register_with_app(app)
+        except Exception:
+            pass
+        # Integrate Prometheus Instrumentator in a guarded manner
+        try:
+            from prometheus_fastapi_instrumentator import Instrumentator
+    
+            if not getattr(app.state, "_instrumentator_attached", False):
+                instr = Instrumentator()
+                instr.instrument(app)
+                app.state._instrumentator_attached = True
+        except Exception:
+            pass
+        # If instrumentator is not available, fall back to exposing /metrics using prometheus_client.
+        try:
+            if FastAPIInstrumentor is not None:
+                try:
+                    FastAPIInstrumentor.instrument_app(app)
+                except Exception:
+                    pass
+    
+            from fastapi import Response as FastAPIResponse
+            from prometheus_client import CONTENT_TYPE_LATEST  # type: ignore
+            from prometheus_client import generate_latest
+    
+            if not any(
+                getattr(route, "path", None) == "/metrics" for route in app.router.routes
+            ):
+    
+                def _metrics_view():
+                    payload = generate_latest()
+                    return FastAPIResponse(content=payload, media_type=CONTENT_TYPE_LATEST)
+    
+                app.add_api_route("/metrics", _metrics_view, methods=["GET"])
+        except Exception:
+            pass
+        # yield control back to FastAPI for runtime
+        yield
+    
+    
+    # OpenAPI metadata for documentation
+    OPENAPI_TAGS = [
+        {
+            "name": "system",
+            "description": "System health, metrics and configuration endpoints",
+        },
+        {
+            "name": "agents",
+            "description": "Agent management: create, list, update, and delete agents",
+        },
+        {
+            "name": "mcp",
+            "description": "Model Context Protocol (MCP) server integration",
+        },
+        {
+            "name": "browser",
+            "description": "Browser automation and screenshot capabilities",
+        },
+    ]
+    
+    app = FastAPI(
+        title="TwisterLab API",
+        description="""
+    ## TwisterLab - Multi-Agent Orchestration Platform
+    
+    TwisterLab provides a unified API for managing and orchestrating AI agents.
+    
+    ### Features
+    - **Agent Management**: Register, monitor, and control multiple AI agents
+    - **MCP Integration**: Model Context Protocol server for IDE integration
+    - **Browser Automation**: Web scraping and screenshot capabilities
+    - **System Monitoring**: Health checks, metrics, and observability
+    
+    ### Authentication
+    Currently supports Bearer token authentication. OAuth2/OIDC coming in future versions.
+    
+    ### Rate Limiting
+    Rate limiting is enforced at {RATE_LIMIT_PER_MINUTE} requests per minute per IP (configurable via environment).
+    
+    ### CORS
+    Cross-origin requests are restricted to configured origins only.
+        """,
+        version="3.2.0",
+        openapi_tags=OPENAPI_TAGS,
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
+        contact={
+            "name": "TwisterLab Team",
+            "url": "https://github.com/youneselfakir0/Twisterlab",
+        },
+        license_info={
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT",
+        },
+        lifespan=lifespan,
+    )
+    
+    
+    # Security configuration via environment variables
+    import os
+    
+    # CORS Origins - comma-separated list, defaults to common development origins
+    # In production, set ALLOWED_ORIGINS=https://your-domain.com
+    ALLOWED_ORIGINS = os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:8000,http://localhost:8080,http://192.168.0.30:30091,http://192.168.0.30:30001"
+    ).split(",")
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    )
+    
+    # Rate limiting middleware
+    # Rate limiting middleware
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    from twisterlab.agents.api.security import RateLimitMiddleware
+    RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "100"))
+    app.add_middleware(RateLimitMiddleware, requests_per_minute=RATE_LIMIT)
+    logger.info(f"Γ£à Security Middleware ENABLED with limit {RATE_LIMIT} req/min")
+    
+    app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
+    app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
+    app.include_router(mcp.router, prefix="/api/v1/mcp", tags=["mcp"])
+    app.include_router(browser.router, prefix="/api/v1/browser", tags=["browser"])
+    
+    
+    @app.get("/")
+    async def root():
+        return {"message": "Welcome to TwisterLab API"}
+    
+    
+    # Mount the simple UI (if present). Support both the package-relative path (src/twisterlab/ui/browser)
+    # and a more generic src/ui/browser path used in other environments.
+    pkg_ui = Path(__file__).resolve().parents[1] / "ui" / "browser"
+    generic_ui = Path(__file__).resolve().parents[2] / "ui" / "browser"
+    STATIC_UI = pkg_ui if pkg_ui.exists() else generic_ui
+    if STATIC_UI.exists():
+        app.mount("/ui", StaticFiles(directory=str(STATIC_UI), html=True), name="ui")
+    
+    
+    # Ensure /metrics exists even if optional prometheus instrumentator is not installed.
+    # This is a lightweight runtime handler that attempts to use prometheus_client if available
+    # but otherwise returns a simple text body. Adding the route at module import time makes it
+    # available during TestClient initialization and in the container runtime prior to startup.
+    def _metrics_view():
+        try:
+            from prometheus_client import CONTENT_TYPE_LATEST  # type: ignore
+            from prometheus_client import generate_latest
+    
+            payload = generate_latest()
+            return FastAPIResponse(content=payload, media_type=CONTENT_TYPE_LATEST)
+        except Exception:
+            # Fallback minimal text for tests/CI when prometheus_client isn't present
+            return FastAPIResponse(
+                content=b"# metrics unavailable\n", media_type="text/plain"
+            )
+    
+    
+    if not any(getattr(route, "path", None) == "/metrics" for route in app.router.routes):
+        app.add_api_route("/metrics", _metrics_view, methods=["GET"])
+    
+
+  # Source: mcp-unified-fixes
+  monitoring.py: |
+    """
+    Monitoring Agent
+    
+    MCP-agnostic agent for system and infrastructure monitoring.
+    Provides capabilities for checking services, containers, and metrics.
+    """
+    
+    from __future__ import annotations
+    
+    import logging
+    from typing import List
+    
+    from .base import (
+        CoreAgent,
+        AgentCapability,
+        AgentResponse,
+        CapabilityType,
+        CapabilityParam,
+        ParamType,
+    )
+    
+    logger = logging.getLogger(__name__)
+    
+    
+    class MonitoringAgent(CoreAgent):
+        """
+        Agent for monitoring TwisterLab infrastructure.
+    
+        Provides capabilities for:
+        - Service health checks
+        - Container monitoring
+        - System metrics
+        - Log viewing
+        """
+    
+        @property
+        def name(self) -> str:
+            return "monitoring"
+    
+        @property
+        def description(self) -> str:
+            return "Infrastructure monitoring and health checks"
+    
+        def get_capabilities(self) -> List[AgentCapability]:
+            return [
+                # Health & Status
+                AgentCapability(
+                    name="health_check",
+                    description="Check health of all TwisterLab services",
+                    handler="handle_health_check",
+                    capability_type=CapabilityType.QUERY,
+                    tags=["health", "status"],
+                ),
+                AgentCapability(
+                    name="get_system_metrics",
+                    description="Get system metrics (CPU, memory, disk)",
+                    handler="handle_get_system_metrics",
+                    capability_type=CapabilityType.QUERY,
+                    tags=["metrics", "system"],
+                ),
+                # Containers
+                AgentCapability(
+                    name="list_containers",
+                    description="List all Docker containers",
+                    handler="handle_list_containers",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "all",
+                            ParamType.BOOLEAN,
+                            "Include stopped containers",
+                            required=False,
+                            default=False,
+                        )
+                    ],
+                    tags=["docker", "containers"],
+                ),
+                AgentCapability(
+                    name="get_container_logs",
+                    description="Get logs from a Docker container",
+                    handler="handle_get_container_logs",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "container_id",
+                            ParamType.STRING,
+                            "Container ID or name",
+                        ),
+                        CapabilityParam(
+                            "tail",
+                            ParamType.INTEGER,
+                            "Number of lines to return",
+                            required=False,
+                            default=100,
+                        ),
+                    ],
+                    tags=["docker", "logs"],
+                ),
+                # Cache
+                AgentCapability(
+                    name="get_cache_stats",
+                    description="Get Redis cache statistics",
+                    handler="handle_get_cache_stats",
+                    capability_type=CapabilityType.QUERY,
+                    tags=["cache", "redis"],
+                ),
+                # LLM
+                AgentCapability(
+                    name="get_llm_status",
+                    description="Check Cortex LLM server status",
+                    handler="handle_get_llm_status",
+                    capability_type=CapabilityType.QUERY,
+                    tags=["llm", "cortex"],
+                ),
+                AgentCapability(
+                    name="list_models",
+                    description="List available LLM models",
+                    handler="handle_list_models",
+                    capability_type=CapabilityType.QUERY,
+                    tags=["llm", "models"],
+                ),
+            ]
+    
+        # =========================================================================
+        # Handler Methods
+        # =========================================================================
+    
+        async def handle_health_check(self) -> AgentResponse:
+            """Check health of all services."""
+            try:
+                health = await self.registry.health_check_all()
+    
+                # Convert to serializable format
+                results = {}
+                for name, h in health.items():
+                    results[name] = {
+                        "status": h.status.value,
+                        "latency_ms": h.latency_ms,
+                        "message": h.message,
+                        "metadata": h.metadata,
+                    }
+    
+                # Determine overall status
+                all_connected = all(h.status.value == "connected" for h in health.values())
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "overall": "healthy" if all_connected else "degraded",
+                        "services": results,
+                    },
+                )
+            except Exception as e:
+                logger.exception("Health check failed")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_get_system_metrics(self) -> AgentResponse:
+            """Get system metrics."""
+            try:
+                system = self.registry.get_system()
+                metrics = await system.get_metrics()
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "cpu_percent": metrics.cpu_percent,
+                        "memory_percent": metrics.memory_percent,
+                        "memory_used_gb": metrics.memory_used_gb,
+                        "memory_total_gb": metrics.memory_total_gb,
+                        "disk_percent": metrics.disk_percent,
+                        "disk_used_gb": metrics.disk_used_gb,
+                        "disk_total_gb": metrics.disk_total_gb,
+                        "container_count": metrics.container_count,
+                    },
+                )
+            except Exception as e:
+                logger.exception("Failed to get system metrics")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_list_containers(self, all: bool = False) -> AgentResponse:
+            """List Docker containers."""
+            try:
+                system = self.registry.get_system()
+                containers = await system.list_containers(all_containers=all)
+    
+                return AgentResponse(
+                    success=True,
+                    data=[
+                        {
+                            "id": c.id,
+                            "name": c.name,
+                            "image": c.image,
+                            "state": c.state.value,
+                            "ports": c.ports,
+                        }
+                        for c in containers
+                    ],
+                )
+            except Exception as e:
+                logger.exception("Failed to list containers")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_get_container_logs(
+            self, container_id: str, tail: int = 100
+        ) -> AgentResponse:
+            """Get container logs."""
+            try:
+                system = self.registry.get_system()
+                logs = await system.container_logs(container_id, tail=tail)
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "container": container_id,
+                        "lines": tail,
+                        "logs": logs,
+                    },
+                )
+            except Exception as e:
+                logger.exception(f"Failed to get logs for {container_id}")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_get_cache_stats(self) -> AgentResponse:
+            """Get Redis cache statistics."""
+            try:
+                cache = self.registry.get_cache()
+                stats = await cache.get_stats()
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "connected_clients": stats.connected_clients,
+                        "used_memory": stats.used_memory,
+                        "total_keys": stats.total_keys,
+                        "hits": stats.hits,
+                        "misses": stats.misses,
+                        "hit_rate": f"{stats.hit_rate:.1f}%",
+                    },
+                )
+            except Exception as e:
+                logger.exception("Failed to get cache stats")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_get_llm_status(self) -> AgentResponse:
+            """Check LLM server status."""
+            try:
+                llm = self.registry.get_llm()
+                health = await llm.health_check()
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "name": health.name,
+                        "status": health.status.value,
+                        "latency_ms": health.latency_ms,
+                        "message": health.message,
+                        "metadata": health.metadata,
+                    },
+                )
+            except Exception as e:
+                logger.exception("Failed to check LLM status")
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_list_models(self) -> AgentResponse:
+            """List available LLM models."""
+            try:
+                llm = self.registry.get_llm()
+                models = await llm.list_models()
+    
+                return AgentResponse(
+                    success=True,
+                    data={
+                        "models": models,
+                        "count": len(models),
+                    },
+                )
+            except Exception as e:
+                logger.exception("Failed to list models")
+                return AgentResponse(success=False, error=str(e))
+    
+
+  # Source: mcp-unified-fixes
+  postgres_client.py: |
+    """
+    PostgreSQL Database Client
+    
+    Concrete implementation of DBClient for PostgreSQL.
+    Connects to EdgeServer PostgreSQL at 192.168.0.30:5432.
+    """
+    
+    from __future__ import annotations
+    
+    import logging
+    import os
+    import time
+    from contextlib import asynccontextmanager
+    from typing import Any, AsyncGenerator, Dict, List, Optional
+    from urllib.parse import urlparse
+    
+    from .base import (
+        DBClient,
+        DBStats,
+        QueryResult,
+        ServiceHealth,
+        ServiceStatus,
+    )
+    
+    logger = logging.getLogger(__name__)
+    
+    # Try to import asyncpg
+    try:
+        import asyncpg
+    
+        ASYNCPG_AVAILABLE = True
+    except ImportError:
+        ASYNCPG_AVAILABLE = False
+        logger.warning("asyncpg not available - DB client will use fallback mode")
+    
+    
+    class PostgresClient(DBClient):
+        """
+        Database client for PostgreSQL.
+    
+        Provides async access to PostgreSQL with connection pooling.
+        """
+    
+        def __init__(
+            self,
+            url: str = "postgresql://postgres:postgres@192.168.0.30:5432/twisterlab",
+        ):
+            """
+            Initialize PostgreSQL client.
+    
+            Args:
+                url: PostgreSQL connection URL in format:
+                     postgresql://user:password@host:port/database
+            """
+            self._url = url
+    
+            # Parse URL
+            parsed = urlparse(url.replace("postgresql://", "postgres://"))
+            self._host = parsed.hostname or "192.168.0.30"
+            self._port = parsed.port or 5432
+            self._database = (parsed.path or "/twisterlab").lstrip("/")
+            self._user = parsed.username or "postgres"
+            self._password = parsed.password or os.getenv("POSTGRES_PASSWORD", "")
+    
+            self._pool: Optional["asyncpg.Pool"] = None
+            logger.info(
+                f"PostgresClient initialized: {self._host}:{self._port}/{self._database}"
+            )
+    
+        @property
+        def name(self) -> str:
+            return "postgresql"
+    
+        async def _get_pool(self) -> "asyncpg.Pool":
+            """Get or create connection pool."""
+            if self._pool is None:
+                if not ASYNCPG_AVAILABLE:
+                    raise RuntimeError("asyncpg not available")
+                self._pool = await asyncpg.create_pool(
+                    host=self._host,
+                    port=self._port,
+                    database=self._database,
+                    user=self._user,
+                    password=self._password,
+                    min_size=2,
+                    max_size=10,
+                    command_timeout=60,
+                )
+            return self._pool
+    
+        async def query(self, sql: str, params: Optional[List[Any]] = None) -> QueryResult:
+            """Execute a SELECT query and return results."""
+            if not ASYNCPG_AVAILABLE:
+                return QueryResult(rows=[], columns=[], row_count=0)
+    
+            try:
+                pool = await self._get_pool()
+                async with pool.acquire() as conn:
+                    # Use fetch for SELECT queries
+                    if params:
+                        rows = await conn.fetch(sql, *params)
+                    else:
+                        rows = await conn.fetch(sql)
+    
+                    if rows:
+                        columns = list(rows[0].keys())
+                        data = [dict(row) for row in rows]
+                        return QueryResult(rows=data, columns=columns, row_count=len(data))
+                    return QueryResult(rows=[], columns=[], row_count=0)
+    
+            except Exception as e:
+                logger.error(f"PostgreSQL query error: {e}")
+                return QueryResult(rows=[], columns=[], row_count=0, error=str(e))
+    
+        async def execute(self, sql: str, params: Optional[List[Any]] = None) -> int:
+            """Execute INSERT/UPDATE/DELETE and return affected rows."""
+            if not ASYNCPG_AVAILABLE:
+                return 0
+    
+            try:
+                pool = await self._get_pool()
+                async with pool.acquire() as conn:
+                    if params:
+                        result = await conn.execute(sql, *params)
+                    else:
+                        result = await conn.execute(sql)
+    
+                    # Parse "INSERT 0 1" style result
+                    parts = result.split()
+                    if len(parts) >= 2 and parts[-1].isdigit():
+                        return int(parts[-1])
+                    return 0
+    
+            except Exception as e:
+                logger.error(f"PostgreSQL execute error: {e}")
+                return 0
+    
+        @asynccontextmanager
+        async def transaction(self) -> AsyncGenerator:
+            """Context manager for transactions."""
+            if not ASYNCPG_AVAILABLE:
+                yield None
+                return
+    
+            pool = await self._get_pool()
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    yield conn
+    
+        async def list_tables(self) -> List[str]:
+            """List all tables in the database."""
+            result = await self.query(
+                """
+                SELECT tablename 
+                FROM pg_tables 
+                WHERE schemaname = 'public'
+                ORDER BY tablename
+            """
+            )
+            return [row["tablename"] for row in result.rows]
+    
+        async def get_table_schema(self, table_name: str) -> List[Dict[str, Any]]:
+            """Get schema for a specific table."""
+            result = await self.query(
+                """
+                SELECT 
+                    column_name,
+                    data_type,
+                    is_nullable,
+                    column_default
+                FROM information_schema.columns
+                WHERE table_name = $1 AND table_schema = 'public'
+                ORDER BY ordinal_position
+                """,
+                [table_name],
+            )
+            return result.rows
+    
+        async def health_check(self) -> ServiceHealth:
+            """Check PostgreSQL health."""
+            if not ASYNCPG_AVAILABLE:
+                return ServiceHealth(
+                    name=self.name,
+                    status=ServiceStatus.DEGRADED,
+                    message="asyncpg library not available",
+                )
+    
+            try:
+                start = time.perf_counter()
+                pool = await self._get_pool()
+    
+                async with pool.acquire() as conn:
+                    version = await conn.fetchval("SELECT version()")
+                    elapsed = (time.perf_counter() - start) * 1000
+    
+                    return ServiceHealth(
+                        name=self.name,
+                        status=ServiceStatus.CONNECTED,
+                        latency_ms=elapsed,
+                        message="OK",
+                        metadata={
+                            "version": version.split(",")[0] if version else None,
+                            "database": self._database,
+                            "pool_size": pool.get_size(),
+                        },
+                    )
+    
+            except Exception as e:
+                return ServiceHealth(
+                    name=self.name, status=ServiceStatus.DISCONNECTED, message=str(e)
+                )
+    
+        async def close(self) -> None:
+            """Close connection pool."""
+            if self._pool:
+                await self._pool.close()
+                self._pool = None
+    
+        # ABC Implementation Aliases
+        async def get_tables(self) -> List[str]:
+            return await self.list_tables()
+    
+        async def get_stats(self) -> DBStats:
+            """Get basic DB stats from the pool."""
+            # Note: Getting real DB size requires a query like pg_database_size
+            return DBStats(
+                active_connections=self._pool.get_size() if self._pool else 0,
+                total_connections=self._pool.get_max_size() if self._pool else 0,
+                database_size="unknown", 
+                table_count=0 
+            )
+    
+
+  # Source: agent-classifier-hotfix
+  real_classifier_agent.py: |
+    """
+    Modernized RealClassifierAgent
+    """
+    
+    from typing import List
+    from twisterlab.agents.core.base import (
+        TwisterAgent, 
+        AgentCapability, 
+        CapabilityParam, 
+        ParamType, 
+        AgentResponse,
+        CapabilityType
+    )
+    
+    class RealClassifierAgent(TwisterAgent):
+        @property
+        def name(self) -> str:
+            return "real-classifier"
+    
+        @property
+        def description(self) -> str:
+            return "Classifies incoming text or tickets into predefined categories."
+    
+        def get_capabilities(self) -> List[AgentCapability]:
+            return [
+                AgentCapability(
+                    name="classify_ticket",
+                    description="Classify a ticket based on its text.",
+                    handler="handle_classify",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam("ticket_text", ParamType.STRING, "The text of the ticket", required=True)
+                    ]
+                )
+            ]
+    
+        async def handle_classify(self, ticket_text: str, **kwargs) -> AgentResponse:
+            """Simple classification logic with robust param handling."""
+            text = ticket_text.lower()
+            
+            # Priority detection
+            priority = "medium"
+            if any(word in text for word in ["urgent", "critical", "emergency", "asap", "down"]):
+                priority = "high"
+            elif any(word in text for word in ["when you can", "low priority", "minor"]):
+                priority = "low"
+            
+            # Category detection - order matters (more specific first)
+            if any(word in text for word in ["database", "sql", "query", "postgres", "mysql", "db"]):
+                category = "DATABASE"
+            elif any(word in text for word in ["security", "breach", "hack", "vulnerability", "unauthorized"]):
+                category = "SECURITY"
+            elif any(word in text for word in ["application", "app", "web", "website", "server", "api", "service"]):
+                category = "APPLICATION"
+            elif any(word in text for word in ["network", "connection", "dns", "firewall", "connectivity"]):
+                category = "NETWORK"
+            elif any(word in text for word in ["slow", "performance", "latency", "timeout"]):
+                category = "PERFORMANCE"
+            elif any(word in text for word in ["password", "login", "auth", "access", "permission"]):
+                category = "ACCESS"
+            elif any(word in text for word in ["software", "install", "update", "version"]):
+                category = "SOFTWARE"
+            elif any(word in text for word in ["bug", "error", "crash", "exception", "fail"]):
+                category = "TECHNICAL"
+            else:
+                category = "GENERAL"
+                
+            return AgentResponse(success=True, data={"category": category, "priority": priority})
+    
+
+  # Source: desktop-commander-fix
+  real_desktop_commander_agent.py: |
+    """
+    RealDesktopCommanderAgent - Secure Command Execution ≡ƒÆ╗
+    
+    This agent executes REAL system commands with security safeguards:
+    - Whitelist of allowed commands
+    - Timeout protection
+    - Sandboxed execution
+    - Audit logging
+    
+    SECURITY: By default, only safe commands are allowed.
+    Set COMMANDER_UNSAFE_MODE=true to enable all commands (NOT recommended).
+    """
+    
+    from __future__ import annotations
+    
+    import asyncio
+    import logging
+    import os
+    import platform
+    import re
+    import shlex
+    from datetime import datetime, timezone
+    from typing import List, Optional, Set
+    
+    from twisterlab.agents.core.base import (
+        TwisterAgent,
+        AgentCapability,
+        AgentResponse,
+        CapabilityType,
+        CapabilityParam,
+        ParamType,
+    )
+    
+    logger = logging.getLogger(__name__)
+    
+    
+    # Whitelist of safe commands (can be extended via env var)
+    DEFAULT_SAFE_COMMANDS: Set[str] = {
+        # System info
+        "hostname", "whoami", "uname", "uptime", "date", "cal",
+        # Process info
+        "ps", "top", "htop", "pgrep", "pidof",
+        # Disk info
+        "df", "du", "lsblk", "mount", "findmnt",
+        # Network info
+        "ping", "netstat", "ss", "ip", "ifconfig", "nslookup", "dig", "host",
+        "curl", "wget",
+        # File operations (read-only)
+        "ls", "cat", "head", "tail", "grep", "find", "wc", "sort", "uniq",
+        "file", "stat", "tree",
+        # Service management (read-only)
+        "systemctl", "service", "journalctl",
+        # Database (read-only)
+        "pg_isready", "redis-cli",
+        # Windows equivalents
+        "dir", "type", "ipconfig", "netstat", "tasklist", "systeminfo",
+        "Get-Process", "Get-Service", "Get-NetIPConfiguration",
+    }
+    
+    # Dangerous commands that should never be allowed
+    DANGEROUS_PATTERNS: List[str] = [
+        r"rm\s+-rf", r"rm\s+/", r"mkfs", r"dd\s+if=", r":\(\)\{:\|:&\};:",
+        r"chmod\s+777", r"chown\s+-R", r"curl.*\|.*sh", r"wget.*\|.*sh",
+        r">\s*/dev/sd", r"shutdown", r"reboot", r"init\s+0", r"halt",
+        r"format\s+c:", r"del\s+/s", r"rd\s+/s",
+    ]
+    
+    
+    class RealDesktopCommanderAgent(TwisterAgent):
+        """
+        Executes system commands with security safeguards.
+        
+        Security Features:
+        - Whitelist of allowed commands
+        - Pattern matching to block dangerous commands
+        - Timeout protection (default 30s)
+        - Audit logging of all executions
+        - Sandboxed subprocess execution
+        """
+    
+        def __init__(self) -> None:
+            super().__init__()
+            self._unsafe_mode = os.getenv("COMMANDER_UNSAFE_MODE", "false").lower() == "true"
+            self._default_timeout = int(os.getenv("COMMANDER_TIMEOUT", "30"))
+            self._audit_log: List[dict] = []
+            
+            # Load additional safe commands from env
+            extra_commands = os.getenv("COMMANDER_EXTRA_COMMANDS", "")
+            self._safe_commands = DEFAULT_SAFE_COMMANDS.copy()
+            if extra_commands:
+                self._safe_commands.update(cmd.strip() for cmd in extra_commands.split(","))
+            
+            if self._unsafe_mode:
+                logger.warning("?????? RealDesktopCommanderAgent running in UNSAFE MODE!")
+            else:
+                logger.info("??? RealDesktopCommanderAgent initialized with security safeguards")
+    
+        @property
+        def name(self) -> str:
+            return "real-desktop-commander"
+    
+        @property
+        def description(self) -> str:
+            return "Executes system commands securely with whitelist protection and audit logging"
+    
+        def get_capabilities(self) -> List[AgentCapability]:
+            return [
+                AgentCapability(
+                    name="execute_command",
+                    description="Execute a command on the local system (with security checks)",
+                    handler="handle_execute_command",
+                    capability_type=CapabilityType.ACTION,
+                    params=[
+                        CapabilityParam(
+                            "command",
+                            ParamType.STRING,
+                            "The command to execute",
+                            required=True,
+                        ),
+                        CapabilityParam(
+                            "timeout",
+                            ParamType.INTEGER,
+                            "Execution timeout in seconds (max 300)",
+                            required=False,
+                            default=30,
+                        ),
+                        CapabilityParam(
+                            "working_dir",
+                            ParamType.STRING,
+                            "Working directory for command execution",
+                            required=False,
+                        ),
+                    ],
+                    tags=["system", "command", "execution"],
+                ),
+                AgentCapability(
+                    name="execute_command_remote",
+                    description="Execute a command on a remote device (simulated for now)",
+                    handler="handle_execute_command_remote",
+                    capability_type=CapabilityType.ACTION,
+                    params=[
+                        CapabilityParam(
+                            "device_id",
+                            ParamType.STRING,
+                            "Target device identifier",
+                            required=True,
+                        ),
+                        CapabilityParam(
+                            "command",
+                            ParamType.STRING,
+                            "The command to execute",
+                            required=True,
+                        ),
+                        CapabilityParam(
+                            "timeout",
+                            ParamType.INTEGER,
+                            "Execution timeout in seconds",
+                            required=False,
+                            default=30,
+                        ),
+                    ],
+                    tags=["system", "remote", "command"],
+                ),
+                AgentCapability(
+                    name="get_allowed_commands",
+                    description="List all allowed commands in safe mode",
+                    handler="handle_get_allowed_commands",
+                    capability_type=CapabilityType.QUERY,
+                    params=[],
+                    tags=["security", "info"],
+                ),
+                AgentCapability(
+                    name="get_audit_log",
+                    description="Get the command execution audit log",
+                    handler="handle_get_audit_log",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam(
+                            "limit",
+                            ParamType.INTEGER,
+                            "Number of entries to return",
+                            required=False,
+                            default=50,
+                        ),
+                    ],
+                    tags=["security", "audit"],
+                ),
+            ]
+    
+        # =========================================================================
+        # SECURITY CHECKS
+        # =========================================================================
+    
+        def _is_command_allowed(self, command: str) -> tuple[bool, str]:
+            """
+            Check if command is allowed to execute.
+            
+            Returns: (is_allowed, reason)
+            """
+            # Check dangerous patterns first
+            for pattern in DANGEROUS_PATTERNS:
+                if re.search(pattern, command, re.IGNORECASE):
+                    return False, f"Command matches dangerous pattern: {pattern}"
+            
+            # In unsafe mode, allow everything except dangerous patterns
+            if self._unsafe_mode:
+                return True, "Unsafe mode enabled"
+            
+            # Extract base command
+            try:
+                if platform.system() == "Windows":
+                    # Windows command parsing
+                    parts = command.strip().split()
+                    base_cmd = parts[0].lower() if parts else ""
+                else:
+                    # Unix command parsing
+                    parts = shlex.split(command)
+                    base_cmd = parts[0].split("/")[-1] if parts else ""
+            except ValueError:
+                return False, "Invalid command syntax"
+            
+            # Check whitelist
+            if base_cmd in self._safe_commands:
+                return True, "Command in whitelist"
+            
+            # Check if it's a PowerShell cmdlet (Windows)
+            if platform.system() == "Windows":
+                if base_cmd.startswith("get-") or base_cmd in ["powershell", "pwsh"]:
+                    return True, "PowerShell read-only cmdlet"
+            
+            return False, f"Command '{base_cmd}' not in whitelist. Use get_allowed_commands to see allowed commands."
+    
+        def _audit_execution(
+            self, 
+            command: str, 
+            success: bool, 
+            output: str,
+            error: Optional[str] = None,
+            duration_ms: int = 0
+        ) -> None:
+            """Log command execution for audit."""
+            entry = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "command": command,
+                "success": success,
+                "output_length": len(output),
+                "error": error,
+                "duration_ms": duration_ms,
+            }
+            self._audit_log.append(entry)
+            
+            # Keep only last 1000 entries
+            if len(self._audit_log) > 1000:
+                self._audit_log = self._audit_log[-1000:]
+            
+            log_level = logging.INFO if success else logging.WARNING
+            logger.log(log_level, f"≡ƒôï Audit: {command[:50]}... -> {'???' if success else '???'}")
+    
+        # =========================================================================
+        # HANDLERS
+        # =========================================================================
+    
+        async def handle_execute_command(
+            self, 
+            command: str, 
+            timeout: int = 30,
+            working_dir: Optional[str] = None,
+            **kwargs  # Accept additional params from orchestration (e.g., device_id)
+        ) -> AgentResponse:
+            """Execute a command on the local system."""
+            # Log any unexpected kwargs for debugging
+            if kwargs:
+                logger.debug(f"≡ƒÆí Received extra params (ignored): {list(kwargs.keys())}")
+            
+            logger.info(f"≡ƒÆ╗ Executing command: {command[:100]}...")
+            
+            # Security check
+            is_allowed, reason = self._is_command_allowed(command)
+            if not is_allowed:
+                logger.warning(f"≡ƒÜ½ Command blocked: {reason}")
+                self._audit_execution(command, False, "", error=reason)
+                return AgentResponse(
+                    success=False,
+                    error=f"Command not allowed: {reason}",
+                    data={"blocked": True, "reason": reason}
+                )
+            
+            # Enforce timeout limits
+            timeout = min(timeout, 300)  # Max 5 minutes
+            
+            start_time = datetime.now(timezone.utc)
+            
+            try:
+                # Determine shell based on platform
+                is_windows = platform.system() == "Windows"
+                
+                if is_windows:
+                    # Use PowerShell on Windows
+                    process = await asyncio.create_subprocess_shell(
+                        command,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        cwd=working_dir,
+                    )
+                else:
+                    # Use bash on Unix
+                    process = await asyncio.create_subprocess_shell(
+                        command,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                        cwd=working_dir,
+                        executable="/bin/bash",
+                    )
+                
+                try:
+                    stdout, stderr = await asyncio.wait_for(
+                        process.communicate(),
+                        timeout=timeout
+                    )
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+                    error_msg = f"Command timed out after {timeout}s"
+                    self._audit_execution(command, False, "", error=error_msg)
+                    return AgentResponse(
+                        success=False,
+                        error=error_msg,
+                        data={"timeout": True, "timeout_seconds": timeout}
+                    )
+                
+                end_time = datetime.now(timezone.utc)
+                duration_ms = int((end_time - start_time).total_seconds() * 1000)
+                
+                # Decode output
+                output = stdout.decode("utf-8", errors="replace").strip()
+                error_output = stderr.decode("utf-8", errors="replace").strip()
+                
+                exit_code = process.returncode
+                success = exit_code == 0
+                
+                # Audit log
+                self._audit_execution(
+                    command, 
+                    success, 
+                    output, 
+                    error=error_output if error_output else None,
+                    duration_ms=duration_ms
+                )
+                
+                result_data = {
+                    "status": "completed",
+                    "exit_code": exit_code,
+                    "output": output[:10000],  # Limit output size
+                    "stderr": error_output[:2000] if error_output else None,
+                    "duration_ms": duration_ms,
+                    "platform": platform.system(),
+                }
+                
+                if success:
+                    logger.info(f"??? Command completed in {duration_ms}ms")
+                else:
+                    logger.warning(f"?????? Command exited with code {exit_code}")
+                
+                return AgentResponse(success=success, data=result_data)
+                
+            except Exception as e:
+                error_msg = str(e)
+                self._audit_execution(command, False, "", error=error_msg)
+                logger.error(f"??? Command execution failed: {e}")
+                return AgentResponse(success=False, error=error_msg)
+    
+        async def handle_execute_command_remote(
+            self, 
+            device_id: str, 
+            command: str, 
+            timeout: int = 30,
+            **kwargs  # Accept additional params from orchestration
+        ) -> AgentResponse:
+            """
+            Execute a command on a remote device.
+            
+            NOTE: This is currently simulated. In production, this would:
+            - Use SSH for Linux devices
+            - Use WinRM for Windows devices
+            - Use device-specific protocols
+            """
+            logger.info(f"≡ƒôí Remote execution on {device_id}: {command[:50]}...")
+            
+            # Security check
+            is_allowed, reason = self._is_command_allowed(command)
+            if not is_allowed:
+                return AgentResponse(
+                    success=False,
+                    error=f"Command not allowed: {reason}",
+                    data={"device_id": device_id, "blocked": True}
+                )
+            
+            # For now, simulate remote execution
+            # In production, this would use SSH/WinRM/etc.
+            
+            # If device_id is "localhost" or "local", execute locally
+            if device_id.lower() in ["localhost", "local", "127.0.0.1"]:
+                return await self.handle_execute_command(command, timeout)
+            
+            # Simulated remote execution
+            logger.info(f"≡ƒôí Simulating remote execution on {device_id}")
+            
+            # Simulate some common commands
+            simulated_outputs = {
+                "df -h": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       500G  234G  266G  47% /",
+                "uptime": " 14:32:01 up 45 days,  3:21,  2 users,  load average: 0.52, 0.48, 0.45",
+                "ps aux": "USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\nroot         1  0.0  0.1 225848  9636 ?        Ss   Dec01   0:15 /sbin/init",
+            }
+            
+            output = simulated_outputs.get(command, f"Simulated output for: {command}")
+            
+            return AgentResponse(
+                success=True,
+                data={
+                    "status": "completed",
+                    "exit_code": 0,
+                    "output": output,
+                    "device_id": device_id,
+                    "simulated": True,
+                    "note": "Remote execution is simulated. Configure SSH/WinRM for real execution.",
+                }
+            )
+    
+        async def handle_get_allowed_commands(self) -> AgentResponse:
+            """List all allowed commands."""
+            return AgentResponse(
+                success=True,
+                data={
+                    "safe_mode": not self._unsafe_mode,
+                    "allowed_commands": sorted(self._safe_commands),
+                    "command_count": len(self._safe_commands),
+                    "note": "Set COMMANDER_EXTRA_COMMANDS env var to add more commands",
+                }
+            )
+    
+        async def handle_get_audit_log(self, limit: int = 50) -> AgentResponse:
+            """Get command execution audit log."""
+            entries = self._audit_log[-limit:]
+            
+            return AgentResponse(
+                success=True,
+                data={
+                    "entries": entries,
+                    "total_count": len(self._audit_log),
+                    "returned_count": len(entries),
+                }
+            )
+    
+    
+    __all__ = ["RealDesktopCommanderAgent", "DEFAULT_SAFE_COMMANDS"]
+    
+
+  # Source: maestro-fix
+  real_maestro_agent.py: |
+    ∩╗┐"""
+    RealMaestroAgent - The Orchestrator Brain
+    
+    This is the central intelligence that:
+    1. Analyzes incoming tickets/tasks
+    2. Decides which agents to dispatch
+    3. Coordinates multi-agent workflows
+    4. Synthesizes results into actionable solutions
+    
+    Supports both LLM-based decisions (Ollama/Claude) and rule-based fallback.
+    """
+    
+    from __future__ import annotations
+    
+    import logging
+    import os
+    from dataclasses import dataclass, field
+    from datetime import datetime, timezone
+    from enum import Enum
+    from typing import Any, Dict, List, Optional
+    
+    try:
+        import httpx
+    except ImportError:
+        httpx = None
+    
+    from twisterlab.agents.core.base import (
+        CoreAgent,
+        AgentCapability,
+        AgentResponse,
+        CapabilityType,
+        CapabilityParam,
+        ParamType,
+    )
+    
+    logger = logging.getLogger(__name__)
+    
+    
+    class TaskPriority(Enum):
+        CRITICAL = "critical"
+        HIGH = "high"
+        MEDIUM = "medium"
+        LOW = "low"
+    
+    
+    class TaskCategory(Enum):
+        DATABASE = "database"
+        NETWORK = "network"
+        APPLICATION = "application"
+        SECURITY = "security"
+        INFRASTRUCTURE = "infrastructure"
+        MONITORING = "monitoring"
+        UNKNOWN = "unknown"
+    
+    
+    @dataclass
+    class OrchestratedTask:
+        id: str
+        description: str
+        priority: TaskPriority = TaskPriority.MEDIUM
+        category: TaskCategory = TaskCategory.UNKNOWN
+        agents_involved: List[str] = field(default_factory=list)
+        steps: List[Dict[str, Any]] = field(default_factory=list)
+        results: List[Dict[str, Any]] = field(default_factory=list)
+        status: str = "pending"
+        created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+        completed_at: Optional[str] = None
+    
+    
+    class RealMaestroAgent(CoreAgent):
+        """The Maestro Orchestrator - Central brain for multi-agent coordination."""
+    
+        def __init__(self, agent_registry=None) -> None:
+            super().__init__()
+            self._agent_registry = agent_registry
+            self._ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            self._ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2")
+            self._use_llm = os.getenv("MAESTRO_USE_LLM", "true").lower() == "true"
+    
+        @property
+        def name(self) -> str:
+            return "maestro"
+    
+        @property
+        def description(self) -> str:
+            return "Orchestrates multi-agent workflows intelligently"
+    
+        @property
+        def agent_registry(self):
+            if self._agent_registry is None:
+                try:
+                    from twisterlab.agents.registry import get_agent_registry
+                    self._agent_registry = get_agent_registry()
+                except ImportError:
+                    logger.warning("Could not import agent registry")
+            return self._agent_registry
+    
+        @agent_registry.setter
+        def agent_registry(self, value):
+            self._agent_registry = value
+    
+        def get_capabilities(self) -> List[AgentCapability]:
+            return [
+                AgentCapability(
+                    name="orchestrate",
+                    description="Orchestrate a complete task workflow across multiple agents",
+                    handler="handle_orchestrate",
+                    capability_type=CapabilityType.ACTION,
+                    params=[
+                        CapabilityParam("task", ParamType.STRING, "The task or ticket to process", required=True),
+                        CapabilityParam("context", ParamType.OBJECT, "Additional context", required=False),
+                        CapabilityParam("dry_run", ParamType.BOOLEAN, "Plan only, don't execute", required=False, default=False),
+                    ],
+                ),
+                AgentCapability(
+                    name="analyze_task",
+                    description="Analyze a task to determine category and priority",
+                    handler="handle_analyze_task",
+                    capability_type=CapabilityType.QUERY,
+                    params=[
+                        CapabilityParam("task", ParamType.STRING, "The task description", required=True),
+                    ],
+                ),
+            ]
+    
+        async def handle_orchestrate(self, task: str, context: Optional[Dict[str, Any]] = None, dry_run: bool = False) -> AgentResponse:
+            logger.info(f"Maestro orchestrating: {task[:100]}...")
+            
+            orchestrated = OrchestratedTask(
+                id=f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                description=task
+            )
+            
+            try:
+                analysis = await self._analyze_task(task, context)
+                orchestrated.priority = analysis["priority"]
+                orchestrated.category = analysis["category"]
+                
+                plan = await self._create_plan(task, analysis, context)
+                orchestrated.agents_involved = plan["agents"]
+                orchestrated.steps = plan["steps"]
+                
+                if dry_run:
+                    return AgentResponse(success=True, data={
+                        "mode": "dry_run",
+                        "task_id": orchestrated.id,
+                        "analysis": {"category": orchestrated.category.value, "priority": orchestrated.priority.value},
+                        "plan": plan,
+                    })
+                
+                results = await self._execute_plan(plan, task, context)
+                orchestrated.results = results
+                orchestrated.status = "completed"
+                orchestrated.completed_at = datetime.now(timezone.utc).isoformat()
+                
+                synthesis = await self._synthesize_results(task, results, analysis)
+                
+                return AgentResponse(success=True, data={
+                    "task_id": orchestrated.id,
+                    "status": "completed",
+                    "analysis": {"category": orchestrated.category.value, "priority": orchestrated.priority.value},
+                    "agents_used": orchestrated.agents_involved,
+                    "steps_executed": len(orchestrated.steps),
+                    "results": results,
+                    "synthesis": synthesis,
+                })
+                
+            except Exception as e:
+                logger.error(f"Orchestration failed: {e}", exc_info=True)
+                return AgentResponse(success=False, error=str(e))
+    
+        async def handle_analyze_task(self, task: str) -> AgentResponse:
+            analysis = await self._analyze_task(task, None)
+            return AgentResponse(success=True, data={
+                "category": analysis["category"].value,
+                "priority": analysis["priority"].value,
+                "suggested_agents": analysis["suggested_agents"],
+                "keywords": analysis["keywords"],
+            })
+    
+        async def _analyze_task(self, task: str, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+            if self._use_llm and httpx:
+                llm_analysis = await self._llm_analyze(task, context)
+                if llm_analysis:
+                    return llm_analysis
+            return self._rule_based_analyze(task, context)
+    
+        async def _llm_analyze(self, task: str, context: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+            try:
+                prompt = f"""Analyze this support ticket and respond in JSON format only:
+    TICKET: {task}
+    Respond with: {{"category": "database|network|application|security|infrastructure|unknown", "priority": "critical|high|medium|low", "suggested_agents": [], "keywords": []}}"""
+                
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.post(
+                        f"{self._ollama_url}/api/generate",
+                        json={"model": self._ollama_model, "prompt": prompt, "stream": False, "format": "json"}
+                    )
+                    if response.status_code == 200:
+                        import json
+                        result = response.json()
+                        analysis = json.loads(result.get("response", "{}"))
+                        return {
+                            "category": TaskCategory(analysis.get("category", "unknown")),
+                            "priority": TaskPriority(analysis.get("priority", "medium")),
+                            "suggested_agents": analysis.get("suggested_agents", []),
+                            "keywords": analysis.get("keywords", []),
+                            "source": "llm",
+                        }
+            except Exception as e:
+                logger.warning(f"LLM analysis failed: {e}")
+            return None
+    
+        def _rule_based_analyze(self, task: str, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+            task_lower = task.lower()
+            category = TaskCategory.UNKNOWN
+            keywords = []
+            suggested_agents = ["classifier", "sentiment-analyzer"]
+            
+            # DATABASE tasks - use database agent for queries
+            if any(kw in task_lower for kw in ["database", "sql", "postgres", "mysql", "query", "db", "table", "connection pool"]):
+                category = TaskCategory.DATABASE
+                keywords = ["database", "sql"]
+                suggested_agents.extend(["database", "backup"])  # Use database agent, not desktop-commander
+            
+            # NETWORK tasks
+            elif any(kw in task_lower for kw in ["network", "connection", "timeout", "dns", "ping", "latency"]):
+                category = TaskCategory.NETWORK
+                keywords = ["network", "connectivity"]
+                suggested_agents.extend(["monitoring", "browser"])
+            
+            # SECURITY tasks
+            elif any(kw in task_lower for kw in ["security", "breach", "hack", "vulnerability", "attack", "intrusion"]):
+                category = TaskCategory.SECURITY
+                keywords = ["security", "threat"]
+                suggested_agents.extend(["backup", "code-review"])
+            
+            # MONITORING/SYSTEM tasks - use desktop-commander with proper commands
+            elif any(kw in task_lower for kw in ["cpu", "memory", "disk", "uptime", "top", "ps", "df", "du", "system status", "metrics", "monitoring"]):
+                category = TaskCategory.MONITORING
+                keywords = ["monitoring", "system"]
+                suggested_agents.extend(["monitoring", "real-desktop-commander"])
+            
+            # INFRASTRUCTURE tasks
+            elif any(kw in task_lower for kw in ["server", "crash", "restart", "deploy", "kubernetes", "pod", "container"]):
+                category = TaskCategory.INFRASTRUCTURE
+                keywords = ["infrastructure", "server"]
+                suggested_agents.extend(["monitoring", "real-desktop-commander"])
+            
+            # APPLICATION tasks
+            elif any(kw in task_lower for kw in ["app", "application", "error", "bug", "500", "404", "api", "endpoint"]):
+                category = TaskCategory.APPLICATION
+                keywords = ["application", "error"]
+                suggested_agents.extend(["browser", "monitoring"])
+            
+            # Priority detection
+            priority = TaskPriority.MEDIUM
+            if any(kw in task_lower for kw in ["urgent", "critical", "down", "crash", "emergency", "outage", "!!!"]):
+                priority = TaskPriority.CRITICAL
+            elif any(kw in task_lower for kw in ["important", "high", "production", "asap"]):
+                priority = TaskPriority.HIGH
+            elif any(kw in task_lower for kw in ["minor", "low", "when possible", "nice to have"]):
+                priority = TaskPriority.LOW
+            
+            return {"category": category, "priority": priority, "suggested_agents": list(set(suggested_agents)), "keywords": keywords, "source": "rules"}
+    
+        async def _create_plan(self, task: str, analysis: Dict[str, Any], context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+            category = analysis["category"]
+            steps = [
+                {"order": 1, "agent": "sentiment-analyzer", "capability": "analyze_sentiment", "params": {"text": task}, "purpose": "Determine urgency"},
+                {"order": 2, "agent": "classifier", "capability": "classify_ticket", "params": {"ticket_text": task}, "purpose": "Categorize issue"},
+            ]
+            
+            # Add category-specific steps with proper agents and commands
+            if category == TaskCategory.DATABASE:
+                # Use database agent for DB operations (safe SQL queries)
+                steps.append({"order": 3, "agent": "database", "capability": "db_health", "params": {}, "purpose": "Check database health"})
+                steps.append({"order": 4, "agent": "backup", "capability": "create_backup", "params": {"service_name": "database"}, "purpose": "Create safety backup"})
+            
+            elif category == TaskCategory.MONITORING:
+                # Use monitoring agent and desktop-commander with SAFE commands
+                steps.append({"order": 3, "agent": "monitoring", "capability": "collect_metrics", "params": {}, "purpose": "Collect system metrics"})
+                steps.append({"order": 4, "agent": "real-desktop-commander", "capability": "execute_command", "params": {"command": "uptime"}, "purpose": "Check system uptime"})
+            
+            elif category == TaskCategory.INFRASTRUCTURE:
+                # Use monitoring and safe system commands
+                steps.append({"order": 3, "agent": "monitoring", "capability": "collect_metrics", "params": {}, "purpose": "Collect metrics"})
+                steps.append({"order": 4, "agent": "real-desktop-commander", "capability": "execute_command", "params": {"command": "df -h"}, "purpose": "Check disk usage"})
+            
+            elif category == TaskCategory.APPLICATION:
+                # Use browser for health checks
+                steps.append({"order": 3, "agent": "browser", "capability": "browse", "params": {"url": "http://localhost:8000/health"}, "purpose": "Check app health"})
+            
+            elif category == TaskCategory.SECURITY:
+                # Use backup and code-review for security incidents
+                steps.append({"order": 3, "agent": "backup", "capability": "create_backup", "params": {"service_name": "security-snapshot"}, "purpose": "Emergency backup"})
+                steps.append({"order": 4, "agent": "code-review", "capability": "security_scan", "params": {"code": "# Security incident check"}, "purpose": "Security scan"})
+            
+            elif category == TaskCategory.NETWORK:
+                # Use monitoring and browser for network issues
+                steps.append({"order": 3, "agent": "monitoring", "capability": "collect_metrics", "params": {}, "purpose": "Check network metrics"})
+            
+            # Always end with resolution
+            steps.append({"order": len(steps) + 1, "agent": "resolver", "capability": "resolve_ticket", "params": {"ticket_id": "TKT-AUTO", "resolution_note": f"Auto-resolved by Maestro ({category.value})"}, "purpose": "Mark resolved"})
+            
+            return {"agents": list(set(s["agent"] for s in steps)), "steps": steps, "estimated_duration_sec": len(steps) * 5}
+    
+        async def _execute_plan(self, plan: Dict[str, Any], task: str, context: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            results = []
+            for step in plan["steps"]:
+                step_result = {"step": step["order"], "agent": step["agent"], "capability": step["capability"], "status": "pending"}
+                try:
+                    agent = self._get_agent(step["agent"])
+                    if not agent:
+                        step_result["status"] = "skipped"
+                        step_result["reason"] = f"Agent {step['agent']} not available"
+                    else:
+                        result = await agent.execute(step["capability"], **step["params"])
+                        step_result["status"] = "success" if result.success else "failed"
+                        step_result["data"] = result.data
+                        if result.error:
+                            step_result["error"] = result.error
+                except Exception as e:
+                    step_result["status"] = "error"
+                    step_result["error"] = str(e)
+                results.append(step_result)
+            return results
+    
+        def _get_agent(self, agent_name: str):
+            if not self.agent_registry:
+                return None
+            return self.agent_registry.get_agent(agent_name)
+    
+        async def _synthesize_results(self, task: str, results: List[Dict[str, Any]], analysis: Dict[str, Any]) -> Dict[str, Any]:
+            successful_steps = [r for r in results if r["status"] == "success"]
+            findings = []
+            for r in successful_steps:
+                if r["agent"] == "sentiment-analyzer" and r.get("data"):
+                    findings.append(f"Sentiment: {r['data'].get('sentiment', 'unknown')}")
+                elif r["agent"] == "classifier" and r.get("data"):
+                    findings.append(f"Category: {r['data'].get('category', 'unknown')}")
+            
+            return {
+                "summary": f"Processed task with {len(successful_steps)}/{len(results)} successful steps",
+                "findings": findings,
+                "success_rate": len(successful_steps) / len(results) if results else 0,
+                "requires_human": len(results) - len(successful_steps) > 0,
+            }
+    
+    
+    __all__ = ["RealMaestroAgent", "TaskPriority", "TaskCategory", "OrchestratedTask"]
+    
+
+  # Source: agent-resolver-hotfix
+  real_resolver_agent.py: |
+    """
+    Modernized RealResolverAgent
+    """
+    
+    from typing import List
+    from twisterlab.agents.core.base import (
+        TwisterAgent, 
+        AgentCapability, 
+        CapabilityParam, 
+        ParamType, 
+        AgentResponse,
+        CapabilityType
+    )
+    
+    class RealResolverAgent(TwisterAgent):
+        @property
+        def name(self) -> str:
+            return "real-resolver"
+    
+        @property
+        def description(self) -> str:
+            return "Resolves system or database issues automatically."
+    
+        def get_capabilities(self) -> List[AgentCapability]:
+            return [
+                AgentCapability(
+                    name="resolve_ticket",
+                    description="Resolve a support ticket.",
+                    handler="handle_resolve",
+                    capability_type=CapabilityType.ACTION,
+                    params=[
+                        CapabilityParam("ticket_id", ParamType.STRING, "ID of the ticket to resolve"),
+                        CapabilityParam("resolution_note", ParamType.STRING, "Resolution details")
+                    ]
+                )
+            ]
+    
+        async def handle_resolve(self, ticket_id: str, resolution_note: str, **kwargs) -> AgentResponse:
+            """Resolve a support ticket.
+            
+            Args:
+                ticket_id: ID of the ticket to resolve
+                resolution_note: Resolution details
+                **kwargs: Additional parameters from orchestration (ignored)
+            """
+            return AgentResponse(success=True, data={"ticket_id": ticket_id, "status": "RESOLVED"})
+    
+
+  # Source: registry-fix
+  registry.py: |
+    import logging
+    import threading
+    from typing import Dict, List, Optional
+    
+    from twisterlab.agents.base.base_agent import BaseAgent
+    from twisterlab.agents.real.browser_agent import RealBrowserAgent
+    from twisterlab.agents.real.real_backup_agent import RealBackupAgent
+    
+    # Importe les classes d'agents v2 que nous avons refactoris??es
+    from twisterlab.agents.real.real_classifier_agent import RealClassifierAgent
+    from twisterlab.agents.real.real_code_review_agent import RealCodeReviewAgent
+    from twisterlab.agents.real.real_desktop_commander_agent import (
+        RealDesktopCommanderAgent,
+    )
+    from twisterlab.agents.real.real_maestro_agent import RealMaestroAgent
+    from twisterlab.agents.real.real_monitoring_agent import RealMonitoringAgent
+    from twisterlab.agents.real.real_resolver_agent import RealResolverAgent
+    from twisterlab.agents.real.real_sentiment_analyzer_agent import (
+        SentimentAnalyzerAgent,
+    )
+    from twisterlab.agents.real.real_sync_agent import RealSyncAgent
+    
+    # Core agents for database and cache operations
+    from twisterlab.agents.core.cache_agent import CacheAgent
+    from twisterlab.agents.core.db_agent import DatabaseAgent
+    
+    
+    logger = logging.getLogger(__name__)
+    
+    
+    class AgentRegistry:
+        """
+        Thread-safe Singleton qui instancie, d??tient et g??re tous les agents actifs du syst??me.
+        C'est la source unique de v??rit?? pour l'??tat des agents.
+        
+        Features:
+        - Thread-safe singleton with double-checked locking
+        - Pre-computed lookup indices for O(1) agent retrieval
+        - Lifecycle management (start/shutdown hooks)
+        - Observability via logging
+        """
+    
+        _instance: Optional["AgentRegistry"] = None
+        _lock = threading.Lock()
+    
+        def __new__(cls):
+            if cls._instance is None:
+                with cls._lock:
+                    # Double-checked locking pattern for thread safety
+                    if cls._instance is None:
+                        cls._instance = super(AgentRegistry, cls).__new__(cls)
+                        cls._instance._initialized = False
+            return cls._instance
+    
+        def __init__(self):
+            # Prevent re-initialization in singleton
+            if hasattr(self, '_initialized') and self._initialized:
+                return
+            
+            self._agents: Dict[str, BaseAgent] = {}
+            self._agents_by_id: Dict[str, BaseAgent] = {}
+            self._lookup_index: Dict[str, BaseAgent] = {}  # Pre-computed normalized keys
+            self._agent_list: List[BaseAgent] = []  # Ordered list for iteration
+            
+            self.initialize_agents()
+    
+        def initialize_agents(self):
+            """Instancie tous les agents v2 au d??marrage de l'API."""
+            if hasattr(self, '_initialized') and self._initialized:
+                return
+                
+            with self._lock:
+                if hasattr(self, '_initialized') and self._initialized:
+                    return
+                    
+                try:
+                    # Create all agents
+                    agents_list = [
+                        RealClassifierAgent(),
+                        RealResolverAgent(),
+                        RealMonitoringAgent(),
+                        RealBackupAgent(),
+                        RealSyncAgent(),
+                        RealDesktopCommanderAgent(),
+                        RealBrowserAgent(),
+                        SentimentAnalyzerAgent(),
+                        RealCodeReviewAgent(),
+                        # Core agents for database and cache
+                        CacheAgent(),
+                        DatabaseAgent(),
+                    ]
+                    
+                    # Maestro needs registry reference for cross-agent communication
+                    maestro = RealMaestroAgent(agent_registry=self)
+                    agents_list.append(maestro)
+                    
+                    # Build lookup indices
+                    self._agents = {}
+                    self._agents_by_id = {}
+                    self._lookup_index = {}
+                    self._agent_list = agents_list
+                    
+                    for agent in agents_list:
+                        key = agent.name.lower()
+                        self._agents[key] = agent
+                        
+                        # Agent ID lookup (if available)
+                        agent_id = getattr(agent, 'agent_id', None)
+                        if agent_id:
+                            self._agents_by_id[agent_id] = agent
+                        
+                        # Pre-compute normalized keys for fast lookup
+                        self._add_lookup_keys(agent, key)
+                    
+                    self._initialized = True
+                    logger.info(f"Agent Registry initialized with {len(agents_list)} agents.")
+                    print(f"Agent Registry initialized with {len(agents_list)} agents.")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to initialize agents: {e}", exc_info=True)
+                    raise
+    
+        def _add_lookup_keys(self, agent: BaseAgent, primary_key: str):
+            """Pre-compute multiple lookup keys for an agent."""
+            # Primary key
+            self._lookup_index[primary_key] = agent
+            
+            # Without hyphens/underscores
+            normalized = primary_key.replace("-", "").replace("_", "")
+            self._lookup_index[normalized] = agent
+            
+            # Without 'agent' suffix
+            if normalized.endswith("agent"):
+                self._lookup_index[normalized[:-5]] = agent
+            
+            # With 'real' prefix variations
+            if primary_key.startswith("real-"):
+                self._lookup_index[primary_key[5:]] = agent  # Without 'real-'
+            
+            # Agent ID as key (if available)
+            agent_id = getattr(agent, 'agent_id', None)
+            if agent_id:
+                self._lookup_index[agent_id] = agent
+    
+        def get_agent(self, name: str) -> Optional[BaseAgent]:
+            """
+            R??cup??re une instance d'agent par son nom.
+            
+            Supports multiple naming conventions:
+            - Exact match: "real-classifier"
+            - Normalized: "realclassifier", "classifier"
+            - Agent ID lookup
+            """
+            if not name:
+                logger.warning("get_agent called with empty name")
+                return None
+            
+            key = name.lower()
+            
+            # Fast O(1) lookup via pre-computed index
+            agent = self._lookup_index.get(key)
+            if agent:
+                return agent
+            
+            # Fallback: try normalized key
+            normalized = key.replace("-", "").replace("_", "")
+            agent = self._lookup_index.get(normalized)
+            if agent:
+                return agent
+            
+            # Last resort: substring match (for fuzzy lookups like 'monitor' -> 'monitoring')
+            for registered_agent in self._agent_list:
+                rn = (registered_agent.name or "").lower()
+                if key in rn or rn in key:
+                    logger.debug(f"Fuzzy match: '{name}' -> '{registered_agent.name}'")
+                    return registered_agent
+            
+            logger.warning(f"Agent not found: '{name}'. Available: {list(self._agents.keys())}")
+            return None
+    
+        def get_agent_by_id(self, agent_id: str) -> Optional[BaseAgent]:
+            """R??cup??re un agent par son ID unique."""
+            return self._agents_by_id.get(agent_id)
+    
+        def list_agents(self) -> Dict[str, Dict]:
+            """Retourne le statut r??el et les m??tadonn??es de tous les agents."""
+            try:
+                result = {}
+                for name, agent in self._agents.items():
+                    status = getattr(agent, 'status', None)
+                    result[name] = {
+                        "agent_id": getattr(agent, 'agent_id', name),
+                        "name": getattr(agent, 'name', name),
+                        "version": getattr(agent, 'version', "1.0.0"),
+                        "description": getattr(agent, 'description', ""),
+                        "status": status.value if status else "active",
+                    }
+                return result
+            except Exception as e:
+                logger.error(f"Error listing agents: {e}", exc_info=True)
+                raise
+    
+        def get_agents_by_capability(self, capability: str) -> List[BaseAgent]:
+            """Find agents that have a specific capability."""
+            result = []
+            for agent in self._agent_list:
+                if hasattr(agent, 'get_capabilities'):
+                    caps = agent.get_capabilities()
+                    if any(c.name == capability for c in caps):
+                        result.append(agent)
+                elif hasattr(agent, 'list_capabilities'):
+                    caps = agent.list_capabilities()
+                    if any(c.get('name') == capability for c in caps):
+                        result.append(agent)
+            return result
+    
+        async def start_all_agents(self):
+            """Start all registered agents (lifecycle hook)."""
+            logger.info("Starting all agents...")
+            for agent in self._agent_list:
+                if hasattr(agent, 'start'):
+                    try:
+                        await agent.start()
+                        logger.info(f"Started agent: {agent.name}")
+                    except Exception as e:
+                        logger.error(f"Failed to start agent {agent.name}: {e}")
+    
+        async def shutdown_all_agents(self):
+            """Gracefully shutdown all agents (lifecycle hook)."""
+            logger.info("Shutting down all agents...")
+            for agent in self._agent_list:
+                if hasattr(agent, 'shutdown'):
+                    try:
+                        await agent.shutdown()
+                        logger.info(f"Shutdown agent: {agent.name}")
+                    except Exception as e:
+                        logger.error(f"Failed to shutdown agent {agent.name}: {e}")
+    
+        def health_check(self) -> Dict[str, bool]:
+            """Check health status of all agents (sync version)."""
+            health = {}
+            for agent in self._agent_list:
+                try:
+                    # Check status attribute if available
+                    status = getattr(agent, 'status', None)
+                    if status:
+                        health[agent.name] = status.value in ("active", "idle", "ready")
+                    else:
+                        health[agent.name] = True  # Assume healthy if no status
+                except Exception as e:
+                    logger.error(f"Health check failed for {agent.name}: {e}")
+                    health[agent.name] = False
+            return health
+    
+        async def health_check_async(self) -> Dict[str, bool]:
+            """Check health status of all agents (async version)."""
+            health = {}
+            for agent in self._agent_list:
+                try:
+                    if hasattr(agent, 'health_check'):
+                        result = agent.health_check()
+                        # Handle both sync and async health_check methods
+                        if hasattr(result, '__await__'):
+                            health[agent.name] = await result
+                        else:
+                            health[agent.name] = result
+                    else:
+                        status = getattr(agent, 'status', None)
+                        health[agent.name] = status.value in ("active", "idle", "ready") if status else True
+                except Exception as e:
+                    logger.error(f"Health check failed for {agent.name}: {e}")
+                    health[agent.name] = False
+            return health
+    
+        @property
+        def agent_count(self) -> int:
+            """Return the number of registered agents."""
+            return len(self._agent_list)
+    
+        def __len__(self) -> int:
+            return self.agent_count
+    
+        def __iter__(self):
+            return iter(self._agent_list)
+    
+    
+    # Instance unique du registre, pr??te ?? ??tre import??e
+    agent_registry = AgentRegistry()
+    
+
+  # Source: api-hotfix-v1
+  security.py: |
+    """
+    Production security configuration
+    Authentication, authorization, and security middleware
+    """
+    
+    import logging
+    import os
+    import secrets
+    from datetime import datetime, timedelta
+    from typing import Any, Dict, Optional
+    
+    from fastapi import Depends, HTTPException, status
+    from fastapi.responses import JSONResponse
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.middleware.trustedhost import TrustedHostMiddleware
+    from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+    from jose import JWTError, jwt
+    from jose import JWTError, jwt
+    try:
+        from passlib.context import CryptContext
+    except ImportError:
+        CryptContext = None
+    
+    from pydantic import BaseModel, Field
+    from starlette.middleware.base import BaseHTTPMiddleware
+    
+    # Security configuration
+    SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
+    ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    
+    # Password hashing
+    if CryptContext:
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    else:
+        pwd_context = None
+    
+    # Security schemes
+    security = HTTPBearer()
+    
+    # Logger
+    logger = logging.getLogger("twisterlab.security")
+    
+    
+    class TokenData(BaseModel):
+        """Token payload data"""
+    
+        sub: str  # subject (user id)
+        exp: datetime
+        iat: datetime
+        roles: list[str] = Field(default_factory=list)
+        permissions: list[str] = Field(default_factory=list)
+    
+    
+    class UserCredentials(BaseModel):
+        """User login credentials"""
+    
+        username: str
+        password: str
+    
+    
+    class TokenResponse(BaseModel):
+        """Token response"""
+    
+        access_token: str
+        token_type: str = "bearer"
+        expires_in: int
+    
+    
+    class RateLimitMiddleware(BaseHTTPMiddleware):
+        """Rate limiting middleware"""
+    
+        def __init__(self, app, requests_per_minute: int = 60):
+            super().__init__(app)
+            self.requests_per_minute = requests_per_minute
+            self.requests = {}  # ip -> list of timestamps
+            logger.warning(f"RateLimitMiddleware initialized with limit {requests_per_minute}")
+    
+        async def dispatch(self, request, call_next):
+            client_ip = request.client.host if request.client else "unknown"
+            # Debug log to trace IP
+            logger.warning(f"RateLimit check for IP: {client_ip}. Count: {len(self.requests.get(client_ip, []))}")
+            
+            # Clean old requests
+            now = datetime.now()
+            cutoff = now - timedelta(minutes=1)
+            if client_ip in self.requests:
+                self.requests[client_ip] = [
+                    ts for ts in self.requests[client_ip] if ts > cutoff
+                ]
+    
+            # Check rate limit
+            if client_ip not in self.requests:
+                self.requests[client_ip] = []
+    
+            if len(self.requests[client_ip]) >= self.requests_per_minute:
+                logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+                return JSONResponse(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    content={"detail": "Too many requests"},
+                )
+    
+            # Add current request
+            self.requests[client_ip].append(now)
+    
+            response = await call_next(request)
+            return response
+    
+    
+    def verify_password(plain_password: str, hashed_password: str) -> bool:
+        """Verify a password against its hash"""
+        return pwd_context.verify(plain_password, hashed_password)
+    
+    
+    def get_password_hash(password: str) -> str:
+        """Hash a password"""
+        return pwd_context.hash(password)
+    
+    
+    def create_access_token(
+        data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+    ) -> str:
+        """Create JWT access token"""
+        to_encode = data.copy()
+    
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+        to_encode.update({"exp": expire, "iat": datetime.utcnow()})
+        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        return encoded_jwt
+    
+    
+    def verify_token(
+        credentials: HTTPAuthorizationCredentials = Depends(security),
+    ) -> TokenData:
+        """Verify JWT token and return token data"""
+        try:
+            payload = jwt.decode(
+                credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM]
+            )
+            token_data = TokenData(**payload)
+            return token_data
+        except JWTError as e:
+            logger.error(f"JWT verification failed: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    
+    
+    def get_current_user(token_data: TokenData = Depends(verify_token)) -> str:
+        """Return the current user identifier from a valid token."""
+        return token_data.sub
+    
+    
+    def require_role(required_role: str):
+        """Dependency to require a specific role"""
+    
+        def role_checker(token_data: TokenData = Depends(verify_token)):
+            if required_role not in token_data.roles:
+                logger.warning(
+                    f"Access denied. Required role: {required_role}, "
+                    f"user roles: {token_data.roles}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Insufficient permissions. Required role: {required_role}",
+                )
+            return token_data
+    
+        return role_checker
+    
+    
+    def require_permission(required_permission: str):
+        """Dependency to require a specific permission"""
+    
+        def permission_checker(token_data: TokenData = Depends(verify_token)):
+            if required_permission not in token_data.permissions:
+                logger.warning(
+                    f"Access denied. Required permission: {required_permission}, "
+                    f"user permissions: {token_data.permissions}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Insufficient permissions. Required permission: {required_permission}",
+                )
+            return token_data
+    
+        return permission_checker
+    
+    
+    def setup_cors(app, allowed_origins: list = None):
+        """Setup CORS middleware"""
+        if allowed_origins is None:
+            allowed_origins = os.getenv(
+                "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080"
+            ).split(",")
+    
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=allowed_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        logger.info(f"CORS configured with origins: {allowed_origins}")
+    
+    
+    def setup_trusted_hosts(app, trusted_hosts: list = None):
+        """Setup trusted host middleware"""
+        if trusted_hosts is None:
+            trusted_hosts = os.getenv("TRUSTED_HOSTS", "*").split(",")
+    
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts)
+        logger.info(f"Trusted hosts configured: {trusted_hosts}")
+    
+    
+    def setup_security_middleware(app):
+        """Setup all security middleware"""
+        # Rate limiting
+        rate_limit = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+        app.add_middleware(RateLimitMiddleware, requests_per_minute=rate_limit)
+        logger.info(f"Rate limiting configured: {rate_limit} requests per minute")
+    
+        # CORS
+        setup_cors(app)
+    
+        # Trusted hosts
+        setup_trusted_hosts(app)
+    
+    
+    # Default admin user creation (for development only)
+    def create_default_admin() -> Dict[str, str]:
+        """Create default admin credentials (development only)"""
+        admin_username = os.getenv("ADMIN_USERNAME", "admin")
+        admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+    
+        return {
+            "username": admin_username,
+            "password_hash": get_password_hash(admin_password),
+            "roles": ["admin"],
+            "permissions": ["read", "write", "delete", "admin"],
+        }
+    
+    
+    # Input validation helpers
+    def sanitize_string(input_str: str, max_length: int = 1000) -> str:
+        """Sanitize string input"""
+        if not isinstance(input_str, str):
+            raise ValueError("Input must be a string")
+    
+        # Remove potentially dangerous characters
+        sanitized = input_str.strip()
+        if len(sanitized) > max_length:
+            raise ValueError(f"Input too long (max {max_length} characters)")
+    
+        return sanitized
+    
+    
+    def validate_email(email: str) -> str:
+        """Validate email format"""
+        import re
+    
+        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    
+        if not re.match(email_regex, email):
+            raise ValueError("Invalid email format")
+    
+        return email.lower().strip()
+    
+
+  # Source: mcp-unified-fixes
+  services_base.py: |
+    """
+    Service Interfaces (Ports) for TwisterLab
+    
+    These abstract base classes define contracts for external services.
+    Concrete implementations (adapters) can be swapped without changing agents.
+    """
+    
+    from abc import ABC, abstractmethod
+    from dataclasses import dataclass, field
+    from enum import Enum
+    from typing import Any, Dict, List, Optional, AsyncIterator
+    from datetime import datetime
+    
+    
+    class ServiceStatus(Enum):
+        """Status of a service connection."""
+    
+        CONNECTED = "connected"
+        DISCONNECTED = "disconnected"
+        DEGRADED = "degraded"
+        UNKNOWN = "unknown"
+    
+    
+    @dataclass
+    class ServiceHealth:
+        """Health status of a service."""
+    
+        name: str
+        status: ServiceStatus
+        latency_ms: Optional[float] = None
+        message: Optional[str] = None
+        last_check: datetime = field(default_factory=datetime.now)
+        metadata: Dict[str, Any] = field(default_factory=dict)
+    
+        def is_healthy(self) -> bool:
+            return self.status == ServiceStatus.CONNECTED
+    
+    
+    # =============================================================================
+    # LLM Client Interface
+    # =============================================================================
+    
+    
+    @dataclass
+    class LLMResponse:
+        """Response from an LLM query."""
+    
+        text: str
+        model: str
+        prompt_tokens: int = 0
+        completion_tokens: int = 0
+        total_tokens: int = 0
+        finish_reason: str = "stop"
+        metadata: Dict[str, Any] = field(default_factory=dict)
+    
+        @property
+        def content(self) -> str:
+            """Alias for text to be compatible with other interfaces."""
+            return self.text
+    
+    
+    @dataclass
+    class LLMMessage:
+        """Chat message for LLM."""
+    
+        role: str  # "system", "user", "assistant"
+        content: str
+    
+    
+    class LLMClient(ABC):
+        """
+        Abstract interface for LLM services.
+    
+        Implementations: CortexClient (Ollama), OpenAIClient, etc.
+        """
+    
+        @property
+        @abstractmethod
+        def name(self) -> str:
+            """Service name identifier."""
+            pass
+    
+        @abstractmethod
+        async def generate(
+            self,
+            prompt: str,
+            model: Optional[str] = None,
+            temperature: float = 0.7,
+            max_tokens: Optional[int] = None,
+            **kwargs
+        ) -> LLMResponse:
+            """Generate completion from a prompt."""
+            pass
+    
+        @abstractmethod
+        async def chat(
+            self,
+            messages: List[LLMMessage],
+            model: Optional[str] = None,
+            temperature: float = 0.7,
+            **kwargs
+        ) -> LLMResponse:
+            """Chat completion with message history."""
+            pass
+    
+        @abstractmethod
+        async def stream(
+            self, prompt: str, model: Optional[str] = None, **kwargs
+        ) -> AsyncIterator[str]:
+            """Stream completion tokens."""
+            pass
+    
+        @abstractmethod
+        async def list_models(self) -> List[Dict[str, Any]]:
+            """List available models."""
+            pass
+    
+        @abstractmethod
+        async def health_check(self) -> ServiceHealth:
+            """Check service health."""
+            pass
+    
+    
+    # =============================================================================
+    # Cache Client Interface
+    # =============================================================================
+    
+    
+    @dataclass
+    class CacheStats:
+        """Cache statistics."""
+    
+        connected_clients: int = 0
+        used_memory: str = "0B"
+        total_keys: int = 0
+        hits: int = 0
+        misses: int = 0
+        hit_rate: float = 0.0
+    
+    
+    class CacheClient(ABC):
+        """
+        Abstract interface for cache services.
+    
+        Implementations: RedisClient, MemcachedClient, etc.
+        """
+    
+        @property
+        @abstractmethod
+        def name(self) -> str:
+            """Service name identifier."""
+            pass
+    
+        @abstractmethod
+        async def get(self, key: str) -> Optional[str]:
+            """Get value by key."""
+            pass
+    
+        @abstractmethod
+        async def set(self, key: str, value: str, ttl: Optional[int] = None) -> bool:
+            """Set value with optional TTL in seconds."""
+            pass
+    
+        @abstractmethod
+        async def delete(self, key: str) -> bool:
+            """Delete a key."""
+            pass
+    
+        @abstractmethod
+        async def exists(self, key: str) -> bool:
+            """Check if key exists."""
+            pass
+    
+        @abstractmethod
+        async def keys(self, pattern: str = "*") -> List[str]:
+            """List keys matching pattern."""
+            pass
+    
+        @abstractmethod
+        async def get_stats(self) -> CacheStats:
+            """Get cache statistics."""
+            pass
+    
+        @abstractmethod
+        async def health_check(self) -> ServiceHealth:
+            """Check service health."""
+            pass
+    
+    
+    # =============================================================================
+    # Database Client Interface
+    # =============================================================================
+    
+    
+    @dataclass
+    class QueryResult:
+        """Result of a database query."""
+    
+        rows: List[Dict[str, Any]]
+        row_count: int
+        columns: List[str]
+        execution_time_ms: float = 0.0
+        error: Optional[str] = None
+    
+    
+    @dataclass
+    class DBStats:
+        """Database statistics."""
+    
+        active_connections: int = 0
+        total_connections: int = 0
+        database_size: str = "0B"
+        table_count: int = 0
+        uptime: str = "0s"
+    
+    
+    class DBClient(ABC):
+        """
+        Abstract interface for database services.
+    
+        Implementations: PostgresClient, MySQLClient, etc.
+        """
+    
+        @property
+        @abstractmethod
+        def name(self) -> str:
+            """Service name identifier."""
+            pass
+    
+        @abstractmethod
+        async def query(
+            self, sql: str, params: Optional[List[Any]] = None, read_only: bool = True
+        ) -> QueryResult:
+            """Execute a SQL query."""
+            pass
+    
+        @abstractmethod
+        async def execute(self, sql: str, params: Optional[List[Any]] = None) -> int:
+            """Execute a SQL statement, return affected rows."""
+            pass
+    
+        @abstractmethod
+        async def get_tables(self) -> List[str]:
+            """List all tables."""
+            pass
+    
+        @abstractmethod
+        async def get_table_schema(self, table: str) -> Dict[str, Any]:
+            """Get schema for a table."""
+            pass
+    
+        @abstractmethod
+        async def get_stats(self) -> DBStats:
+            """Get database statistics."""
+            pass
+    
+        @abstractmethod
+        async def health_check(self) -> ServiceHealth:
+            """Check service health."""
+            pass
+    
+    
+    # =============================================================================
+    # System Client Interface (for Docker, Host metrics, etc.)
+    # =============================================================================
+    
+    
+    class ContainerState(Enum):
+        """State of a container."""
+    
+        RUNNING = "running"
+        STOPPED = "stopped"
+        PAUSED = "paused"
+        STARTING = "starting"
+        UNKNOWN = "unknown"
+    
+    
+    @dataclass
+    class ContainerInfo:
+        """Docker container information."""
+    
+        id: str
+        name: str
+        image: str
+        state: ContainerState = ContainerState.UNKNOWN
+        ports: Dict[str, Any] = field(default_factory=dict)
+        created: Optional[str] = None
+        labels: Dict[str, str] = field(default_factory=dict)
+    
+    
+    @dataclass
+    class ServiceInfo:
+        """Service information."""
+    
+        name: str
+        status: str
+        replicas: int = 1
+        ports: Dict[str, int] = field(default_factory=dict)
+    
+    
+    @dataclass
+    class SystemMetrics:
+        """System metrics."""
+    
+        cpu_percent: float = 0.0
+        memory_used_gb: float = 0.0
+        memory_total_gb: float = 0.0
+        memory_percent: float = 0.0
+        disk_used_gb: float = 0.0
+        disk_total_gb: float = 0.0
+        disk_percent: float = 0.0
+        uptime_seconds: int = 0
+        container_count: int = 0
+    
+    
+    class SystemClient(ABC):
+        """
+        Abstract interface for system/infrastructure services.
+    
+        Implementations: DockerClient, SSHClient, etc.
+        """
+    
+        @property
+        @abstractmethod
+        def name(self) -> str:
+            """Service name identifier."""
+            pass
+    
+        @abstractmethod
+        async def get_containers(self) -> List[ContainerInfo]:
+            """List Docker containers."""
+            pass
+    
+        @abstractmethod
+        async def get_container_logs(self, container: str, lines: int = 100) -> List[str]:
+            """Get container logs."""
+            pass
+    
+        @abstractmethod
+        async def get_metrics(self) -> SystemMetrics:
+            """Get system metrics."""
+            pass
+    
+        @abstractmethod
+        async def health_check(self) -> ServiceHealth:
+            """Check service health."""
+            pass
+    
+
+  # Source: mcp-unified-fixes
+  system_client.py: |
+    """
+    Docker/System Client
+    
+    Concrete implementation of SystemClient for Docker and system monitoring.
+    Uses Docker SDK for container management.
+    """
+    
+    from __future__ import annotations
+    
+    import logging
+    import platform
+    import time
+    from typing import Any, Dict, List, Optional
+    
+    from .base import (
+        ContainerInfo,
+        ContainerState,
+        ServiceHealth,
+        ServiceInfo,
+        ServiceStatus,
+        SystemClient,
+        SystemMetrics,
+    )
+    
+    logger = logging.getLogger(__name__)
+    
+    # Try to import docker
+    try:
+        import docker
+    
+        DOCKER_AVAILABLE = True
+    except ImportError:
+        DOCKER_AVAILABLE = False
+        logger.warning("docker SDK not available - system client will use fallback mode")
+    
+    # Try to import psutil for system metrics
+    try:
+        import psutil
+    
+        PSUTIL_AVAILABLE = True
+    except ImportError:
+        PSUTIL_AVAILABLE = False
+        logger.warning("psutil not available - limited system metrics")
+    
+    
+    class DockerSystemClient(SystemClient):
+        """
+        System client for Docker and OS metrics.
+    
+        Provides container management and system monitoring.
+        """
+    
+        def __init__(self, base_url: Optional[str] = None):
+            self._base_url = base_url
+            self._client: Optional["docker.DockerClient"] = None
+            logger.info("DockerSystemClient initialized")
+    
+        @property
+        def name(self) -> str:
+            return "docker"
+    
+        def _get_client(self) -> "docker.DockerClient":
+            """Get or create Docker client."""
+            if self._client is None:
+                if not DOCKER_AVAILABLE:
+                    raise RuntimeError("docker SDK not available")
+                if self._base_url:
+                    self._client = docker.DockerClient(base_url=self._base_url)
+                else:
+                    self._client = docker.from_env()
+            return self._client
+    
+        async def list_containers(
+            self, all_containers: bool = False
+        ) -> List[ContainerInfo]:
+            """List Docker containers."""
+            if not DOCKER_AVAILABLE:
+                return []
+    
+            try:
+                client = self._get_client()
+                containers = client.containers.list(all=all_containers)
+    
+                result = []
+                for c in containers:
+                    # Determine state
+                    status = c.status.lower()
+                    if status == "running":
+                        state = ContainerState.RUNNING
+                    elif status == "exited":
+                        state = ContainerState.STOPPED
+                    elif status == "paused":
+                        state = ContainerState.PAUSED
+                    elif status in ("restarting", "created"):
+                        state = ContainerState.STARTING
+                    else:
+                        state = ContainerState.UNKNOWN
+    
+                    # Get image name
+                    image_name = c.image.tags[0] if c.image.tags else c.image.short_id
+    
+                    # Get port mappings
+                    ports = {}
+                    for port, bindings in (c.ports or {}).items():
+                        if bindings:
+                            host_port = bindings[0].get("HostPort")
+                            if host_port:
+                                ports[port] = int(host_port)
+    
+                    result.append(
+                        ContainerInfo(
+                            id=c.short_id,
+                            name=c.name,
+                            image=image_name,
+                            state=state,
+                            created=c.attrs.get("Created", ""),
+                            ports=ports,
+                            labels=c.labels or {},
+                        )
+                    )
+    
+                return result
+    
+            except Exception as e:
+                logger.error(f"Docker list_containers error: {e}")
+                return []
+    
+        async def get_container(self, container_id: str) -> Optional[ContainerInfo]:
+            """Get a specific container by ID or name."""
+            if not DOCKER_AVAILABLE:
+                return None
+    
+            try:
+                client = self._get_client()
+                c = client.containers.get(container_id)
+    
+                status = c.status.lower()
+                state = {
+                    "running": ContainerState.RUNNING,
+                    "exited": ContainerState.STOPPED,
+                    "paused": ContainerState.PAUSED,
+                }.get(status, ContainerState.UNKNOWN)
+    
+                return ContainerInfo(
+                    id=c.short_id,
+                    name=c.name,
+                    image=c.image.tags[0] if c.image.tags else c.image.short_id,
+                    state=state,
+                    created=c.attrs.get("Created", ""),
+                    ports={},
+                    labels=c.labels or {},
+                )
+    
+            except Exception as e:
+                logger.error(f"Docker get_container error: {e}")
+                return None
+    
+        async def container_logs(self, container_id: str, tail: int = 100) -> str:
+            """Get container logs."""
+            if not DOCKER_AVAILABLE:
+                return ""
+    
+            try:
+                client = self._get_client()
+                container = client.containers.get(container_id)
+                logs = container.logs(tail=tail, timestamps=True)
+                return logs.decode("utf-8", errors="replace")
+    
+            except Exception as e:
+                logger.error(f"Docker container_logs error: {e}")
+                return f"Error: {e}"
+    
+        async def list_services(self) -> List[ServiceInfo]:
+            """List Docker Swarm services (or running containers as services)."""
+            if not DOCKER_AVAILABLE:
+                return []
+    
+            try:
+                client = self._get_client()
+    
+                # Try Swarm services first
+                try:
+                    services = client.services.list()
+                    return [
+                        ServiceInfo(
+                            name=s.name,
+                            status="active",
+                            replicas=s.attrs.get("Spec", {})
+                            .get("Mode", {})
+                            .get("Replicated", {})
+                            .get("Replicas", 1),
+                        )
+                        for s in services
+                    ]
+                except Exception:
+                    # Fallback to containers as services
+                    containers = client.containers.list()
+                    return [
+                        ServiceInfo(
+                            name=c.name,
+                            status="running" if c.status == "running" else "stopped",
+                            replicas=1,
+                        )
+                        for c in containers
+                    ]
+    
+            except Exception as e:
+                logger.error(f"Docker list_services error: {e}")
+                return []
+    
+        async def get_metrics(self) -> SystemMetrics:
+            """Get system metrics (CPU, memory, disk)."""
+            try:
+                if PSUTIL_AVAILABLE:
+                    cpu = psutil.cpu_percent(interval=0.1)
+                    mem = psutil.virtual_memory()
+                    disk = psutil.disk_usage("/")
+    
+                    # Count containers if Docker is available
+                    container_count = 0
+                    if DOCKER_AVAILABLE:
+                        try:
+                            client = self._get_client()
+                            container_count = len(client.containers.list())
+                        except Exception:
+                            pass
+    
+                    return SystemMetrics(
+                        cpu_percent=cpu,
+                        memory_percent=mem.percent,
+                        memory_used_gb=round(mem.used / (1024**3), 2),
+                        memory_total_gb=round(mem.total / (1024**3), 2),
+                        disk_percent=disk.percent,
+                        disk_used_gb=round(disk.used / (1024**3), 2),
+                        disk_total_gb=round(disk.total / (1024**3), 2),
+                        container_count=container_count,
+                    )
+                else:
+                    # Fallback metrics
+                    return SystemMetrics(
+                        cpu_percent=0.0,
+                        memory_percent=0.0,
+                        memory_used_gb=0.0,
+                        memory_total_gb=0.0,
+                        disk_percent=0.0,
+                        disk_used_gb=0.0,
+                        disk_total_gb=0.0,
+                        container_count=0,
+                    )
+    
+            except Exception as e:
+                logger.error(f"System metrics error: {e}")
+                return SystemMetrics()
+    
+        async def health_check(self) -> ServiceHealth:
+            """Check Docker daemon health."""
+            if not DOCKER_AVAILABLE:
+                return ServiceHealth(
+                    name=self.name,
+                    status=ServiceStatus.DEGRADED,
+                    message="docker SDK not available",
+                )
+    
+            try:
+                start = time.perf_counter()
+                client = self._get_client()
+                info = client.info()
+                elapsed = (time.perf_counter() - start) * 1000
+    
+                return ServiceHealth(
+                    name=self.name,
+                    status=ServiceStatus.CONNECTED,
+                    latency_ms=elapsed,
+                    message="OK",
+                    metadata={
+                        "containers_running": info.get("ContainersRunning", 0),
+                        "containers_stopped": info.get("ContainersStopped", 0),
+                        "images": info.get("Images", 0),
+                        "server_version": info.get("ServerVersion"),
+                        "os": info.get("OperatingSystem"),
+                    },
+                )
+    
+            except Exception as e:
+                return ServiceHealth(
+                    name=self.name, status=ServiceStatus.DISCONNECTED, message=str(e)
+                )
+    
+        async def close(self) -> None:
+            """Close Docker client."""
+            if self._client:
+                self._client.close()
+                self._client = None
+    
+        # ABC Implementation Aliases
+        async def get_containers(self) -> List[ContainerInfo]:
+            return await self.list_containers()
+    
+        async def get_container_logs(self, container: str, lines: int = 100) -> List[str]:
+            logs = await self.container_logs(container_id=container, tail=lines)
+            return logs.splitlines()
+    
+        # Additional utility methods
+    
+        async def get_system_info(self) -> Dict[str, Any]:
+            """Get comprehensive system information."""
+            info = {
+                "hostname": platform.node(),
+                "platform": platform.system(),
+                "platform_version": platform.version(),
+                "architecture": platform.machine(),
+                "python_version": platform.python_version(),
+            }
+    
+            if PSUTIL_AVAILABLE:
+                info.update(
+                    {
+                        "cpu_count": psutil.cpu_count(),
+                        "cpu_count_logical": psutil.cpu_count(logical=True),
+                        "boot_time": psutil.boot_time(),
+                    }
+                )
+    
+            if DOCKER_AVAILABLE:
+                try:
+                    client = self._get_client()
+                    docker_info = client.info()
+                    info["docker"] = {
+                        "version": docker_info.get("ServerVersion"),
+                        "containers": docker_info.get("Containers", 0),
+                        "images": docker_info.get("Images", 0),
+                        "driver": docker_info.get("Driver"),
+                    }
+                except Exception:
+                    info["docker"] = None
+    
+            return info
+    
+

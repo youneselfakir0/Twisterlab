@@ -1,0 +1,25 @@
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "name": "mcp-unified",
+            "volumeMounts": [
+              {
+                "name": "http-server-patch-volume",
+                "mountPath": "/app/src/twisterlab/agents/mcp/http_server.py",
+                "subPath": "http_server.py"
+              },
+              {
+                "name": "http-server-patch-volume",
+                "mountPath": "/app/src/twisterlab/agents/real/cortex_ia_agent.py",
+                "subPath": "cortex_ia_agent.py"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

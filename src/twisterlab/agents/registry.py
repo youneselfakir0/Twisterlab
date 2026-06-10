@@ -1,6 +1,6 @@
 import logging
 import threading
-from typing import Dict, List, Optional, Callable, Any, Type
+from typing import Dict, List, Optional, Callable, Any
 from enum import Enum
 
 # Standardized Agent Status
@@ -82,12 +82,8 @@ class AgentRegistry:
             ("n8n-navigator", "twisterlab.agents.real.n8n_navigator_agent", "N8nNavigatorAgent", "Orchestrates n8n workflows.", ["n8n_trigger_webhook"], 10),
             ("invoke-ai", "twisterlab.agents.real.invoke_ai_agent", "InvokeAIAgent", "AI Image generation bridge.", ["generate_image"], 10),
             ("notion", "twisterlab.agents.real.real_notion_agent", "RealNotionAgent", "Notion workspace synchronization.", ["create_page", "list_pages", "sync_notion"], 10),
-            ("trader", "twisterlab.agents.real.real_trader_agent", "RealTraderAgent", "Analyzes crypto markets and generates scalping signals (KuCoin).", ["analyze_market"], 10),
             ("database", "twisterlab.agents.core.db_agent", "DatabaseAgent", "Low-level SQL database interface.", ["db_health", "execute_query"], 10),
-            ("market-data", "twisterlab.agents.signals.market_agent", "MarketDataAgent", "Ingests OHLCV and prepares clean market snapshots.", ["get_snapshot"], 10),
-            ("pattern-detector", "twisterlab.agents.signals.pattern_agent", "PatternAgent", "Detects technical setups and proposes raw signals.", ["propose_signal"], 10),
-            ("signal-filter", "twisterlab.agents.signals.filter_agent", "FilterAgent", "Validates signals and assigns confidence scores.", ["filter_signal"], 10),
-            ("meta-signal", "twisterlab.agents.signals.meta_agent", "MetaSignalAgent", "Tranches final BUY/SELL/NO TRADE decisions.", ["decide"], 10)
+            ("instruction", "twisterlab.agents.real.real_instruction_agent", "RealInstructionAgent", "Processes and analyzes project instructions and documentation.", ["parse_instructions"], 10)
         ]
 
         for key, path, cls, desc, caps, prio in registry_data:
@@ -124,13 +120,29 @@ class AgentRegistry:
         self._lookup_index[norm] = primary_key
         
         # Add common aliases
+        aliases = []
         if primary_key.startswith("real-"):
-            self._lookup_index[self._normalize_name(primary_key[5:])] = primary_key
+            aliases.append(primary_key[5:])
         else:
-            self._lookup_index[self._normalize_name("real-" + primary_key)] = primary_key
+            aliases.append("real-" + primary_key)
             
         if not primary_key.endswith("agent"):
-            self._lookup_index[self._normalize_name(primary_key + "agent")] = primary_key
+            aliases.append(primary_key + "agent")
+            
+        # Add custom domain-specific aliases
+        if primary_key == "sentiment":
+            aliases.extend(["sentiment-analyzer", "sentiment-analysis"])
+        elif primary_key == "classifier":
+            aliases.extend(["classifier-agent", "real-classifier"])
+        elif primary_key == "monitoring":
+            aliases.extend(["monitor", "real-monitor", "system-monitor"])
+        elif primary_key == "cortex":
+            aliases.extend(["cortex-ia", "cortex-ai", "ai-core"])
+        elif primary_key == "commander":
+            aliases.extend(["desktop-commander", "real-desktop-commander"])
+
+        for alias in aliases:
+            self._lookup_index[self._normalize_name(alias)] = primary_key
 
     def get_agent(self, name: str) -> Optional[Any]:
         """Lazy-instantiates and returns an agent by name or alias."""

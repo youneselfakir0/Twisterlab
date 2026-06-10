@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: twisterlab-config-v4
+  namespace: twisterlab
+  labels:
+    version: "4.0.0"
+data:
+  # --- CORE SETTINGS ---
+  CORE__APP_NAME: "TwisterLab Mission Control"
+  CORE__VERSION: "4.0.0-stable"
+  CORE__DEBUG: "false"
+  CORE__ALLOWED_ORIGINS: "http://localhost:3000,http://twisterlab.local"
+  CORE__RATE_LIMIT_PER_MINUTE: "500"
+
+  # --- INFRA SETTINGS (Zéro IP / DNS Intégral) ---
+  INFRA__POSTGRES_HOST: "postgres.twisterlab.svc.cluster.local"
+  INFRA__POSTGRES_DB: "twisterlab_prod"
+  INFRA__POSTGRES_PORT: "5432"
+  INFRA__REDIS_HOST: "redis.twisterlab.svc.cluster.local"
+  INFRA__REDIS_PORT: "6379"
+  INFRA__OLLAMA_BASE_URL: "http://ollama.twisterlab.svc.cluster.local:11434"
+  INFRA__OLLAMA_MODEL: "llama3.2:1b"
+  INFRA__N8N_URL: "http://n8n.twisterlab.svc.cluster.local:5678"
+  INFRA__NOTION_PARENT_TYPE: "page"

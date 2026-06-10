@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bg text-gray-200 font-sans overflow-hidden;
+    background-image: 
+      linear-gradient(rgba(0, 242, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 242, 255, 0.03) 1px, transparent 1px),
+      radial-gradient(ellipse 60% 40% at 0% 0%, rgba(0,242,255,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 100% 100%, rgba(139,92,246,0.07) 0%, transparent 70%);
+    background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-panel backdrop-blur-md border border-white/10 shadow-2xl;
+  }
+  
+  .neon-border-cyan {
+    @apply border border-cyan/30 shadow-[0_0_10px_rgba(0,242,255,0.15)];
+  }
+
+  .neon-border-purple {
+    @apply border border-purple/30 shadow-[0_0_10px_rgba(139,92,246,0.15)];
+  }
+
+  .scanline {
+    @apply absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03];
+    background: linear-gradient(to bottom, transparent, #00f2ff, transparent);
+    background-size: 100% 100px;
+    animation: scan 8s linear infinite;
+  }
+}

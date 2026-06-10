@@ -7,8 +7,8 @@ from sqlalchemy.orm import DeclarativeBase
 
 logger = logging.getLogger(__name__)
 
-# Default to a local SQLite database for trader journaling
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///twisterlab_trader.db")
+# Default to a local SQLite database
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///twisterlab.db")
 if DATABASE_URL.startswith("postgres"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
 
@@ -40,14 +40,6 @@ async def init_db():
         except Exception as e:
             logger.error(f"Failed to initialize agent models: {e}")
             
-        try:
-            from twisterlab.database.models import trading as _trading_model  # noqa: F401
-            await conn.run_sync(Base.metadata.create_all)
-        except ImportError:
-            logger.warning("Trading models not found, skipping table creation.")
-        except Exception as e:
-            logger.error(f"Failed to initialize trading models: {e}")
-
         try:
             from twisterlab.database.models import resilience as _resilience_model  # noqa: F401
             await conn.run_sync(Base.metadata.create_all)

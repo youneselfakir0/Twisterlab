@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-unified
+  namespace: twisterlab
+  labels:
+    app: mcp-unified
+    component: mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-unified
+  template:
+    metadata:
+      labels:
+        app: mcp-unified
+        component: mcp
+    spec:
+      containers:
+      - name: mcp-unified
+        image: 192.168.0.30:8090/library/mcp-unified:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: MCP_LOG_LEVEL
+          value: "INFO"
+        - name: PORT
+          value: "8080"
+        - name: PYTHONPATH
+          value: "/app/src"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"

@@ -1,0 +1,22 @@
+{
+  "task": "audit",
+  "res": {
+    "status": "completed",
+    "task": "audit",
+    "plan": {
+      "steps": [
+        "classify_ticket",
+        "resolve_ticket"
+      ],
+      "estimated_duration": "4m",
+      "resources": {
+        "cpu": "medium",
+        "ram": "1GB"
+      }
+    },
+    "findings": [],
+    "synthesis": "Mission terminée avec 2/2 étapes validées.",
+    "requires_human": false,
+    "mission_id": "M-20260410-052"
+  }
+}

@@ -1,0 +1,546 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "monitoring_health_check",
+        "description": "Check health of all TwisterLab services",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "monitoring_get_system_metrics",
+        "description": "Get system metrics (CPU, memory, disk)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "monitoring_list_containers",
+        "description": "List all Docker containers",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "boolean",
+              "description": "Include stopped containers",
+              "default": false
+            }
+          },
+          "required": []
+        }
+      },
+      {
+        "name": "monitoring_get_container_logs",
+        "description": "Get logs from a Docker container",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "container_id": {
+              "type": "string",
+              "description": "Container ID or name"
+            },
+            "tail": {
+              "type": "integer",
+              "description": "Number of lines to return",
+              "default": 100
+            }
+          },
+          "required": [
+            "container_id"
+          ]
+        }
+      },
+      {
+        "name": "monitoring_get_cache_stats",
+        "description": "Get Redis cache statistics",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "monitoring_get_llm_status",
+        "description": "Check Cortex LLM server status",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "monitoring_list_models",
+        "description": "List available LLM models",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "maestro_orchestrate",
+        "description": "Orchestrate a complete task workflow across multiple agents",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "task": {
+              "type": "string",
+              "description": "The task or ticket to process"
+            },
+            "context": {
+              "type": "object",
+              "description": "Additional context"
+            },
+            "dry_run": {
+              "type": "boolean",
+              "description": "Plan only, don't execute",
+              "default": false
+            }
+          },
+          "required": [
+            "task"
+          ]
+        }
+      },
+      {
+        "name": "maestro_analyze_task",
+        "description": "Analyze a task to determine category and priority",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "task": {
+              "type": "string",
+              "description": "The task description"
+            }
+          },
+          "required": [
+            "task"
+          ]
+        }
+      },
+      {
+        "name": "database_execute_query",
+        "description": "Execute a SQL query (SELECT only)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "sql": {
+              "type": "string",
+              "description": "SQL query to execute (SELECT only)"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum rows to return",
+              "default": 100
+            }
+          },
+          "required": [
+            "sql"
+          ]
+        }
+      },
+      {
+        "name": "database_list_tables",
+        "description": "List all tables in the database",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "database_describe_table",
+        "description": "Get schema for a specific table",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "table_name": {
+              "type": "string",
+              "description": "Name of the table to describe"
+            }
+          },
+          "required": [
+            "table_name"
+          ]
+        }
+      },
+      {
+        "name": "database_db_health",
+        "description": "Check database connection health",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "cache_cache_get",
+        "description": "Get a value from cache",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Cache key to retrieve"
+            }
+          },
+          "required": [
+            "key"
+          ]
+        }
+      },
+      {
+        "name": "cache_cache_set",
+        "description": "Set a value in cache",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Cache key"
+            },
+            "value": {
+              "type": "string",
+              "description": "Value to store"
+            },
+            "ttl": {
+              "type": "integer",
+              "description": "Time to live in seconds"
+            }
+          },
+          "required": [
+            "key",
+            "value"
+          ]
+        }
+      },
+      {
+        "name": "cache_cache_delete",
+        "description": "Delete a key from cache",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "Cache key to delete"
+            }
+          },
+          "required": [
+            "key"
+          ]
+        }
+      },
+      {
+        "name": "cache_cache_keys",
+        "description": "List cache keys matching a pattern",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "description": "Pattern to match (e.g., 'user:*')",
+              "default": "*"
+            }
+          },
+          "required": []
+        }
+      },
+      {
+        "name": "cache_cache_stats",
+        "description": "Get cache statistics",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "classifier_classify_ticket",
+        "description": "Classify a ticket based on its text.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ticket_text": {
+              "type": "string",
+              "description": "The text of the ticket"
+            }
+          },
+          "required": [
+            "ticket_text"
+          ]
+        }
+      },
+      {
+        "name": "sentiment-analyzer_analyze_sentiment",
+        "description": "Determine the sentiment of a given text.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "The text to analyze"
+            },
+            "detailed": {
+              "type": "boolean",
+              "description": "Whether to include keywords",
+              "default": false
+            }
+          },
+          "required": [
+            "text"
+          ]
+        }
+      },
+      {
+        "name": "resolver_resolve_ticket",
+        "description": "Resolve a support ticket.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "ticket_id": {
+              "type": "string",
+              "description": "ID of the ticket to resolve"
+            },
+            "resolution_note": {
+              "type": "string",
+              "description": "Resolution details"
+            }
+          },
+          "required": [
+            "ticket_id",
+            "resolution_note"
+          ]
+        }
+      },
+      {
+        "name": "real-desktop-commander_execute_command",
+        "description": "Execute a command on the local system (with security checks)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "The command to execute"
+            },
+            "timeout": {
+              "type": "integer",
+              "description": "Execution timeout in seconds (max 300)",
+              "default": 30
+            },
+            "working_dir": {
+              "type": "string",
+              "description": "Working directory for command execution"
+            }
+          },
+          "required": [
+            "command"
+          ]
+        }
+      },
+      {
+        "name": "real-desktop-commander_execute_command_remote",
+        "description": "Execute a command on a remote device (simulated for now)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "device_id": {
+              "type": "string",
+              "description": "Target device identifier"
+            },
+            "command": {
+              "type": "string",
+              "description": "The command to execute"
+            },
+            "timeout": {
+              "type": "integer",
+              "description": "Execution timeout in seconds",
+              "default": 30
+            }
+          },
+          "required": [
+            "device_id",
+            "command"
+          ]
+        }
+      },
+      {
+        "name": "real-desktop-commander_get_allowed_commands",
+        "description": "List all allowed commands in safe mode",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "real-desktop-commander_get_audit_log",
+        "description": "Get the command execution audit log",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Number of entries to return",
+              "default": 50
+            }
+          },
+          "required": []
+        }
+      },
+      {
+        "name": "code-review_analyze_code",
+        "description": "Analyze a snippet of code for basic issues.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "The code snippet to analyze"
+            },
+            "language": {
+              "type": "string",
+              "description": "The programming language"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        }
+      },
+      {
+        "name": "code-review_security_scan",
+        "description": "Scan code for known security patterns (e.g., hardcoded secrets).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "description": "The code snippet to scan"
+            }
+          },
+          "required": [
+            "code"
+          ]
+        }
+      },
+      {
+        "name": "backup_create_backup",
+        "description": "Create a backup for a specific service.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "service_name": {
+              "type": "string",
+              "description": "Name of service to backup"
+            },
+            "location": {
+              "type": "string",
+              "description": "Backup destination",
+              "default": "cloud"
+            }
+          },
+          "required": [
+            "service_name"
+          ]
+        }
+      },
+      {
+        "name": "browser_browse",
+        "description": "Browse a URL and return page content. Uses Playwright if available, httpx as fallback.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "URL to visit (must start with http/https)"
+            },
+            "screenshot": {
+              "type": "boolean",
+              "description": "Take a screenshot (only with Playwright)",
+              "default": true
+            },
+            "force_engine": {
+              "type": "string",
+              "description": "Force specific engine: 'playwright', 'httpx', or 'auto'",
+              "default": "auto"
+            }
+          },
+          "required": [
+            "url"
+          ]
+        }
+      },
+      {
+        "name": "browser_status",
+        "description": "Get browser agent status and available engines",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "cortex-ia_invoke_ia",
+        "description": "Invoke the AI on Cortex port 9090 with a prompt",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "description": "Your question or request to the AI"
+            },
+            "model": {
+              "type": "string",
+              "description": "Model name (optional)"
+            }
+          },
+          "required": [
+            "prompt"
+          ]
+        }
+      },
+      {
+        "name": "web-desktop-navigator_n8n_status",
+        "description": "Check the connection and status of the n8n backend engine",
+        "inputSchema": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      },
+      {
+        "name": "web-desktop-navigator_n8n_trigger_webhook",
+        "description": "Trigger an automation workflow via Webhook",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "webhook_path": {
+              "type": "string",
+              "description": "Path to the webhook (e.g. 'my-automation')"
+            },
+            "method": {
+              "type": "string",
+              "description": "HTTP method ('GET' or 'POST')",
+              "default": "POST"
+            },
+            "payload": {
+              "type": "string",
+              "description": "JSON string containing the payload to push to n8n",
+              "default": "{}"
+            }
+          },
+          "required": [
+            "webhook_path"
+          ]
+        }
+      }
+    ]
+  }
+}

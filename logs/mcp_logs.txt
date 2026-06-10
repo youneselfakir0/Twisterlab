@@ -1,0 +1,20 @@
+﻿INFO:     10.42.0.175:49648 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     10.42.0.1:53910 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.1:53914 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.175:56978 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     10.42.0.1:44150 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.1:59814 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.175:59104 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     10.42.0.1:59302 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.1:59318 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.175:46216 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     10.42.0.1:51356 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.1:49576 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.175:52804 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     10.42.0.1:44152 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.1:44168 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.175:45338 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     10.42.0.1:56392 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.1:43816 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.42.0.175:37366 - "GET /metrics HTTP/1.1" 404 Not Found
+INFO:     10.42.0.1:57766 - "GET /health HTTP/1.1" 200 OK

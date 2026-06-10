@@ -1,0 +1,36 @@
+---
+# Prometheus Alert Rule Loader Configuration
+# Add this to your prometheus.yml or helm values
+
+# If using Prometheus Operator/kube-prometheus-stack:
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: twisterlab-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: twisterlab_agents
+      interval: 30s
+      rules:
+        - alert: CriticalAgentDropout
+          expr: twisterlab_registry_agents_online < 3
+          for: 2m
+          labels:
+            severity: critical
+            component: agent-registry
+          annotations:
+            summary: "Critical agent fleet size below threshold"
+            description: "Only {{ $value }} agents online (threshold: 3)"
+
+---
+# Alternative: For standalone Prometheus deployment
+# Add this to your prometheus.yml:
+
+# rule_files:
+#   - /etc/prometheus/rules/twisterlab-alerts.yml
+
+# Then mount the ConfigMap as a volume in your Prometheus deployment

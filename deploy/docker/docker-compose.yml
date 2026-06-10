@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  twisterlab-api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+
+  twisterlab-mcp:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.mcp-unified
+    ports:
+      - "8080:8080"
+    environment:
+      - MCP_SERVER_HOST=0.0.0.0
+    depends_on:
+      - twisterlab-api
+
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: twisterlab
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+volumes:
+  db_data:

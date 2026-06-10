@@ -1,0 +1,260 @@
+{
+  "name": "EdgeServer Disk Monitoring Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "name": "Schedule Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://192.168.0.30:30000/api/v1/system/health",
+        "options": {}
+      },
+      "name": "Check System Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract disk usage from health check response\nconst healthData = $input.first().json;\n\nconst diskUsagePercent = healthData.disk.percent_used;\nconst diskUsedGB = healthData.disk.used_gb;\nconst diskTotalGB = healthData.disk.total_gb;\nconst hostname = healthData.hostname;\n\n// Define thresholds\nconst WARNING_THRESHOLD = 75;\nconst CRITICAL_THRESHOLD = 80;\nconst EMERGENCY_THRESHOLD = 90;\n\nlet severity = 'normal';\nlet alertMessage = '';\nlet shouldAlert = false;\n\nif (diskUsagePercent >= EMERGENCY_THRESHOLD) {\n  severity = 'emergency';\n  alertMessage = `🚨 EMERGENCY: Disk usage at ${diskUsagePercent}% on ${hostname}!`;\n  shouldAlert = true;\n} else if (diskUsagePercent >= CRITICAL_THRESHOLD) {\n  severity = 'critical';\n  alertMessage = `⚠️ CRITICAL: Disk usage at ${diskUsagePercent}% on ${hostname}. Immediate action required.`;\n  shouldAlert = true;\n} else if (diskUsagePercent >= WARNING_THRESHOLD) {\n  severity = 'warning';\n  alertMessage = `⚠️ WARNING: Disk usage at ${diskUsagePercent}% on ${hostname}. Please review.`;\n  shouldAlert = true;\n}\n\nreturn {\n  json: {\n    hostname,\n    diskUsagePercent,\n    diskUsedGB,\n    diskTotalGB,\n    severity,\n    alertMessage,\n    shouldAlert,\n    timestamp: new Date().toISOString(),\n    thresholds: {\n      warning: WARNING_THRESHOLD,\n      critical: CRITICAL_THRESHOLD,\n      emergency: EMERGENCY_THRESHOLD\n    }\n  }\n};"
+      },
+      "name": "Evaluate Disk Usage",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.shouldAlert }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Should Send Alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#infrastructure-alerts",
+        "text": "={{ $json.alertMessage }}",
+        "attachments": [
+          {
+            "color": "={{ $json.severity === 'emergency' ? 'danger' : ($json.severity === 'critical' ? 'danger' : 'warning') }}",
+            "fields": {
+              "item": [
+                {
+                  "short": true,
+                  "title": "Hostname",
+                  "value": "={{ $json.hostname }}"
+                },
+                {
+                  "short": true,
+                  "title": "Severity",
+                  "value": "={{ $json.severity.toUpperCase() }}"
+                },
+                {
+                  "short": true,
+                  "title": "Disk Usage",
+                  "value": "={{ $json.diskUsagePercent }}%"
+                },
+                {
+                  "short": true,
+                  "title": "Used/Total",
+                  "value": "={{ $json.diskUsedGB }}GB / {{ $json.diskTotalGB }}GB"
+                },
+                {
+                  "short": false,
+                  "title": "Timestamp",
+                  "value": "={{ $json.timestamp }}"
+                },
+                {
+                  "short": false,
+                  "title": "Action Required",
+                  "value": "Review disk usage, clean up logs, or expand storage capacity"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "name": "Send Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [1050, 200],
+      "credentials": {
+        "slackApi": {
+          "id": "2",
+          "name": "Slack Workspace"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "alerts@yourcompany.com",
+        "toEmail": "devops-team@yourcompany.com",
+        "subject": "={{ '[' + $json.severity.toUpperCase() + '] EdgeServer Disk Alert - ' + $json.diskUsagePercent + '%' }}",
+        "emailType": "html",
+        "message": "=<h2>{{ $json.alertMessage }}</h2>\n<p><strong>Hostname:</strong> {{ $json.hostname }}</p>\n<p><strong>Disk Usage:</strong> {{ $json.diskUsagePercent }}%</p>\n<p><strong>Used Space:</strong> {{ $json.diskUsedGB }}GB / {{ $json.diskTotalGB }}GB</p>\n<p><strong>Timestamp:</strong> {{ $json.timestamp }}</p>\n<hr>\n<h3>Thresholds</h3>\n<ul>\n  <li>Warning: {{ $json.thresholds.warning }}%</li>\n  <li>Critical: {{ $json.thresholds.critical }}%</li>\n  <li>Emergency: {{ $json.thresholds.emergency }}%</li>\n</ul>\n<hr>\n<h3>Recommended Actions</h3>\n<ul>\n  <li>Review application logs and clean up old entries</li>\n  <li>Check for large temporary files</li>\n  <li>Consider expanding storage capacity</li>\n  <li>Review backup retention policies</li>\n</ul>"
+      },
+      "name": "Send Email Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1050, 400],
+      "credentials": {
+        "smtp": {
+          "id": "3",
+          "name": "SMTP Server"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "priority": "={{ $json.severity === 'emergency' ? 'urgent' : ($json.severity === 'critical' ? 'high' : 'low') }}",
+        "title": "={{ '[Disk Alert] ' + $json.hostname + ' - ' + $json.diskUsagePercent + '%' }}",
+        "body": "={{ $json.alertMessage + '\\n\\nUsed: ' + $json.diskUsedGB + 'GB / ' + $json.diskTotalGB + 'GB' }}",
+        "additionalFields": {
+          "escalationPolicy": "Default"
+        }
+      },
+      "name": "Create PagerDuty Incident",
+      "type": "n8n-nodes-base.pagerDuty",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "credentials": {
+        "pagerDutyApi": {
+          "id": "4",
+          "name": "PagerDuty Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "your-google-sheet-id",
+        "sheetName": "Disk Alerts",
+        "columns": {
+          "mappings": [
+            {
+              "column": "Timestamp",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "column": "Hostname",
+              "value": "={{ $json.hostname }}"
+            },
+            {
+              "column": "Disk Usage %",
+              "value": "={{ $json.diskUsagePercent }}"
+            },
+            {
+              "column": "Used GB",
+              "value": "={{ $json.diskUsedGB }}"
+            },
+            {
+              "column": "Total GB",
+              "value": "={{ $json.diskTotalGB }}"
+            },
+            {
+              "column": "Severity",
+              "value": "={{ $json.severity }}"
+            }
+          ]
+        }
+      },
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [1050, 500],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5",
+          "name": "Google Sheets Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Check System Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check System Health": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Disk Usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Disk Usage": {
+      "main": [
+        [
+          {
+            "node": "Should Send Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Send Alert?": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create PagerDuty Incident",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Email Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  ],
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

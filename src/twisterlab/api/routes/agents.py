@@ -9,31 +9,29 @@ router = APIRouter()
 
 @router.get("/live")
 async def list_live_agents():
-    """Lists all agents from the in-memory registry (not DB repo)."""
+    """Lists all agents from the in-memory registry with detailed status."""
     try:
         from twisterlab.agents.registry import get_agent_registry
         registry = get_agent_registry()
         agents_dict = registry.list_agents()
         result = []
         for name, meta in agents_dict.items():
-            if isinstance(meta, dict):
-                result.append({
-                    "name": meta.get("name", name),
-                    "description": meta.get("description", ""),
-                    "status": "online" if meta.get("initialized") else "registered",
-                    "capabilities": meta.get("capabilities", []),
-                    "tools": meta.get("capabilities", []),
-                })
-            else:
-                result.append({
-                    "name": name,
-                    "description": str(meta),
-                    "status": "registered",
-                    "capabilities": [],
-                    "tools": [],
-                })
+            result.append({
+                "id": name,
+                "name": meta.get("name", name).capitalize(),
+                "description": meta.get("description", ""),
+                "status": "online" if meta.get("status") == "online" else "standby",
+                "initialized": meta.get("initialized", False),
+                "priority": meta.get("priority", 0),
+                "capabilities": meta.get("capabilities", []),
+                "tools": meta.get("capabilities", []),
+                "error": meta.get("error")
+            })
+        # Sort by priority and name
+        result.sort(key=lambda x: (-x["priority"], x["id"]))
         return result
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error listing live agents: {e}")
         return []
 
 

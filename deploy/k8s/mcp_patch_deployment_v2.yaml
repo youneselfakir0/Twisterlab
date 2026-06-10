@@ -1,0 +1,31 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: mcp-unified
+        volumeMounts:
+        - name: script-patch
+          mountPath: /app/http_server.py
+          subPath: http_server.py
+        - name: router-patch
+          mountPath: /app/src/twisterlab/agents/mcp/router.py
+          subPath: router.py
+        - name: monitoring-metrics-patch
+          mountPath: /app/src/twisterlab/monitoring/metrics.py
+          subPath: metrics.py
+        - name: agents-metrics-patch
+          mountPath: /app/src/twisterlab/agents/metrics.py
+          subPath: metrics.py
+      volumes:
+      - name: script-patch
+        configMap:
+          name: mcp-unified-script
+      - name: router-patch
+        configMap:
+          name: mcp-router-patch
+      - name: monitoring-metrics-patch
+        configMap:
+          name: mcp-metrics-patch
+      - name: agents-metrics-patch
+        configMap:
+          name: mcp-agents-metrics-patch

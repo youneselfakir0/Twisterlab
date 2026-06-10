@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: twisterlab
+    component: api
+    version: v3.8.2
+  name: twisterlab-api
+  namespace: twisterlab
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: twisterlab
+      component: api
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2026-04-26T23:12:32-04:00'
+      creationTimestamp: null
+      labels:
+        app: twisterlab
+        component: api
+    spec:
+      containers:
+      - env:
+        - name: OLLAMA_BASE_URL
+          value: http://192.168.0.20:11434
+        - name: OLLAMA_MODEL
+          value: llama3.2:1b
+        - name: MAESTRO_USE_LLM
+          value: 'true'
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              key: ENVIRONMENT
+              name: twisterlab-config
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              key: LOG_LEVEL
+              name: twisterlab-config
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: SECRET_KEY
+              name: twisterlab-secrets
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: JWT_SECRET_KEY
+              name: twisterlab-secrets
+        - name: POSTGRES_HOST
+          value: postgres.twisterlab.svc.cluster.local
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: POSTGRES_PASSWORD
+              name: twisterlab-secrets
+        - name: REDIS_HOST
+          value: redis.twisterlab.svc.cluster.local
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: REDIS_PASSWORD
+              name: twisterlab-secrets
+        - name: ALLOWED_ORIGINS
+          value: http://localhost:3000,http://192.168.0.30:30091
+        - name: RATE_LIMIT_PER_MINUTE
+          value: '500'
+        - name: N8N_API_KEY
+          value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlZWY0YTlkMy03NTZhLTRhZWEtYWVhZS0xZGZmNmJmZGMxMmUiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiYTNhM2VlNzctYzA5Zi00MmUwLWJiODMtMjExZWFhOGVhZDg2IiwiaWF0IjoxNzc2MzYzNTE1fQ.TsNfaNEZzBTfhHKUxSr2w2OB5pJPtT8I5rQetCRTO0E
+        - name: N8N_BASE_URL
+          value: http://192.168.0.30:5678
+        - name: NOTION_TOKEN
+          value: ntn_p83568381507m9WWa5MaAxUsiEmDdzDvVb7daxAWxPy47l
+        - name: NOTION_DEFAULT_DATABASE_ID
+          value: 3431f21b3b068087845cd838474d5464
+        - name: NOTION_PARENT_TYPE
+          value: page
+        image: localhost:5000/twisterlab-api:v3.8.2
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        name: api
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: '1'
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /app/index.html
+          name: ui-hotfix-volume
+          subPath: index.html
+        - mountPath: /app/index.css
+          name: ui-hotfix-volume
+          subPath: index.css
+        - mountPath: /app/src/twisterlab/api/main.py
+          name: ui-hotfix-volume
+          subPath: main.py
+        - mountPath: /app/src/twisterlab/api/__init__.py
+          name: ui-hotfix-volume
+          subPath: __init__.py
+        - mountPath: /app/src/twisterlab/database/session.py
+          name: ui-hotfix-volume
+          subPath: session.py
+        - mountPath: /app/src/twisterlab/api/routes_trading_ui.py
+          name: ui-hotfix-volume
+          subPath: routes_trading_ui.py
+        - mountPath: /app/src/twisterlab/api/routes_trading_live.py
+          name: ui-hotfix-volume
+          subPath: routes_trading_live.py
+        - mountPath: /app/src/twisterlab/api/schemas/trading.py
+          name: ui-hotfix-volume
+          subPath: api_schemas_trading.py
+        - mountPath: /app/src/twisterlab/database/models/trading.py
+          name: ui-hotfix-volume
+          subPath: db_models_trading.py
+        - mountPath: /app/src/twisterlab/services/trading
+          name: svc-trading-volume
+        - mountPath: /app/src/twisterlab/utils/trading
+          name: util-trading-volume
+        - mountPath: /app/archives
+          name: archive-volume
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          name: ui-hotfix-v382
+        name: ui-hotfix-volume
+      - configMap:
+          name: hotfix-services-trading
+        name: svc-trading-volume
+      - configMap:
+          name: hotfix-utils-trading
+        name: util-trading-volume
+      - name: archive-volume
+        persistentVolumeClaim:
+          claimName: twisterlab-archive-pvc

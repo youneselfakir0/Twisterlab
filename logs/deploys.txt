@@ -1,0 +1,16 @@
+﻿NAMESPACE        NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+kube-system      coredns                  1/1     1            1           115d
+kube-system      local-path-provisioner   1/1     1            1           115d
+kube-system      metrics-server           1/1     1            1           115d
+kube-system      traefik                  1/1     1            1           115d
+monitoring       alertmanager             1/1     1            1           56d
+monitoring       grafana                  0/1     1            0           84d
+monitoring       prometheus               1/1     1            1           85d
+twisterlab-dev   postgres                 1/1     1            1           80d
+twisterlab-dev   redis                    1/1     1            1           80d
+twisterlab       grafana                  0/1     1            0           115d
+twisterlab       mcp-unified              1/1     1            1           34d
+twisterlab       postgres-exporter        1/1     1            1           76d
+twisterlab       redis                    1/1     1            1           115d
+twisterlab       redis-exporter           1/1     1            1           76d
+twisterlab       twisterlab-api           0/2     2            0           114d

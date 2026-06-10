@@ -1,0 +1,12 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: api
+        volumeMounts:
+        - mountPath: /app/archives
+          name: archive-volume
+      volumes:
+      - name: archive-volume
+        persistentVolumeClaim:
+          claimName: twisterlab-archive-pvc

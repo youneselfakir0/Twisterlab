@@ -1,0 +1,23 @@
+﻿NAMESPACE        NAME                                      READY   STATUS             RESTARTS        AGE
+kube-system      coredns-6d668d687-mk7bl                   1/1     Running            3 (3m14s ago)   102d
+kube-system      helm-install-traefik-crd-njh6b            0/1     Completed          0               102d
+kube-system      helm-install-traefik-r8vj2                0/1     Completed          0               102d
+kube-system      local-path-provisioner-869c44bfbd-8dr84   1/1     Running            4 (3m14s ago)   102d
+kube-system      metrics-server-7bfffcd44-snkqs            1/1     Running            4 (3m14s ago)   115d
+kube-system      svclb-traefik-e22b957c-98c9l              2/2     Running            8 (3m14s ago)   115d
+kube-system      traefik-865bd56545-c24sd                  1/1     Running            6 (61s ago)     102d
+monitoring       alertmanager-757bc9879d-qpfjt             1/1     Running            3 (3m14s ago)   41d
+monitoring       grafana-5b67d5545d-6nsk7                  0/1     Running            10 (13s ago)    41d
+monitoring       prometheus-59f45d8549-gf8gh               1/1     Running            5 (87s ago)     41d
+monitoring       prometheus-59f45d8549-rlt6x               0/1     Completed          0               55d
+twisterlab-dev   postgres-69469c6df-9nk2s                  0/1     Completed          0               55d
+twisterlab-dev   postgres-69469c6df-dvt4q                  1/1     Running            3 (3m14s ago)   41d
+twisterlab-dev   redis-698496554f-ljxsp                    1/1     Running            3 (3m14s ago)   41d
+twisterlab       grafana-d49bb8647-jg65d                   0/1     Running            3 (49s ago)     25d
+twisterlab       mcp-unified-598fff45ff-hlrv4              1/1     Running            4 (18s ago)     19d
+twisterlab       postgres-0                                0/1     Running            4 (51s ago)     27d
+twisterlab       postgres-exporter-64bf5d8bd5-fhx66        1/1     Running            6 (3m14s ago)   27d
+twisterlab       redis-66476d5df5-2djcf                    1/1     Running            2 (3m14s ago)   27d
+twisterlab       redis-exporter-6d8bbd8bbf-lslrl           1/1     Running            2 (3m14s ago)   27d
+twisterlab       twisterlab-api-6c4ff854d9-7x896           0/1     CrashLoopBackOff   151 (12s ago)   21d
+twisterlab       twisterlab-api-6c4ff854d9-tkqv6           0/1     CrashLoopBackOff   151 (27s ago)   21d

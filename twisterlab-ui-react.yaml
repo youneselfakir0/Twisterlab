@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: twisterlab-ui-react
+  namespace: twisterlab
+  labels:
+    app: twisterlab-ui-react
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: twisterlab-ui-react
+  template:
+    metadata:
+      labels:
+        app: twisterlab-ui-react
+    spec:
+      containers:
+      - name: twisterlab-ui-react
+        # Replace 'twisterlab/ui-react:latest' with your registry image path if needed
+        image: twisterlab/ui-react:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: twisterlab-ui-react
+  namespace: twisterlab
+spec:
+  selector:
+    app: twisterlab-ui-react
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: twisterlab-ui-react-ingress
+  namespace: twisterlab
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: centre.twisterlab.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: twisterlab-ui-react
+            port:
+              number: 80

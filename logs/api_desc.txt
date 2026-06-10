@@ -1,0 +1,91 @@
+﻿Name:             twisterlab-api-6c4ff854d9-7x896
+Namespace:        twisterlab
+Priority:         0
+Service Account:  default
+Node:             edgeserver.twisterlab.local/192.168.0.30
+Start Time:       Tue, 24 Feb 2026 18:38:18 -0500
+Labels:           app=twisterlab
+                  component=api
+                  pod-template-hash=6c4ff854d9
+Annotations:      kubectl.kubernetes.io/restartedAt: 2026-01-18T00:13:16-05:00
+Status:           Running
+IP:               10.42.0.173
+IPs:
+  IP:           10.42.0.173
+Controlled By:  ReplicaSet/twisterlab-api-6c4ff854d9
+Containers:
+  api:
+    Container ID:   containerd://33caa3e57311a2d0e527e08b07414929cdef6dc6b6778fe2c66ed4f0edf0ee6c
+    Image:          ghcr.io/youneselfakir0/twisterlab/api:sha-869cd3e
+    Image ID:       ghcr.io/youneselfakir0/twisterlab/api@sha256:b021075e3753131165dee2d4be21083c4bfe1939e0c2813babb7738897426222
+    Port:           8000/TCP (http)
+    Host Port:      0/TCP (http)
+    State:          Waiting
+      Reason:       CrashLoopBackOff
+    Last State:     Terminated
+      Reason:       StartError
+      Message:      failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: error mounting "/var/lib/kubelet/pods/316f8027-7dd4-46c6-9101-59f6395c376b/volume-subpaths/hotfix-volume/api/0" to rootfs at "/app/src/twisterlab/api/main.py": mount src=/var/lib/kubelet/pods/316f8027-7dd4-46c6-9101-59f6395c376b/volume-subpaths/hotfix-volume/api/0, dst=/app/src/twisterlab/api/main.py, dstFd=/proc/thread-self/fd/37, flags=MS_RDONLY|MS_BIND|MS_REC: not a directory
+      Exit Code:    128
+      Started:      Wed, 31 Dec 1969 19:00:00 -0500
+      Finished:     Tue, 17 Mar 2026 20:57:07 -0400
+    Ready:          False
+    Restart Count:  154
+    Limits:
+      cpu:     1
+      memory:  1Gi
+    Requests:
+      cpu:      500m
+      memory:   512Mi
+    Liveness:   http-get http://:8000/ delay=30s timeout=1s period=10s #success=1 #failure=3
+    Readiness:  http-get http://:8000/ delay=5s timeout=1s period=5s #success=1 #failure=3
+    Environment:
+      OLLAMA_BASE_URL:        http://192.168.0.20:11434
+      OLLAMA_MODEL:           llama3.2:1b
+      MAESTRO_USE_LLM:        true
+      ENVIRONMENT:            <set to the key 'ENVIRONMENT' of config map 'twisterlab-config'>  Optional: false
+      LOG_LEVEL:              <set to the key 'LOG_LEVEL' of config map 'twisterlab-config'>    Optional: false
+      SECRET_KEY:             <set to the key 'SECRET_KEY' in secret 'twisterlab-secrets'>      Optional: false
+      JWT_SECRET_KEY:         <set to the key 'JWT_SECRET_KEY' in secret 'twisterlab-secrets'>  Optional: false
+      POSTGRES_HOST:          postgres.twisterlab.svc.cluster.local
+      POSTGRES_PASSWORD:      <set to the key 'POSTGRES_PASSWORD' in secret 'twisterlab-secrets'>  Optional: false
+      REDIS_HOST:             redis.twisterlab.svc.cluster.local
+      REDIS_PASSWORD:         <set to the key 'REDIS_PASSWORD' in secret 'twisterlab-secrets'>  Optional: false
+      ALLOWED_ORIGINS:        http://localhost:3000,http://192.168.0.30:30091
+      RATE_LIMIT_PER_MINUTE:  100
+    Mounts:
+      /app/src/twisterlab/agents/api/security.py from hotfix-volume (rw,path="security.py")
+      /app/src/twisterlab/api/main.py from hotfix-volume (rw,path="main.py")
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-cq84j (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       False 
+  ContainersReady             False 
+  PodScheduled                True 
+Volumes:
+  hotfix-volume:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      twisterlab-patches-v1
+    Optional:  false
+  kube-api-access-cq84j:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   Burstable
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason          Age                   From     Message
+  ----     ------          ----                  ----     -------
+  Normal   Created         38m (x145 over 12h)   kubelet  Created container: api
+  Normal   Pulled          27m (x149 over 12h)   kubelet  Container image "ghcr.io/youneselfakir0/twisterlab/api:sha-869cd3e" already present on machine
+  Warning  BackOff         27m (x3635 over 12h)  kubelet  Back-off restarting failed container api in pod twisterlab-api-6c4ff854d9-7x896_twisterlab(316f8027-7dd4-46c6-9101-59f6395c376b)
+  Normal   SandboxChanged  17m                   kubelet  Pod sandbox changed, it will be killed and re-created.
+  Warning  Failed          14m (x4 over 16m)     kubelet  Error: failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: error mounting "/var/lib/kubelet/pods/316f8027-7dd4-46c6-9101-59f6395c376b/volume-subpaths/hotfix-volume/api/0" to rootfs at "/app/src/twisterlab/api/main.py": mount src=/var/lib/kubelet/pods/316f8027-7dd4-46c6-9101-59f6395c376b/volume-subpaths/hotfix-volume/api/0, dst=/app/src/twisterlab/api/main.py, dstFd=/proc/thread-self/fd/37, flags=MS_RDONLY|MS_BIND|MS_REC: not a directory
+  Normal   Pulled          5m7s (x7 over 16m)    kubelet  Container image "ghcr.io/youneselfakir0/twisterlab/api:sha-869cd3e" already present on machine
+  Normal   Created         5m6s (x7 over 16m)    kubelet  Created container: api
+  Warning  BackOff         87s (x79 over 16m)    kubelet  Back-off restarting failed container api in pod twisterlab-api-6c4ff854d9-7x896_twisterlab(316f8027-7dd4-46c6-9101-59f6395c376b)

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-api
+  namespace: twisterlab
+spec:
+  containers:
+  - name: debug
+    image: localhost:5000/twisterlab-api:v3.8.2
+    command: ["python", "-c", "import twisterlab.api.main; print('API modules loaded successfully')"]
+  restartPolicy: Never

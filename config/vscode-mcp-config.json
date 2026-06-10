@@ -1,58 +1,57 @@
 {
   "_comment": "VS Code MCP Configuration for TwisterLab",
-  "_instructions": "Add this to your VS Code settings.json or workspace .vscode/settings.json",
-  "_updated": "2026-01-12",
+  "_instructions": "Add this to your VS Code workspace settings.json: .vscode/settings.json",
+  "_updated": "2026-05-21",
   "_endpoint": "http://192.168.0.30:30080",
+  "_transport": "HTTP/REST (FastAPI native)",
   
   "mcp": {
     "servers": {
       "twisterlab": {
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "mcp-remote", "http://192.168.0.30:30080/mcp", "--allow-http"]
+        "type": "sse",
+        "url": "http://192.168.0.30:30080/api/v1/mcp/tools"
       }
+    }
+  },
+  
+  "github.copilot.chat.mcpServers": {
+    "twisterlab": {
+      "type": "sse",
+      "url": "http://192.168.0.30:30080/api/v1/mcp/tools"
     }
   },
 
   "_tools_reference": {
-    "monitoring": [
-      "monitoring_health_check",
-      "monitoring_get_system_metrics",
-      "monitoring_list_containers",
-      "monitoring_get_container_logs",
-      "monitoring_get_cache_stats",
-      "monitoring_get_llm_status",
-      "monitoring_list_models"
+    "agents_discovery": {
+      "list_autonomous_agents": "GET/POST /api/v1/mcp/tools/list_autonomous_agents - List all 20+ agents with capabilities",
+      "call_agent_tool": "POST /api/v1/mcp/tools/call_agent_tool - Execute a specific agent capability"
+    },
+    
+    "monitoring_agent": [
+      "monitoring_collect_metrics - System metrics (CPU, RAM, Disk)",
+      "monitoring_system_health - Full system health check"
     ],
-    "maestro": [
-      "maestro_chat",
-      "maestro_generate",
-      "maestro_orchestrate",
-      "maestro_list_agents",
-      "maestro_analyze"
+    
+    "classification_agents": [
+      "real-classifier_classify_ticket - Classify tickets into categories",
+      "sentiment-analyzer_analyze_sentiment - Analyze text sentiment"
     ],
-    "database": [
-      "database_execute_query",
-      "database_list_tables",
-      "database_describe_table",
-      "database_db_health"
+    
+    "automation_agents": [
+      "real-desktop-commander_execute_command - Execute system commands (safe mode)",
+      "real-resolver_resolve_ticket - Mark tickets as resolved",
+      "real-backup_create_backup - Create backups"
     ],
-    "cache": [
-      "cache_cache_get",
-      "cache_cache_set",
-      "cache_cache_delete",
-      "cache_cache_keys",
-      "cache_cache_stats"
+    
+    "analysis_agents": [
+      "code-review_analyze_code - Code quality analysis",
+      "code-review_security_scan - Security vulnerability scan",
+      "browser_browse - Web browsing and content extraction"
     ],
-    "agents": [
-      "sentiment-analyzer_analyze_sentiment",
-      "real-classifier_classify_ticket",
-      "real-resolver_resolve_ticket",
-      "real-backup_create_backup",
-      "real-desktop-commander_execute_command",
-      "browser_browse",
-      "code-review_analyze_code",
-      "code-review_security_scan"
+    
+    "orchestration": [
+      "maestro_orchestrate - Multi-agent workflow coordination",
+      "maestro_analyze_task - Task analysis and routing"
     ]
   }
 }

@@ -1,0 +1,48 @@
+[
+  {
+    "name": "invoke-ai_get_status",
+    "description": "Get the status and version of the InvokeAI server",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "invoke-ai_list_models",
+    "description": "List available models in InvokeAI",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "invoke-ai_generate_image",
+    "description": "Enqueue an image generation task on InvokeAI",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Your positive image prompt"
+        },
+        "negative_prompt": {
+          "type": "string",
+          "description": "Your negative image prompt"
+        },
+        "model": {
+          "type": "string",
+          "description": "Model name (optional)"
+        },
+        "steps": {
+          "type": "integer",
+          "description": "Sampling steps (optional, default 30)"
+        }
+      },
+      "required": [
+        "prompt"
+      ]
+    }
+  }
+]

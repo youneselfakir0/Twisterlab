@@ -10,6 +10,22 @@ from twisterlab.monitoring_utils import get_metric_values
 router = APIRouter()
 
 
+@router.post("/domain/sync")
+async def domain_sync():
+    """Trigger the Active Directory synchronization process."""
+    try:
+        from twisterlab.agents.registry import get_agent_registry
+        registry = get_agent_registry()
+        sync_agent = registry.get_agent("sync")
+        if not sync_agent:
+            raise HTTPException(status_code=503, detail="Sync agent not available")
+        
+        result = await sync_agent.execute("sync_domain")
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class SettingsUpdate(BaseModel):
     kucoin_api_key: str
     kucoin_secret: str

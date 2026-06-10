@@ -76,13 +76,31 @@ else
 fi
 
 echo -e "\033[90m----------------------------------------------------------${RESET}"
-echo -e "${BOLD}${GREEN}🚀 TwisterLab Setup Complete!${RESET}"
+echo -e "${GREEN}✓ TwisterLab Onboarding Complete!${RESET}"
+
+# Step 5: PATH Suggestion
 echo ""
-echo -e "${CYAN}Next steps:${RESET}"
+echo -e "${YELLOW}Step 5: PATH Suggestion...${RESET}"
+abs_path=$(pwd)
+bin_path="$abs_path/.venv/bin"
+
+if [[ ":$PATH:" != *":$bin_path:"* ]]; then
+    echo -e "To run 'twisterlab' from anywhere, add this to your .bashrc or .zshrc:"
+    echo -e "  ${CYAN}export PATH=\"\$PATH:$bin_path\"${RESET}"
+else
+    echo -e "${GREEN}✓ TwisterLab is already in your PATH.${RESET}"
+fi
+
+echo ""
+echo -e "=========================================================="
+echo -e "${BOLD}${CYAN}🚀 TwisterLab v5.2.0 Setup Complete!${RESET}"
+echo -e "=========================================================="
+echo ""
+echo -e "${CYAN}Next steps (available via 'twisterlab' if in PATH):${RESET}"
 echo -e "1. Test system connectivity:"
-echo -e "   ${BOLD}poetry run twisterlab doctor${RESET}"
+echo -e "   ${BOLD}twisterlab doctor${RESET}"
 echo -e "2. Start the background server:"
-echo -e "   ${BOLD}poetry run twisterlab gateway start${RESET}"
+echo -e "   ${BOLD}twisterlab gateway start${RESET}"
 echo -e "3. List registered agents:"
-echo -e "   ${BOLD}poetry run twisterlab agent list${RESET}"
+echo -e "   ${BOLD}twisterlab agent list${RESET}"
 echo ""

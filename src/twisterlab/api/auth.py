@@ -57,13 +57,12 @@ async def get_redis_client() -> aioredis.Redis:
     """Get or initialize Redis client for session management."""
     global _redis_client
     if _redis_client is None:
-        redis_host = os.getenv("REDIS_HOST", "localhost")
-        redis_port = int(os.getenv("REDIS_PORT", "6379"))
-        redis_password = os.getenv("REDIS_PASSWORD")
-
+        from twisterlab.config.unified_settings import settings
+        infra = settings.infra
+        
+        logger.info(f"Connecting to Redis at {infra.redis_host}:{infra.redis_port}")
         _redis_client = await aioredis.from_url(
-            f"redis://{redis_host}:{redis_port}",
-            password=redis_password,
+            infra.redis_url,
             decode_responses=True,
             socket_timeout=5.0,
             socket_connect_timeout=5.0,

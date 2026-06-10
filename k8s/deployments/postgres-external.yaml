@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-external
+  namespace: twisterlab
+spec:
+  type: NodePort
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+    nodePort: 30432
+  selector:
+    app: twisterlab
+    component: database

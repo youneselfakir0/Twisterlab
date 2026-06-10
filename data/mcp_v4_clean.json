@@ -1,0 +1,164 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "annotations": {
+      "deployment.kubernetes.io/revision": "58",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"labels\":{\"app\":\"mcp-unified\",\"component\":\"mcp\"},\"name\":\"mcp-unified\",\"namespace\":\"twisterlab\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app\":\"mcp-unified\"}},\"template\":{\"metadata\":{\"annotations\":{\"prometheus.io/path\":\"/metrics\",\"prometheus.io/port\":\"8080\",\"prometheus.io/scrape\":\"true\"},\"labels\":{\"app\":\"mcp-unified\",\"component\":\"mcp\"}},\"spec\":{\"containers\":[{\"env\":[{\"name\":\"REDIS_URL\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"REDIS_URL\",\"name\":\"twisterlab-secrets\",\"optional\":true}}},{\"name\":\"DATABASE_URL\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"DATABASE_URL\",\"name\":\"twisterlab-secrets\",\"optional\":true}}},{\"name\":\"MCP_LOG_LEVEL\",\"value\":\"INFO\"},{\"name\":\"PORT\",\"value\":\"8080\"},{\"name\":\"PYTHONPATH\",\"value\":\"/app/src\"}],\"image\":\"twisterlab/mcp-unified:latest\",\"imagePullPolicy\":\"IfNotPresent\",\"livenessProbe\":{\"httpGet\":{\"path\":\"/health\",\"port\":8080},\"initialDelaySeconds\":15,\"periodSeconds\":30,\"timeoutSeconds\":5},\"name\":\"mcp-unified\",\"ports\":[{\"containerPort\":8080,\"name\":\"http\"}],\"readinessProbe\":{\"httpGet\":{\"path\":\"/health\",\"port\":8080},\"initialDelaySeconds\":5,\"periodSeconds\":10},\"resources\":{\"limits\":{\"cpu\":\"500m\",\"memory\":\"512Mi\"},\"requests\":{\"cpu\":\"100m\",\"memory\":\"256Mi\"}}}]}}}}\n"
+    },
+    "labels": {
+      "app": "mcp-unified",
+      "component": "mcp"
+    },
+    "name": "mcp-unified",
+    "namespace": "twisterlab"
+  },
+  "spec": {
+    "progressDeadlineSeconds": 600,
+    "replicas": 1,
+    "revisionHistoryLimit": 10,
+    "selector": {
+      "matchLabels": {
+        "app": "mcp-unified"
+      }
+    },
+    "strategy": {
+      "rollingUpdate": {
+        "maxSurge": "25%",
+        "maxUnavailable": "25%"
+      },
+      "type": "RollingUpdate"
+    },
+    "template": {
+      "metadata": {
+        "annotations": {
+          "kubectl.kubernetes.io/restartedAt": "2026-04-17T16:51:04-04:00",
+          "prometheus.io/path": "/metrics",
+          "prometheus.io/port": "8080",
+          "prometheus.io/scrape": "true"
+        },
+        "creationTimestamp": null,
+        "labels": {
+          "app": "mcp-unified",
+          "component": "mcp"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "env": [
+              {
+                "name": "OLLAMA_BASE_URL",
+                "value": "http://192.168.0.30:11434"
+              },
+              {
+                "name": "OLLAMA_MODEL",
+                "value": "llama3.2"
+              },
+              {
+                "name": "MAESTRO_USE_LLM",
+                "value": "true"
+              },
+              {
+                "name": "REDIS_URL",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "REDIS_URL",
+                    "name": "twisterlab-secrets",
+                    "optional": true
+                  }
+                }
+              },
+              {
+                "name": "DATABASE_URL",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "DATABASE_URL",
+                    "name": "twisterlab-secrets",
+                    "optional": true
+                  }
+                }
+              },
+              {
+                "name": "MCP_LOG_LEVEL",
+                "value": "INFO"
+              },
+              {
+                "name": "PORT",
+                "value": "8080"
+              },
+              {
+                "name": "PYTHONPATH",
+                "value": "/app/src"
+              },
+              {
+                "name": "NOTION_TOKEN",
+                "value": "ntn_p83568381507m9WWa5MaAxUsiEmDdzDvVb7daxAWxPy47l"
+              },
+              {
+                "name": "NOTION_DEFAULT_DATABASE_ID",
+                "value": "3431f21b3b068087845cd838474d5464"
+              }
+            ],
+            "image": "192.168.0.30:8090/library/mcp-unified:v4.0",
+            "imagePullPolicy": "IfNotPresent",
+            "livenessProbe": {
+              "failureThreshold": 3,
+              "httpGet": {
+                "path": "/health",
+                "port": 8080,
+                "scheme": "HTTP"
+              },
+              "initialDelaySeconds": 15,
+              "periodSeconds": 30,
+              "successThreshold": 1,
+              "timeoutSeconds": 5
+            },
+            "name": "mcp-unified",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "name": "http",
+                "protocol": "TCP"
+              }
+            ],
+            "readinessProbe": {
+              "failureThreshold": 3,
+              "httpGet": {
+                "path": "/health",
+                "port": 8080,
+                "scheme": "HTTP"
+              },
+              "initialDelaySeconds": 5,
+              "periodSeconds": 10,
+              "successThreshold": 1,
+              "timeoutSeconds": 1
+            },
+            "resources": {
+              "limits": {
+                "cpu": "500m",
+                "memory": "512Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "256Mi"
+              }
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File"
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "imagePullSecrets": [
+          {
+            "name": "harbor-credentials"
+          }
+        ],
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "terminationGracePeriodSeconds": 30
+      }
+    }
+  }
+}

@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: twisterlab-api
+  namespace: twisterlab
+  labels:
+    app: twisterlab
+    component: api
+    version: v5.1.0
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+    resilience.twisterlab.ai/features: "self-healing,idempotency,circuit-breaker"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: twisterlab
+      component: api
+  
+  # 🛡️ AGGRESSIVE ROLLING UPDATE STRATEGY
+  # Guarantees zero-downtime while maintaining at least 1 healthy Maestro pod
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Create 1 new pod before killing old ones
+      maxUnavailable: 0  # NEVER allow all pods to be down simultaneously
+  
+  template:
+    metadata:
+      labels:
+        app: twisterlab
+        component: api
+        version: v5.1.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      # 🔄 GRACEFUL SHUTDOWN - Allow 30s for in-flight requests to complete
+      terminationGracePeriodSeconds: 30
+      
+      containers:
+      - name: api
+        image: localhost:5000/twisterlab-api:v5.1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        - containerPort: 9090  # Prometheus metrics endpoint
+          name: metrics
+          protocol: TCP
+        
+        env:
+        # 🧠 LLM Configuration
+        - name: OLLAMA_BASE_URL
+          value: "http://192.168.0.20:11434"
+        - name: OLLAMA_MODEL
+          value: "llama3.2:1b"
+        - name: MAESTRO_USE_LLM
+          value: "true"
+        
+        # 🛡️ RESILIENCE MODE CONFIGURATION
+        # Options: default | db_hybrid | memory_only
+        # Use 'kubectl patch' to switch modes without redeploying
+        - name: MAESTRO_RESILIENCE_MODE
+          value: "default"
+        
+        # 🔄 SELF-HEALING PARAMETERS
+        - name: MAESTRO_MAX_HEALING_RETRIES
+          value: "2"
+        - name: MAESTRO_HEALING_TIMEOUT_SECONDS
+          value: "30"
+        
+        # 💼 TRADING IDEMPOTENCY
+        - name: TRADING_IDEMPOTENCY_ENABLED
+          value: "true"
+        - name: TRADING_IDEMPOTENCY_TTL_SECONDS
+          value: "3600"  # 1 hour deduplication window
+        
+        # 📊 CIRCUIT BREAKER CONFIGURATION
+        - name: CIRCUIT_BREAKER_ENABLED
+          value: "true"
+        - name: CIRCUIT_BREAKER_FAILURE_THRESHOLD
+          value: "5"
+        - name: CIRCUIT_BREAKER_TIMEOUT_SECONDS
+          value: "300"  # 5 min quarantine
+        
+        # 🌍 STANDARD ENVIRONMENT
+        - name: ENVIRONMENT
+          valueFrom:

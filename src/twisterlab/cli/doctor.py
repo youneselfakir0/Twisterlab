@@ -95,37 +95,6 @@ async def check_llm() -> bool:
         return False
 
 
-def check_kucoin() -> bool:
-    try:
-        import ccxt
-        from twisterlab.config.unified_settings import settings
-        
-        # Test public API first
-        exchange_class = ccxt.kucoin
-        exchange = exchange_class({
-            'apiKey': settings.trading.kucoin_api_key or None,
-            'secret': settings.trading.kucoin_secret or None,
-            'password': settings.trading.kucoin_passphrase or None,
-            'enableRateLimit': True,
-        })
-        
-        if settings.trading.kucoin_is_sandbox:
-            exchange.set_sandbox_mode(True)
-            
-        markets = exchange.fetch_markets()
-        if len(markets) > 0:
-            auth_str = "Authenticated" if settings.trading.kucoin_api_key else "Public only"
-            mode_str = "Sandbox" if settings.trading.kucoin_is_sandbox else "Live"
-            print_status("KuCoin API", True, f"Connected ({mode_str}, {auth_str}, {len(markets)} markets loaded)")
-            return True
-        else:
-            print_status("KuCoin API", False, "Failed to retrieve market list")
-            return False
-    except Exception as e:
-        print_status("KuCoin API", False, f"CCXT validation failed: {e}")
-        return False
-
-
 def check_port() -> bool:
     # Check if local port 8000 is occupied (gateway running)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -156,11 +125,10 @@ async def run_doctor():
     db_ok = await check_database()
     redis_ok = check_redis()
     llm_ok = await check_llm()
-    kucoin_ok = check_kucoin()
     port_ok = check_port()
     
     print("-" * 60)
-    all_ok = db_ok and redis_ok and llm_ok and kucoin_ok
+    all_ok = db_ok and redis_ok and llm_ok
     if all_ok:
         try:
             print(f"{BOLD}{GREEN}🎉 System Status: HEALTHY! All components operational.{RESET}")

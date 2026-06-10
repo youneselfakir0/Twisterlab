@@ -1,0 +1,13 @@
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "notion_create_page",
+    "arguments": {
+      "title": "🎯 Stratégie d'Orchestration TwisterLab (Maestro v3.5)",
+      "content": "# 🎯 Stratégie d'Orchestration TwisterLab\n\nCe document d\u00e9finit la vision strat\u00e9gique pour l'utilisation automatis\u00e9e des agents par l'orchestrateur **Maestro**.\n\n## 1. Vision : L'IA au Service de l'Infrastructure\nL'objectif est de transformer chaque demande utilisateur en une s\u00e9rie d'actions coordonn\u00e9es, document\u00e9es et v\u00e9rifiables.\n\n## 2. Matrice de Mobilisation des Agents\nMaestro d\u00e9cide de l'utilisation des agents selon les r\u00e8gles suivantes :\n\n| Cat\u00e9gorie | Agent Principal | D\u00e9clencheur (Keywords) |\n| :--- | :--- | :--- |\n| **S\u00e9curit\u00e9 & Backup** | `backup` | 'sauvegarde', 'snapshot', 'archivage' |\n| **Sant\u00e9 Syst\u00e8me** | `monitoring` | 'audit', 'sant\u00e9', 'm\u00e9triques', 'CPU/RAM' |\n| **Web & Services** | `browser` | 'v\u00e9rifie URL', 'n8n', 'accessibilit\u00e9' |\n| **Base de Donn\u00e9es** | `database` | 'SQL', 'tables', 'schema' |\n| **Documentation** | `notion` | 'Knowledge Base', 'wiki', 'rapport' |\n\n## 3. Protocole de Mission Standard (The Golden Loop)\nChaque mission orchestr\u00e9e par Maestro doit suivre ce cycle :\n1.  **Analyse** : Classification de la t\u00e2che par l'agent `classifier`.\n2.  **Collecte** : Acquisition de donn\u00e9es r\u00e9elles via `monitoring` ou `browser`.\n3.  **Action** : Ex\u00e9cution technique (ex: backup ou r\u00e9solution).\n4.  **Synth\u00e8se** : Compilation des r\u00e9sultats et archivage syst\u00e9matique dans **Notion**.\n\n## 4. R\u00e8gle d'Or de la Persistance\n**\"Ce qui n'est pas dans Notion n'existe pas.\"**\nMaestro a pour consigne stricte de documenter chaque fin de mission avec les donn\u00e9es techniques brutes pour permettre une analyse historique et une am\u00e9lioration continue des mod\u00e8les LLM.\n\n## 5. \u00c9volutivit\u00e9\nTout nouvel agent enregistr\u00e9 dans le `AgentRegistry` devient imm\u00e9diatement disponible pour Maestro s'il expose des capacit\u00e9s (capabilities) compatibles avec les r\u00e8gles de planification.\n\n---\n*Approuv\u00e9 par la Direction Technique TwisterLab*",
+      "tags": ["strategy", "maestro", "governance"]
+    }
+  },
+  "id": 2
+}

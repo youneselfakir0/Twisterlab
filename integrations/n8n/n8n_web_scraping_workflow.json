@@ -1,0 +1,145 @@
+{
+    "name": "Web Navigator: Tech Watch & Summary",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "tech-watch",
+                "options": {}
+            },
+            "name": "Webhook Action",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.body.target_url }}",
+                "options": {
+                    "allowUnauthorizedCerts": true
+                }
+            },
+            "name": "Scrape Website",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                420,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "extractHtmlContent",
+                "extractionValues": {
+                    "values": [
+                        {
+                            "key": "title",
+                            "cssSelector": "h1"
+                        },
+                        {
+                            "key": "content",
+                            "cssSelector": "p",
+                            "returnValue": "html",
+                            "returnArray": true
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Extract Content",
+            "type": "n8n-nodes-base.html",
+            "typeVersion": 1,
+            "position": [
+                640,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "keepOnlySet": true,
+                "values": {
+                    "string": [
+                        {
+                            "name": "summary",
+                            "value": "={{ $json.title }}: \n{{ $json.content.slice(0,3).join(' ').replace(/<[^>]*>?/gm, '') }}..."
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Clean Text",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 2,
+            "position": [
+                860,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "authentication": "webhook",
+                "webhookUri": "https://discord.com/api/webhooks/1478246238074962004/B5Dscrqa1QRRCcsTIYzBqTJ6h9_V3JQIPnL88ADZy2dGPSlBgSY3wwgVYD6FVlmSQbal",
+                "text": "={{ $json.summary }}\n\n🔗 Source: {{ $('Webhook Action').item.json.body.target_url }}",
+                "options": {}
+            },
+            "name": "Discord Summary",
+            "type": "n8n-nodes-base.discord",
+            "typeVersion": 2,
+            "position": [
+                1080,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Action": {
+            "main": [
+                [
+                    {
+                        "node": "Scrape Website",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Scrape Website": {
+            "main": [
+                [
+                    {
+                        "node": "Extract Content",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Content": {
+            "main": [
+                [
+                    {
+                        "node": "Clean Text",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Clean Text": {
+            "main": [
+                [
+                    {
+                        "node": "Discord Summary",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {}
+}

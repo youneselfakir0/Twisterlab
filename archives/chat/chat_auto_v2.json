@@ -1,0 +1,26 @@
+{
+  "session_id": "auto_v2",
+  "last_update": "2026-04-09T10:28:38.358271+00:00",
+  "messages": [
+    {
+      "type": "ai",
+      "html": "Error"
+    },
+    {
+      "type": "user",
+      "html": "Confirm persistence test: Save this message."
+    },
+    {
+      "type": "ai",
+      "html": "Error"
+    },
+    {
+      "type": "ai",
+      "html": "Error"
+    },
+    {
+      "type": "user",
+      "html": "Confirm persistence test: v3.5.5 is live."
+    }
+  ]
+}

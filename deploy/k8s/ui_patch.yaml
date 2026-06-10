@@ -1,0 +1,19 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: api
+        volumeMounts:
+        - name: ui-hotfix-volume
+          mountPath: /app/index.html
+          subPath: index.html
+        - name: ui-hotfix-volume
+          mountPath: /app/index.css
+          subPath: index.css
+        - name: ui-hotfix-volume
+          mountPath: /app/src/twisterlab/api/main.py
+          subPath: main.py
+      volumes:
+      - name: ui-hotfix-volume
+        configMap:
+          name: ui-hotfix-v382

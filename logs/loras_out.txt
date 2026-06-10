@@ -1,0 +1,4 @@
+﻿=== STATUS ===
+{"jsonrpc": "2.0", "id": 1, "result": {"isError": true, "content": [{"type": "text", "text": "Unknown tool: invoke-ai_get_status"}]}}
+=== MODELS/LORAS ===
+{"jsonrpc": "2.0", "id": 1, "result": {"isError": true, "content": [{"type": "text", "text": "Unknown tool: invoke-ai_list_models"}]}}

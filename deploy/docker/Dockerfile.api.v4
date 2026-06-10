@@ -1,0 +1,99 @@
+# Stage 1: Builder
+FROM python:3.11-slim as builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+RUN pip install --no-cache-dir poetry==1.7.1
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Export to requirements.txt for simpler installation in final stage
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+
+# Create virtualenv and install dependencies
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Runtime
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies (including Playwright requirements)
+RUN apt-get update && apt-get install -y \
+    libgbm1 \
+    libnss3 \
+    libnspr4 \
+    libasound2 \
+    libatk1.0-0 \
+    libc6 \
+    libcairo2 \
+    libcups2 \
+    libdbus-1-3 \
+    libexpat1 \
+    libfontconfig1 \
+    libgcc1 \
+    libgdk-pixbuf2.0-0 \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libstdc++6 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxcomposite1 \
+    libxcursor1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxi6 \
+    libxrandr2 \
+    libxrender1 \
+    libxshmfence1 \
+    libxtst6 \
+    ca-certificates \
+    fonts-liberation \
+    libappindicator3-1 \
+    libnss3 \
+    lsb-release \
+    xdg-utils \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtualenv from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Playwright browsers at build-time (Immutable standard)
+RUN playwright install chromium --with-deps
+
+# Copy entire application source (v4.0.0)
+# This eliminates the need for ConfigMap mounts for code.
+COPY src/ /app/src/
+COPY index.html index.css ./
+COPY alembic.ini ./
+
+# Set Environment Standards
+ENV PYTHONPATH=/app/src
+ENV PYTHONUNBUFFERED=1
+ENV APP_VERSION=4.0.0-stable
+
+# Expose API port
+EXPOSE 8000
+
+# Non-root user for security
+RUN useradd -m twisterlab && chown -R twisterlab:twisterlab /app
+USER twisterlab
+
+# Entrypoint using Uvicorn
+CMD ["python", "-m", "uvicorn", "twisterlab.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

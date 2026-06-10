@@ -1,0 +1,505 @@
+﻿apiVersion: v1
+data:
+  real_desktop_commander_agent.py: "\"\"\"\r\nRealDesktopCommanderAgent - Secure Command
+    Execution \U0001F4BB\r\n\r\nThis agent executes REAL system commands with security
+    safeguards:\r\n- Whitelist of allowed commands\r\n- Timeout protection\r\n- Sandboxed
+    execution\r\n- Audit logging\r\n\r\nSECURITY: By default, only safe commands are
+    allowed.\r\nSet COMMANDER_UNSAFE_MODE=true to enable all commands (NOT recommended).\r\n\"\"\"\r\n\r\nfrom
+    __future__ import annotations\r\n\r\nimport asyncio\r\nimport logging\r\nimport
+    os\r\nimport platform\r\nimport re\r\nimport shlex\r\nfrom datetime import datetime,
+    timezone\r\nfrom typing import List, Optional, Set\r\n\r\nfrom twisterlab.agents.core.base
+    import (\r\n    TwisterAgent,\r\n    AgentCapability,\r\n    AgentResponse,\r\n
+    \   CapabilityType,\r\n    CapabilityParam,\r\n    ParamType,\r\n)\r\n\r\nlogger
+    = logging.getLogger(__name__)\r\n\r\n\r\n# Whitelist of safe commands (can be
+    extended via env var)\r\nDEFAULT_SAFE_COMMANDS: Set[str] = {\r\n    # System info\r\n
+    \   \"hostname\", \"whoami\", \"uname\", \"uptime\", \"date\", \"cal\",\r\n    #
+    Process info\r\n    \"ps\", \"top\", \"htop\", \"pgrep\", \"pidof\",\r\n    #
+    Disk info\r\n    \"df\", \"du\", \"lsblk\", \"mount\", \"findmnt\",\r\n    # Network
+    info\r\n    \"ping\", \"netstat\", \"ss\", \"ip\", \"ifconfig\", \"nslookup\",
+    \"dig\", \"host\",\r\n    \"curl\", \"wget\",\r\n    # File operations (read-only)\r\n
+    \   \"ls\", \"cat\", \"head\", \"tail\", \"grep\", \"find\", \"wc\", \"sort\",
+    \"uniq\",\r\n    \"file\", \"stat\", \"tree\",\r\n    # Service management (read-only)\r\n
+    \   \"systemctl\", \"service\", \"journalctl\",\r\n    # Database (read-only)\r\n
+    \   \"pg_isready\", \"redis-cli\",\r\n    # Windows equivalents\r\n    \"dir\",
+    \"type\", \"ipconfig\", \"netstat\", \"tasklist\", \"systeminfo\",\r\n    \"Get-Process\",
+    \"Get-Service\", \"Get-NetIPConfiguration\",\r\n}\r\n\r\n# Dangerous commands
+    that should never be allowed\r\nDANGEROUS_PATTERNS: List[str] = [\r\n    r\"rm\\s+-rf\",
+    r\"rm\\s+/\", r\"mkfs\", r\"dd\\s+if=\", r\":\\(\\)\\{:\\|:&\\};:\",\r\n    r\"chmod\\s+777\",
+    r\"chown\\s+-R\", r\"curl.*\\|.*sh\", r\"wget.*\\|.*sh\",\r\n    r\">\\s*/dev/sd\",
+    r\"shutdown\", r\"reboot\", r\"init\\s+0\", r\"halt\",\r\n    r\"format\\s+c:\",
+    r\"del\\s+/s\", r\"rd\\s+/s\",\r\n]\r\n\r\n\r\nclass RealDesktopCommanderAgent(TwisterAgent):\r\n
+    \   \"\"\"\r\n    Executes system commands with security safeguards.\r\n    \r\n
+    \   Security Features:\r\n    - Whitelist of allowed commands\r\n    - Pattern
+    matching to block dangerous commands\r\n    - Timeout protection (default 30s)\r\n
+    \   - Audit logging of all executions\r\n    - Sandboxed subprocess execution\r\n
+    \   \"\"\"\r\n\r\n    def __init__(self, registry=None) -> None:\r\n        super().__init__(registry)\r\n
+    \       self._unsafe_mode = os.getenv(\"COMMANDER_UNSAFE_MODE\", \"false\").lower()
+    == \"true\"\r\n        self._default_timeout = int(os.getenv(\"COMMANDER_TIMEOUT\",
+    \"30\"))\r\n        self._audit_log: List[dict] = []\r\n        \r\n        #
+    Load additional safe commands from env\r\n        extra_commands = os.getenv(\"COMMANDER_EXTRA_COMMANDS\",
+    \"\")\r\n        self._safe_commands = DEFAULT_SAFE_COMMANDS.copy()\r\n        if
+    extra_commands:\r\n            self._safe_commands.update(cmd.strip() for cmd
+    in extra_commands.split(\",\"))\r\n        \r\n        if self._unsafe_mode:\r\n
+    \           logger.warning(\"?????? RealDesktopCommanderAgent running in UNSAFE
+    MODE!\")\r\n        else:\r\n            logger.info(\"??? RealDesktopCommanderAgent
+    initialized with security safeguards\")\r\n\r\n    @property\r\n    def name(self)
+    -> str:\r\n        return \"real-desktop-commander\"\r\n\r\n    @property\r\n
+    \   def description(self) -> str:\r\n        return \"Executes system commands
+    securely with whitelist protection and audit logging\"\r\n\r\n    def get_capabilities(self)
+    -> List[AgentCapability]:\r\n        return [\r\n            AgentCapability(\r\n
+    \               name=\"execute_command\",\r\n                description=\"Execute
+    a command on the local system (with security checks)\",\r\n                handler=\"handle_execute_command\",\r\n
+    \               capability_type=CapabilityType.ACTION,\r\n                params=[\r\n
+    \                   CapabilityParam(\r\n                        \"command\",\r\n
+    \                       ParamType.STRING,\r\n                        \"The command
+    to execute\",\r\n                        required=True,\r\n                    ),\r\n
+    \                   CapabilityParam(\r\n                        \"timeout\",\r\n
+    \                       ParamType.INTEGER,\r\n                        \"Execution
+    timeout in seconds (max 300)\",\r\n                        required=False,\r\n
+    \                       default=30,\r\n                    ),\r\n                    CapabilityParam(\r\n
+    \                       \"working_dir\",\r\n                        ParamType.STRING,\r\n
+    \                       \"Working directory for command execution\",\r\n                        required=False,\r\n
+    \                   ),\r\n                ],\r\n                tags=[\"system\",
+    \"command\", \"execution\"],\r\n            ),\r\n            AgentCapability(\r\n
+    \               name=\"execute_command_remote\",\r\n                description=\"Execute
+    a command on a remote device (simulated for now)\",\r\n                handler=\"handle_execute_command_remote\",\r\n
+    \               capability_type=CapabilityType.ACTION,\r\n                params=[\r\n
+    \                   CapabilityParam(\r\n                        \"device_id\",\r\n
+    \                       ParamType.STRING,\r\n                        \"Target
+    device identifier\",\r\n                        required=True,\r\n                    ),\r\n
+    \                   CapabilityParam(\r\n                        \"command\",\r\n
+    \                       ParamType.STRING,\r\n                        \"The command
+    to execute\",\r\n                        required=True,\r\n                    ),\r\n
+    \                   CapabilityParam(\r\n                        \"timeout\",\r\n
+    \                       ParamType.INTEGER,\r\n                        \"Execution
+    timeout in seconds\",\r\n                        required=False,\r\n                        default=30,\r\n
+    \                   ),\r\n                ],\r\n                tags=[\"system\",
+    \"remote\", \"command\"],\r\n            ),\r\n            AgentCapability(\r\n
+    \               name=\"get_allowed_commands\",\r\n                description=\"List
+    all allowed commands in safe mode\",\r\n                handler=\"handle_get_allowed_commands\",\r\n
+    \               capability_type=CapabilityType.QUERY,\r\n                params=[],\r\n
+    \               tags=[\"security\", \"info\"],\r\n            ),\r\n            AgentCapability(\r\n
+    \               name=\"get_audit_log\",\r\n                description=\"Get the
+    command execution audit log\",\r\n                handler=\"handle_get_audit_log\",\r\n
+    \               capability_type=CapabilityType.QUERY,\r\n                params=[\r\n
+    \                   CapabilityParam(\r\n                        \"limit\",\r\n
+    \                       ParamType.INTEGER,\r\n                        \"Number
+    of entries to return\",\r\n                        required=False,\r\n                        default=50,\r\n
+    \                   ),\r\n                ],\r\n                tags=[\"security\",
+    \"audit\"],\r\n            ),\r\n        ]\r\n\r\n    # =========================================================================\r\n
+    \   # SECURITY CHECKS\r\n    # =========================================================================\r\n\r\n
+    \   def _is_command_allowed(self, command: str) -> tuple[bool, str]:\r\n        \"\"\"\r\n
+    \       Check if command is allowed to execute.\r\n        \r\n        Returns:
+    (is_allowed, reason)\r\n        \"\"\"\r\n        # Check dangerous patterns first\r\n
+    \       for pattern in DANGEROUS_PATTERNS:\r\n            if re.search(pattern,
+    command, re.IGNORECASE):\r\n                return False, f\"Command matches dangerous
+    pattern: {pattern}\"\r\n        \r\n        # In unsafe mode, allow everything
+    except dangerous patterns\r\n        if self._unsafe_mode:\r\n            return
+    True, \"Unsafe mode enabled\"\r\n        \r\n        # Extract base command\r\n
+    \       try:\r\n            if platform.system() == \"Windows\":\r\n                #
+    Windows command parsing\r\n                parts = command.strip().split()\r\n
+    \               base_cmd = parts[0].lower() if parts else \"\"\r\n            else:\r\n
+    \               # Unix command parsing\r\n                parts = shlex.split(command)\r\n
+    \               base_cmd = parts[0].split(\"/\")[-1] if parts else \"\"\r\n        except
+    ValueError:\r\n            return False, \"Invalid command syntax\"\r\n        \r\n
+    \       # Check whitelist\r\n        if base_cmd in self._safe_commands:\r\n            return
+    True, \"Command in whitelist\"\r\n        \r\n        # Check if it's a PowerShell
+    cmdlet (Windows)\r\n        if platform.system() == \"Windows\":\r\n            if
+    base_cmd.startswith(\"get-\") or base_cmd in [\"powershell\", \"pwsh\"]:\r\n                return
+    True, \"PowerShell read-only cmdlet\"\r\n        \r\n        return False, f\"Command
+    '{base_cmd}' not in whitelist. Use get_allowed_commands to see allowed commands.\"\r\n\r\n
+    \   def _audit_execution(\r\n        self, \r\n        command: str, \r\n        success:
+    bool, \r\n        output: str,\r\n        error: Optional[str] = None,\r\n        duration_ms:
+    int = 0\r\n    ) -> None:\r\n        \"\"\"Log command execution for audit.\"\"\"\r\n
+    \       entry = {\r\n            \"timestamp\": datetime.now(timezone.utc).isoformat(),\r\n
+    \           \"command\": command,\r\n            \"success\": success,\r\n            \"output_length\":
+    len(output),\r\n            \"error\": error,\r\n            \"duration_ms\":
+    duration_ms,\r\n        }\r\n        self._audit_log.append(entry)\r\n        \r\n
+    \       # Keep only last 1000 entries\r\n        if len(self._audit_log) > 1000:\r\n
+    \           self._audit_log = self._audit_log[-1000:]\r\n        \r\n        log_level
+    = logging.INFO if success else logging.WARNING\r\n        logger.log(log_level,
+    f\"\U0001F4CB Audit: {command[:50]}... -> {'???' if success else '???'}\")\r\n\r\n
+    \   # =========================================================================\r\n
+    \   # HANDLERS\r\n    # =========================================================================\r\n\r\n
+    \   async def handle_execute_command(\r\n        self, \r\n        command: str,
+    \r\n        timeout: int = 30,\r\n        working_dir: Optional[str] = None,\r\n
+    \       device_id: Optional[str] = None,  # Accepted but ignored (local execution
+    only)\r\n        **kwargs\r\n    ) -> AgentResponse:\r\n        \"\"\"Execute
+    a command on the local system.\"\"\"\r\n        # If device_id is provided, treat
+    as local execution\r\n        if device_id and device_id.lower() not in [\"localhost\",
+    \"local\", \"127.0.0.1\", \"edgeserver\"]:\r\n            logger.info(f\"\U0001F4A1
+    device_id='{device_id}' received ??? executing locally (remote not supported here)\")\r\n
+    \       if kwargs:\r\n            logger.debug(f\"\U0001F4A1 Received extra params
+    (ignored): {list(kwargs.keys())}\")\r\n        \r\n        logger.info(f\"\U0001F4BB
+    Executing command: {command[:100]}...\")\r\n        \r\n        # Security check\r\n
+    \       is_allowed, reason = self._is_command_allowed(command)\r\n        if not
+    is_allowed:\r\n            logger.warning(f\"\U0001F6AB Command blocked: {reason}\")\r\n
+    \           self._audit_execution(command, False, \"\", error=reason)\r\n            return
+    AgentResponse(\r\n                success=False,\r\n                error=f\"Command
+    not allowed: {reason}\",\r\n                data={\"blocked\": True, \"reason\":
+    reason}\r\n            )\r\n        \r\n        # Enforce timeout limits\r\n        timeout
+    = min(timeout, 300)  # Max 5 minutes\r\n        \r\n        start_time = datetime.now(timezone.utc)\r\n
+    \       \r\n        try:\r\n            # Determine shell based on platform\r\n
+    \           is_windows = platform.system() == \"Windows\"\r\n            \r\n
+    \           if is_windows:\r\n                # Use PowerShell on Windows\r\n
+    \               process = await asyncio.create_subprocess_shell(\r\n                    command,\r\n
+    \                   stdout=asyncio.subprocess.PIPE,\r\n                    stderr=asyncio.subprocess.PIPE,\r\n
+    \                   cwd=working_dir,\r\n                )\r\n            else:\r\n
+    \               # Use bash on Unix\r\n                process = await asyncio.create_subprocess_shell(\r\n
+    \                   command,\r\n                    stdout=asyncio.subprocess.PIPE,\r\n
+    \                   stderr=asyncio.subprocess.PIPE,\r\n                    cwd=working_dir,\r\n
+    \                   executable=\"/bin/bash\",\r\n                )\r\n            \r\n
+    \           try:\r\n                stdout, stderr = await asyncio.wait_for(\r\n
+    \                   process.communicate(),\r\n                    timeout=timeout\r\n
+    \               )\r\n            except asyncio.TimeoutError:\r\n                process.kill()\r\n
+    \               await process.wait()\r\n                error_msg = f\"Command
+    timed out after {timeout}s\"\r\n                self._audit_execution(command,
+    False, \"\", error=error_msg)\r\n                return AgentResponse(\r\n                    success=False,\r\n
+    \                   error=error_msg,\r\n                    data={\"timeout\":
+    True, \"timeout_seconds\": timeout}\r\n                )\r\n            \r\n            end_time
+    = datetime.now(timezone.utc)\r\n            duration_ms = int((end_time - start_time).total_seconds()
+    * 1000)\r\n            \r\n            # Decode output\r\n            output =
+    stdout.decode(\"utf-8\", errors=\"replace\").strip()\r\n            error_output
+    = stderr.decode(\"utf-8\", errors=\"replace\").strip()\r\n            \r\n            exit_code
+    = process.returncode\r\n            success = exit_code == 0\r\n            \r\n
+    \           # Audit log\r\n            self._audit_execution(\r\n                command,
+    \r\n                success, \r\n                output, \r\n                error=error_output
+    if error_output else None,\r\n                duration_ms=duration_ms\r\n            )\r\n
+    \           \r\n            result_data = {\r\n                \"status\": \"completed\",\r\n
+    \               \"exit_code\": exit_code,\r\n                \"output\": output[:10000],
+    \ # Limit output size\r\n                \"stderr\": error_output[:2000] if error_output
+    else None,\r\n                \"duration_ms\": duration_ms,\r\n                \"platform\":
+    platform.system(),\r\n            }\r\n            \r\n            if success:\r\n
+    \               logger.info(f\"??? Command completed in {duration_ms}ms\")\r\n
+    \           else:\r\n                logger.warning(f\"?????? Command exited with
+    code {exit_code}\")\r\n            \r\n            return AgentResponse(success=success,
+    data=result_data)\r\n            \r\n        except Exception as e:\r\n            error_msg
+    = str(e)\r\n            self._audit_execution(command, False, \"\", error=error_msg)\r\n
+    \           logger.error(f\"??? Command execution failed: {e}\")\r\n            return
+    AgentResponse(success=False, error=error_msg)\r\n\r\n    async def handle_execute_command_remote(\r\n
+    \       self, \r\n        device_id: str, \r\n        command: str, \r\n        timeout:
+    int = 30,\r\n        **kwargs  # Accept additional params from orchestration\r\n
+    \   ) -> AgentResponse:\r\n        \"\"\"\r\n        Execute a command on a remote
+    device.\r\n        \r\n        NOTE: This is currently simulated. In production,
+    this would:\r\n        - Use SSH for Linux devices\r\n        - Use WinRM for
+    Windows devices\r\n        - Use device-specific protocols\r\n        \"\"\"\r\n
+    \       logger.info(f\"\U0001F4E1 Remote execution on {device_id}: {command[:50]}...\")\r\n
+    \       \r\n        # Security check\r\n        is_allowed, reason = self._is_command_allowed(command)\r\n
+    \       if not is_allowed:\r\n            return AgentResponse(\r\n                success=False,\r\n
+    \               error=f\"Command not allowed: {reason}\",\r\n                data={\"device_id\":
+    device_id, \"blocked\": True}\r\n            )\r\n        \r\n        # For now,
+    simulate remote execution\r\n        # In production, this would use SSH/WinRM/etc.\r\n
+    \       \r\n        # If device_id is \"localhost\" or \"local\", execute locally\r\n
+    \       if device_id.lower() in [\"localhost\", \"local\", \"127.0.0.1\"]:\r\n
+    \           return await self.handle_execute_command(command, timeout)\r\n        \r\n
+    \       # Simulated remote execution\r\n        logger.info(f\"\U0001F4E1 Simulating
+    remote execution on {device_id}\")\r\n        \r\n        # Simulate some common
+    commands\r\n        simulated_outputs = {\r\n            \"df -h\": \"Filesystem
+    \     Size  Used Avail Use% Mounted on\\n/dev/sda1       500G  234G  266G  47%
+    /\",\r\n            \"uptime\": \" 14:32:01 up 45 days,  3:21,  2 users,  load
+    average: 0.52, 0.48, 0.45\",\r\n            \"ps aux\": \"USER       PID %CPU
+    %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\\nroot         1  0.0  0.1
+    225848  9636 ?        Ss   Dec01   0:15 /sbin/init\",\r\n        }\r\n        \r\n
+    \       output = simulated_outputs.get(command, f\"Simulated output for: {command}\")\r\n
+    \       \r\n        return AgentResponse(\r\n            success=True,\r\n            data={\r\n
+    \               \"status\": \"completed\",\r\n                \"exit_code\": 0,\r\n
+    \               \"output\": output,\r\n                \"device_id\": device_id,\r\n
+    \               \"simulated\": True,\r\n                \"note\": \"Remote execution
+    is simulated. Configure SSH/WinRM for real execution.\",\r\n            }\r\n
+    \       )\r\n\r\n    async def handle_get_allowed_commands(self) -> AgentResponse:\r\n
+    \       \"\"\"List all allowed commands.\"\"\"\r\n        return AgentResponse(\r\n
+    \           success=True,\r\n            data={\r\n                \"safe_mode\":
+    not self._unsafe_mode,\r\n                \"allowed_commands\": sorted(self._safe_commands),\r\n
+    \               \"command_count\": len(self._safe_commands),\r\n                \"note\":
+    \"Set COMMANDER_EXTRA_COMMANDS env var to add more commands\",\r\n            }\r\n
+    \       )\r\n\r\n    async def handle_get_audit_log(self, limit: int = 50) ->
+    AgentResponse:\r\n        \"\"\"Get command execution audit log.\"\"\"\r\n        entries
+    = self._audit_log[-limit:]\r\n        \r\n        return AgentResponse(\r\n            success=True,\r\n
+    \           data={\r\n                \"entries\": entries,\r\n                \"total_count\":
+    len(self._audit_log),\r\n                \"returned_count\": len(entries),\r\n
+    \           }\r\n        )\r\n\r\n\r\n__all__ = [\"RealDesktopCommanderAgent\",
+    \"DEFAULT_SAFE_COMMANDS\"]\r\n"
+  real_monitoring_agent.py: "\uFEFF\"\"\"\n\x52\x65\x61\x6C\x4D\x6F\x6E\x69\x74\x6F\x72\x69\x6E\x67\x41\x67\x65\x6E\x74\x20\x2D\x20\x52\x65\x61\x6C\x20\x53\x79\x73\x74\x65\x6D\x20\x4D\x65\x74\x72\x69\x63\x73\x20\x43\x6F\x6C\x6C\x65\x63\x74\x69\x6F\x6E\x2E\n\"\"\"\n\n\x66\x72\x6F\x6D\x20\x5F\x5F\x66\x75\x74\x75\x72\x65\x5F\x5F\x20\x69\x6D\x70\x6F\x72\x74\x20\x61\x6E\x6E\x6F\x74\x61\x74\x69\x6F\x6E\x73\n\n\x69\x6D\x70\x6F\x72\x74\x20\x6C\x6F\x67\x67\x69\x6E\x67\n\x69\x6D\x70\x6F\x72\x74\x20\x70\x6C\x61\x74\x66\x6F\x72\x6D\n\x69\x6D\x70\x6F\x72\x74\x20\x73\x6F\x63\x6B\x65\x74\n\x66\x72\x6F\x6D\x20\x64\x61\x74\x65\x74\x69\x6D\x65\x20\x69\x6D\x70\x6F\x72\x74\x20\x64\x61\x74\x65\x74\x69\x6D\x65\x2C\x20\x74\x69\x6D\x65\x7A\x6F\x6E\x65\n\x66\x72\x6F\x6D\x20\x74\x79\x70\x69\x6E\x67\x20\x69\x6D\x70\x6F\x72\x74\x20\x4C\x69\x73\x74\n\n\x74\x72\x79\x3A\n\x20\x20\x20\x20\x69\x6D\x70\x6F\x72\x74\x20\x70\x73\x75\x74\x69\x6C\n\x20\x20\x20\x20\x50\x53\x55\x54\x49\x4C\x5F\x41\x56\x41\x49\x4C\x41\x42\x4C\x45\x20\x3D\x20\x54\x72\x75\x65\n\x65\x78\x63\x65\x70\x74\x20\x49\x6D\x70\x6F\x72\x74\x45\x72\x72\x6F\x72\x3A\n\x20\x20\x20\x20\x70\x73\x75\x74\x69\x6C\x20\x3D\x20\x4E\x6F\x6E\x65\n\x20\x20\x20\x20\x50\x53\x55\x54\x49\x4C\x5F\x41\x56\x41\x49\x4C\x41\x42\x4C\x45\x20\x3D\x20\x46\x61\x6C\x73\x65\n\n\x66\x72\x6F\x6D\x20\x74\x77\x69\x73\x74\x65\x72\x6C\x61\x62\x2E\x61\x67\x65\x6E\x74\x73\x2E\x63\x6F\x72\x65\x2E\x62\x61\x73\x65\x20\x69\x6D\x70\x6F\x72\x74\x20\x28\n\x20\x20\x20\x20\x54\x77\x69\x73\x74\x65\x72\x41\x67\x65\x6E\x74\x2C\n\x20\x20\x20\x20\x41\x67\x65\x6E\x74\x43\x61\x70\x61\x62\x69\x6C\x69\x74\x79\x2C\n\x20\x20\x20\x20\x41\x67\x65\x6E\x74\x52\x65\x73\x70\x6F\x6E\x73\x65\x2C\n\x20\x20\x20\x20\x43\x61\x70\x61\x62\x69\x6C\x69\x74\x79\x54\x79\x70\x65\x2C\n\x29\n\n\x6C\x6F\x67\x67\x65\x72\x20\x3D\x20\x6C\x6F\x67\x67\x69\x6E\x67\x2E\x67\x65\x74\x4C\x6F\x67\x67\x65\x72\x28\x5F\x5F\x6E\x61\x6D\x65\x5F\x5F\x29\n\n\n\x63\x6C\x61\x73\x73\x20\x52\x65\x61\x6C\x4D\x6F\x6E\x69\x74\x6F\x72\x69\x6E\x67\x41\x67\x65\x6E\x74\x28\x54\x77\x69\x73\x74\x65\x72\x41\x67\x65\x6E\x74\x29\x3A\n\x20\x20\x20\x20\x64\x65\x66\x20\x5F\x5F\x69\x6E\x69\x74\x5F\x5F\x28\x73\x65\x6C\x66\x2C\x20\x72\x65\x67\x69\x73\x74\x72\x79\x3D\x4E\x6F\x6E\x65\x29\x20\x2D\x3E\x20\x4E\x6F\x6E\x65\x3A\n\x20\x20\x20\x20\x20\x20\x20\x20\x73\x75\x70\x65\x72\x28\x29\x2E\x5F\x5F\x69\x6E\x69\x74\x5F\x5F\x28\x72\x65\x67\x69\x73\x74\x72\x79\x29\n\x20\x20\x20\x20\x20\x20\x20\x20\x69\x66\x20\x50\x53\x55\x54\x49\x4C\x5F\x41\x56\x41\x49\x4C\x41\x42\x4C\x45\x3A\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x6C\x6F\x67\x67\x65\x72\x2E\x69\x6E\x66\x6F\x28\"\x52\x65\x61\x6C\x4D\x6F\x6E\x69\x74\x6F\x72\x69\x6E\x67\x41\x67\x65\x6E\x74\x20\x69\x6E\x69\x74\x69\x61\x6C\x69\x7A\x65\x64\x20\x77\x69\x74\x68\x20\x70\x73\x75\x74\x69\x6C\"\x29\n\n\x20\x20\x20\x20\x40\x70\x72\x6F\x70\x65\x72\x74\x79\n\x20\x20\x20\x20\x64\x65\x66\x20\x6E\x61\x6D\x65\x28\x73\x65\x6C\x66\x29\x20\x2D\x3E\x20\x73\x74\x72\x3A\n\x20\x20\x20\x20\x20\x20\x20\x20\x72\x65\x74\x75\x72\x6E\x20\"\x6D\x6F\x6E\x69\x74\x6F\x72\x69\x6E\x67\"\n\n\x20\x20\x20\x20\x40\x70\x72\x6F\x70\x65\x72\x74\x79\n\x20\x20\x20\x20\x64\x65\x66\x20\x64\x65\x73\x63\x72\x69\x70\x74\x69\x6F\x6E\x28\x73\x65\x6C\x66\x29\x20\x2D\x3E\x20\x73\x74\x72\x3A\n\x20\x20\x20\x20\x20\x20\x20\x20\x72\x65\x74\x75\x72\x6E\x20\"\x43\x6F\x6C\x6C\x65\x63\x74\x73\x20\x72\x65\x61\x6C\x20\x73\x79\x73\x74\x65\x6D\x20\x6D\x65\x74\x72\x69\x63\x73\x20\x75\x73\x69\x6E\x67\x20\x70\x73\x75\x74\x69\x6C\"\n\n\x20\x20\x20\x20\x64\x65\x66\x20\x67\x65\x74\x5F\x63\x61\x70\x61\x62\x69\x6C\x69\x74\x69\x65\x73\x28\x73\x65\x6C\x66\x29\x20\x2D\x3E\x20\x4C\x69\x73\x74\x5B\x41\x67\x65\x6E\x74\x43\x61\x70\x61\x62\x69\x6C\x69\x74\x79\x5D\x3A\n\x20\x20\x20\x20\x20\x20\x20\x20\x72\x65\x74\x75\x72\x6E\x20\x5B\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x41\x67\x65\x6E\x74\x43\x61\x70\x61\x62\x69\x6C\x69\x74\x79\x28\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x6E\x61\x6D\x65\x3D\"\x63\x6F\x6C\x6C\x65\x63\x74\x5F\x6D\x65\x74\x72\x69\x63\x73\"\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x64\x65\x73\x63\x72\x69\x70\x74\x69\x6F\x6E\x3D\"\x43\x6F\x6C\x6C\x65\x63\x74\x20\x61\x6C\x6C\x20\x73\x79\x73\x74\x65\x6D\x20\x6D\x65\x74\x72\x69\x63\x73\"\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x68\x61\x6E\x64\x6C\x65\x72\x3D\"\x68\x61\x6E\x64\x6C\x65\x5F\x63\x6F\x6C\x6C\x65\x63\x74\x5F\x6D\x65\x74\x72\x69\x63\x73\"\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x63\x61\x70\x61\x62\x69\x6C\x69\x74\x79\x5F\x74\x79\x70\x65\x3D\x43\x61\x70\x61\x62\x69\x6C\x69\x74\x79\x54\x79\x70\x65\x2E\x51\x55\x45\x52\x59\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x70\x61\x72\x61\x6D\x73\x3D\x5B\x5D\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x74\x61\x67\x73\x3D\x5B\"\x6D\x6F\x6E\x69\x74\x6F\x72\x69\x6E\x67\"\x5D\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x29\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x5D\n\n\x20\x20\x20\x20\x61\x73\x79\x6E\x63\x20\x64\x65\x66\x20\x68\x61\x6E\x64\x6C\x65\x5F\x63\x6F\x6C\x6C\x65\x63\x74\x5F\x6D\x65\x74\x72\x69\x63\x73\x28\x73\x65\x6C\x66\x29\x20\x2D\x3E\x20\x41\x67\x65\x6E\x74\x52\x65\x73\x70\x6F\x6E\x73\x65\x3A\n\x20\x20\x20\x20\x20\x20\x20\x20\x69\x66\x20\x6E\x6F\x74\x20\x50\x53\x55\x54\x49\x4C\x5F\x41\x56\x41\x49\x4C\x41\x42\x4C\x45\x3A\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x72\x65\x74\x75\x72\x6E\x20\x41\x67\x65\x6E\x74\x52\x65\x73\x70\x6F\x6E\x73\x65\x28\x73\x75\x63\x63\x65\x73\x73\x3D\x54\x72\x75\x65\x2C\x20\x64\x61\x74\x61\x3D\x7B\"\x63\x70\x75\"\x3A\x20\x34\x35\x2E\x30\x2C\x20\"\x6D\x65\x6D\x6F\x72\x79\"\x3A\x20\x36\x30\x2E\x30\x2C\x20\"\x73\x69\x6D\x75\x6C\x61\x74\x65\x64\"\x3A\x20\x54\x72\x75\x65\x7D\x29\n\x20\x20\x20\x20\x20\x20\x20\x20\n\x20\x20\x20\x20\x20\x20\x20\x20\x74\x72\x79\x3A\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x63\x70\x75\x20\x3D\x20\x70\x73\x75\x74\x69\x6C\x2E\x63\x70\x75\x5F\x70\x65\x72\x63\x65\x6E\x74\x28\x69\x6E\x74\x65\x72\x76\x61\x6C\x3D\x30\x2E\x35\x29\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x6D\x65\x6D\x20\x3D\x20\x70\x73\x75\x74\x69\x6C\x2E\x76\x69\x72\x74\x75\x61\x6C\x5F\x6D\x65\x6D\x6F\x72\x79\x28\x29\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x64\x69\x73\x6B\x20\x3D\x20\x70\x73\x75\x74\x69\x6C\x2E\x64\x69\x73\x6B\x5F\x75\x73\x61\x67\x65\x28\x27\x2F\x27\x29\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x64\x61\x74\x61\x20\x3D\x20\x7B\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x74\x69\x6D\x65\x73\x74\x61\x6D\x70\"\x3A\x20\x64\x61\x74\x65\x74\x69\x6D\x65\x2E\x6E\x6F\x77\x28\x74\x69\x6D\x65\x7A\x6F\x6E\x65\x2E\x75\x74\x63\x29\x2E\x69\x73\x6F\x66\x6F\x72\x6D\x61\x74\x28\x29\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x68\x6F\x73\x74\x6E\x61\x6D\x65\"\x3A\x20\x73\x6F\x63\x6B\x65\x74\x2E\x67\x65\x74\x68\x6F\x73\x74\x6E\x61\x6D\x65\x28\x29\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x70\x6C\x61\x74\x66\x6F\x72\x6D\"\x3A\x20\x70\x6C\x61\x74\x66\x6F\x72\x6D\x2E\x73\x79\x73\x74\x65\x6D\x28\x29\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x64\x61\x74\x61\x5F\x73\x6F\x75\x72\x63\x65\"\x3A\x20\"\x70\x73\x75\x74\x69\x6C\"\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x63\x70\x75\"\x3A\x20\x7B\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x75\x73\x61\x67\x65\x5F\x70\x65\x72\x63\x65\x6E\x74\"\x3A\x20\x63\x70\x75\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x63\x6F\x72\x65\x73\"\x3A\x20\x70\x73\x75\x74\x69\x6C\x2E\x63\x70\x75\x5F\x63\x6F\x75\x6E\x74\x28\x29\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x7D\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x6D\x65\x6D\x6F\x72\x79\"\x3A\x20\x7B\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x74\x6F\x74\x61\x6C\x5F\x67\x62\"\x3A\x20\x72\x6F\x75\x6E\x64\x28\x6D\x65\x6D\x2E\x74\x6F\x74\x61\x6C\x20\x2F\x20\x28\x31\x30\x32\x34\x2A\x2A\x33\x29\x2C\x20\x32\x29\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x75\x73\x65\x64\x5F\x67\x62\"\x3A\x20\x72\x6F\x75\x6E\x64\x28\x6D\x65\x6D\x2E\x75\x73\x65\x64\x20\x2F\x20\x28\x31\x30\x32\x34\x2A\x2A\x33\x29\x2C\x20\x32\x29\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x70\x65\x72\x63\x65\x6E\x74\x5F\x75\x73\x65\x64\"\x3A\x20\x6D\x65\x6D\x2E\x70\x65\x72\x63\x65\x6E\x74\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x7D\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x64\x69\x73\x6B\"\x3A\x20\x7B\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x74\x6F\x74\x61\x6C\x5F\x67\x62\"\x3A\x20\x72\x6F\x75\x6E\x64\x28\x64\x69\x73\x6B\x2E\x74\x6F\x74\x61\x6C\x20\x2F\x20\x28\x31\x30\x32\x34\x2A\x2A\x33\x29\x2C\x20\x32\x29\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x75\x73\x65\x64\x5F\x67\x62\"\x3A\x20\x72\x6F\x75\x6E\x64\x28\x64\x69\x73\x6B\x2E\x75\x73\x65\x64\x20\x2F\x20\x28\x31\x30\x32\x34\x2A\x2A\x33\x29\x2C\x20\x32\x29\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\"\x70\x65\x72\x63\x65\x6E\x74\x5F\x75\x73\x65\x64\"\x3A\x20\x64\x69\x73\x6B\x2E\x70\x65\x72\x63\x65\x6E\x74\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x7D\x2C\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x7D\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x72\x65\x74\x75\x72\x6E\x20\x41\x67\x65\x6E\x74\x52\x65\x73\x70\x6F\x6E\x73\x65\x28\x73\x75\x63\x63\x65\x73\x73\x3D\x54\x72\x75\x65\x2C\x20\x64\x61\x74\x61\x3D\x64\x61\x74\x61\x29\n\x20\x20\x20\x20\x20\x20\x20\x20\x65\x78\x63\x65\x70\x74\x20\x45\x78\x63\x65\x70\x74\x69\x6F\x6E\x20\x61\x73\x20\x65\x3A\n\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x72\x65\x74\x75\x72\x6E\x20\x41\x67\x65\x6E\x74\x52\x65\x73\x70\x6F\x6E\x73\x65\x28\x73\x75\x63\x63\x65\x73\x73\x3D\x46\x61\x6C\x73\x65\x2C\x20\x65\x72\x72\x6F\x72\x3D\x73\x74\x72\x28\x65\x29\x29\n\n\n\x5F\x5F\x61\x6C\x6C\x5F\x5F\x20\x3D\x20\x5B\"\x52\x65\x61\x6C\x4D\x6F\x6E\x69\x74\x6F\x72\x69\x6E\x67\x41\x67\x65\x6E\x74\"\x2C\x20\"\x50\x53\x55\x54\x49\x4C\x5F\x41\x56\x41\x49\x4C\x41\x42\x4C\x45\"\x5D\n"
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: "{\"apiVersion\":\"v1\",\"data\":{\"real_desktop_commander_agent.py\":\"\\\"\\\"\\\"\\r\\nRealDesktopCommanderAgent
+      - Secure Command Execution \U0001F4BB\\r\\n\\r\\nThis agent executes REAL system
+      commands with security safeguards:\\r\\n- Whitelist of allowed commands\\r\\n-
+      Timeout protection\\r\\n- Sandboxed execution\\r\\n- Audit logging\\r\\n\\r\\nSECURITY:
+      By default, only safe commands are allowed.\\r\\nSet COMMANDER_UNSAFE_MODE=true
+      to enable all commands (NOT recommended).\\r\\n\\\"\\\"\\\"\\r\\n\\r\\nfrom
+      __future__ import annotations\\r\\n\\r\\nimport asyncio\\r\\nimport logging\\r\\nimport
+      os\\r\\nimport platform\\r\\nimport re\\r\\nimport shlex\\r\\nfrom datetime
+      import datetime, timezone\\r\\nfrom typing import List, Optional, Set\\r\\n\\r\\nfrom
+      twisterlab.agents.core.base import (\\r\\n    TwisterAgent,\\r\\n    AgentCapability,\\r\\n
+      \   AgentResponse,\\r\\n    CapabilityType,\\r\\n    CapabilityParam,\\r\\n
+      \   ParamType,\\r\\n)\\r\\n\\r\\nlogger = logging.getLogger(__name__)\\r\\n\\r\\n\\r\\n#
+      Whitelist of safe commands (can be extended via env var)\\r\\nDEFAULT_SAFE_COMMANDS:
+      Set[str] = {\\r\\n    # System info\\r\\n    \\\"hostname\\\", \\\"whoami\\\",
+      \\\"uname\\\", \\\"uptime\\\", \\\"date\\\", \\\"cal\\\",\\r\\n    # Process
+      info\\r\\n    \\\"ps\\\", \\\"top\\\", \\\"htop\\\", \\\"pgrep\\\", \\\"pidof\\\",\\r\\n
+      \   # Disk info\\r\\n    \\\"df\\\", \\\"du\\\", \\\"lsblk\\\", \\\"mount\\\",
+      \\\"findmnt\\\",\\r\\n    # Network info\\r\\n    \\\"ping\\\", \\\"netstat\\\",
+      \\\"ss\\\", \\\"ip\\\", \\\"ifconfig\\\", \\\"nslookup\\\", \\\"dig\\\", \\\"host\\\",\\r\\n
+      \   \\\"curl\\\", \\\"wget\\\",\\r\\n    # File operations (read-only)\\r\\n
+      \   \\\"ls\\\", \\\"cat\\\", \\\"head\\\", \\\"tail\\\", \\\"grep\\\", \\\"find\\\",
+      \\\"wc\\\", \\\"sort\\\", \\\"uniq\\\",\\r\\n    \\\"file\\\", \\\"stat\\\",
+      \\\"tree\\\",\\r\\n    # Service management (read-only)\\r\\n    \\\"systemctl\\\",
+      \\\"service\\\", \\\"journalctl\\\",\\r\\n    # Database (read-only)\\r\\n    \\\"pg_isready\\\",
+      \\\"redis-cli\\\",\\r\\n    # Windows equivalents\\r\\n    \\\"dir\\\", \\\"type\\\",
+      \\\"ipconfig\\\", \\\"netstat\\\", \\\"tasklist\\\", \\\"systeminfo\\\",\\r\\n
+      \   \\\"Get-Process\\\", \\\"Get-Service\\\", \\\"Get-NetIPConfiguration\\\",\\r\\n}\\r\\n\\r\\n#
+      Dangerous commands that should never be allowed\\r\\nDANGEROUS_PATTERNS: List[str]
+      = [\\r\\n    r\\\"rm\\\\s+-rf\\\", r\\\"rm\\\\s+/\\\", r\\\"mkfs\\\", r\\\"dd\\\\s+if=\\\",
+      r\\\":\\\\(\\\\)\\\\{:\\\\|:\\u0026\\\\};:\\\",\\r\\n    r\\\"chmod\\\\s+777\\\",
+      r\\\"chown\\\\s+-R\\\", r\\\"curl.*\\\\|.*sh\\\", r\\\"wget.*\\\\|.*sh\\\",\\r\\n
+      \   r\\\"\\u003e\\\\s*/dev/sd\\\", r\\\"shutdown\\\", r\\\"reboot\\\", r\\\"init\\\\s+0\\\",
+      r\\\"halt\\\",\\r\\n    r\\\"format\\\\s+c:\\\", r\\\"del\\\\s+/s\\\", r\\\"rd\\\\s+/s\\\",\\r\\n]\\r\\n\\r\\n\\r\\nclass
+      RealDesktopCommanderAgent(TwisterAgent):\\r\\n    \\\"\\\"\\\"\\r\\n    Executes
+      system commands with security safeguards.\\r\\n    \\r\\n    Security Features:\\r\\n
+      \   - Whitelist of allowed commands\\r\\n    - Pattern matching to block dangerous
+      commands\\r\\n    - Timeout protection (default 30s)\\r\\n    - Audit logging
+      of all executions\\r\\n    - Sandboxed subprocess execution\\r\\n    \\\"\\\"\\\"\\r\\n\\r\\n
+      \   def __init__(self, registry=None) -\\u003e None:\\r\\n        super().__init__(registry)\\r\\n
+      \       self._unsafe_mode = os.getenv(\\\"COMMANDER_UNSAFE_MODE\\\", \\\"false\\\").lower()
+      == \\\"true\\\"\\r\\n        self._default_timeout = int(os.getenv(\\\"COMMANDER_TIMEOUT\\\",
+      \\\"30\\\"))\\r\\n        self._audit_log: List[dict] = []\\r\\n        \\r\\n
+      \       # Load additional safe commands from env\\r\\n        extra_commands
+      = os.getenv(\\\"COMMANDER_EXTRA_COMMANDS\\\", \\\"\\\")\\r\\n        self._safe_commands
+      = DEFAULT_SAFE_COMMANDS.copy()\\r\\n        if extra_commands:\\r\\n            self._safe_commands.update(cmd.strip()
+      for cmd in extra_commands.split(\\\",\\\"))\\r\\n        \\r\\n        if self._unsafe_mode:\\r\\n
+      \           logger.warning(\\\"?????? RealDesktopCommanderAgent running in UNSAFE
+      MODE!\\\")\\r\\n        else:\\r\\n            logger.info(\\\"??? RealDesktopCommanderAgent
+      initialized with security safeguards\\\")\\r\\n\\r\\n    @property\\r\\n    def
+      name(self) -\\u003e str:\\r\\n        return \\\"real-desktop-commander\\\"\\r\\n\\r\\n
+      \   @property\\r\\n    def description(self) -\\u003e str:\\r\\n        return
+      \\\"Executes system commands securely with whitelist protection and audit logging\\\"\\r\\n\\r\\n
+      \   def get_capabilities(self) -\\u003e List[AgentCapability]:\\r\\n        return
+      [\\r\\n            AgentCapability(\\r\\n                name=\\\"execute_command\\\",\\r\\n
+      \               description=\\\"Execute a command on the local system (with
+      security checks)\\\",\\r\\n                handler=\\\"handle_execute_command\\\",\\r\\n
+      \               capability_type=CapabilityType.ACTION,\\r\\n                params=[\\r\\n
+      \                   CapabilityParam(\\r\\n                        \\\"command\\\",\\r\\n
+      \                       ParamType.STRING,\\r\\n                        \\\"The
+      command to execute\\\",\\r\\n                        required=True,\\r\\n                    ),\\r\\n
+      \                   CapabilityParam(\\r\\n                        \\\"timeout\\\",\\r\\n
+      \                       ParamType.INTEGER,\\r\\n                        \\\"Execution
+      timeout in seconds (max 300)\\\",\\r\\n                        required=False,\\r\\n
+      \                       default=30,\\r\\n                    ),\\r\\n                    CapabilityParam(\\r\\n
+      \                       \\\"working_dir\\\",\\r\\n                        ParamType.STRING,\\r\\n
+      \                       \\\"Working directory for command execution\\\",\\r\\n
+      \                       required=False,\\r\\n                    ),\\r\\n                ],\\r\\n
+      \               tags=[\\\"system\\\", \\\"command\\\", \\\"execution\\\"],\\r\\n
+      \           ),\\r\\n            AgentCapability(\\r\\n                name=\\\"execute_command_remote\\\",\\r\\n
+      \               description=\\\"Execute a command on a remote device (simulated
+      for now)\\\",\\r\\n                handler=\\\"handle_execute_command_remote\\\",\\r\\n
+      \               capability_type=CapabilityType.ACTION,\\r\\n                params=[\\r\\n
+      \                   CapabilityParam(\\r\\n                        \\\"device_id\\\",\\r\\n
+      \                       ParamType.STRING,\\r\\n                        \\\"Target
+      device identifier\\\",\\r\\n                        required=True,\\r\\n                    ),\\r\\n
+      \                   CapabilityParam(\\r\\n                        \\\"command\\\",\\r\\n
+      \                       ParamType.STRING,\\r\\n                        \\\"The
+      command to execute\\\",\\r\\n                        required=True,\\r\\n                    ),\\r\\n
+      \                   CapabilityParam(\\r\\n                        \\\"timeout\\\",\\r\\n
+      \                       ParamType.INTEGER,\\r\\n                        \\\"Execution
+      timeout in seconds\\\",\\r\\n                        required=False,\\r\\n                        default=30,\\r\\n
+      \                   ),\\r\\n                ],\\r\\n                tags=[\\\"system\\\",
+      \\\"remote\\\", \\\"command\\\"],\\r\\n            ),\\r\\n            AgentCapability(\\r\\n
+      \               name=\\\"get_allowed_commands\\\",\\r\\n                description=\\\"List
+      all allowed commands in safe mode\\\",\\r\\n                handler=\\\"handle_get_allowed_commands\\\",\\r\\n
+      \               capability_type=CapabilityType.QUERY,\\r\\n                params=[],\\r\\n
+      \               tags=[\\\"security\\\", \\\"info\\\"],\\r\\n            ),\\r\\n
+      \           AgentCapability(\\r\\n                name=\\\"get_audit_log\\\",\\r\\n
+      \               description=\\\"Get the command execution audit log\\\",\\r\\n
+      \               handler=\\\"handle_get_audit_log\\\",\\r\\n                capability_type=CapabilityType.QUERY,\\r\\n
+      \               params=[\\r\\n                    CapabilityParam(\\r\\n                        \\\"limit\\\",\\r\\n
+      \                       ParamType.INTEGER,\\r\\n                        \\\"Number
+      of entries to return\\\",\\r\\n                        required=False,\\r\\n
+      \                       default=50,\\r\\n                    ),\\r\\n                ],\\r\\n
+      \               tags=[\\\"security\\\", \\\"audit\\\"],\\r\\n            ),\\r\\n
+      \       ]\\r\\n\\r\\n    # =========================================================================\\r\\n
+      \   # SECURITY CHECKS\\r\\n    # =========================================================================\\r\\n\\r\\n
+      \   def _is_command_allowed(self, command: str) -\\u003e tuple[bool, str]:\\r\\n
+      \       \\\"\\\"\\\"\\r\\n        Check if command is allowed to execute.\\r\\n
+      \       \\r\\n        Returns: (is_allowed, reason)\\r\\n        \\\"\\\"\\\"\\r\\n
+      \       # Check dangerous patterns first\\r\\n        for pattern in DANGEROUS_PATTERNS:\\r\\n
+      \           if re.search(pattern, command, re.IGNORECASE):\\r\\n                return
+      False, f\\\"Command matches dangerous pattern: {pattern}\\\"\\r\\n        \\r\\n
+      \       # In unsafe mode, allow everything except dangerous patterns\\r\\n        if
+      self._unsafe_mode:\\r\\n            return True, \\\"Unsafe mode enabled\\\"\\r\\n
+      \       \\r\\n        # Extract base command\\r\\n        try:\\r\\n            if
+      platform.system() == \\\"Windows\\\":\\r\\n                # Windows command
+      parsing\\r\\n                parts = command.strip().split()\\r\\n                base_cmd
+      = parts[0].lower() if parts else \\\"\\\"\\r\\n            else:\\r\\n                #
+      Unix command parsing\\r\\n                parts = shlex.split(command)\\r\\n
+      \               base_cmd = parts[0].split(\\\"/\\\")[-1] if parts else \\\"\\\"\\r\\n
+      \       except ValueError:\\r\\n            return False, \\\"Invalid command
+      syntax\\\"\\r\\n        \\r\\n        # Check whitelist\\r\\n        if base_cmd
+      in self._safe_commands:\\r\\n            return True, \\\"Command in whitelist\\\"\\r\\n
+      \       \\r\\n        # Check if it's a PowerShell cmdlet (Windows)\\r\\n        if
+      platform.system() == \\\"Windows\\\":\\r\\n            if base_cmd.startswith(\\\"get-\\\")
+      or base_cmd in [\\\"powershell\\\", \\\"pwsh\\\"]:\\r\\n                return
+      True, \\\"PowerShell read-only cmdlet\\\"\\r\\n        \\r\\n        return
+      False, f\\\"Command '{base_cmd}' not in whitelist. Use get_allowed_commands
+      to see allowed commands.\\\"\\r\\n\\r\\n    def _audit_execution(\\r\\n        self,
+      \\r\\n        command: str, \\r\\n        success: bool, \\r\\n        output:
+      str,\\r\\n        error: Optional[str] = None,\\r\\n        duration_ms: int
+      = 0\\r\\n    ) -\\u003e None:\\r\\n        \\\"\\\"\\\"Log command execution
+      for audit.\\\"\\\"\\\"\\r\\n        entry = {\\r\\n            \\\"timestamp\\\":
+      datetime.now(timezone.utc).isoformat(),\\r\\n            \\\"command\\\": command,\\r\\n
+      \           \\\"success\\\": success,\\r\\n            \\\"output_length\\\":
+      len(output),\\r\\n            \\\"error\\\": error,\\r\\n            \\\"duration_ms\\\":
+      duration_ms,\\r\\n        }\\r\\n        self._audit_log.append(entry)\\r\\n
+      \       \\r\\n        # Keep only last 1000 entries\\r\\n        if len(self._audit_log)
+      \\u003e 1000:\\r\\n            self._audit_log = self._audit_log[-1000:]\\r\\n
+      \       \\r\\n        log_level = logging.INFO if success else logging.WARNING\\r\\n
+      \       logger.log(log_level, f\\\"\U0001F4CB Audit: {command[:50]}... -\\u003e
+      {'???' if success else '???'}\\\")\\r\\n\\r\\n    # =========================================================================\\r\\n
+      \   # HANDLERS\\r\\n    # =========================================================================\\r\\n\\r\\n
+      \   async def handle_execute_command(\\r\\n        self, \\r\\n        command:
+      str, \\r\\n        timeout: int = 30,\\r\\n        working_dir: Optional[str]
+      = None,\\r\\n        device_id: Optional[str] = None,  # Accepted but ignored
+      (local execution only)\\r\\n        **kwargs\\r\\n    ) -\\u003e AgentResponse:\\r\\n
+      \       \\\"\\\"\\\"Execute a command on the local system.\\\"\\\"\\\"\\r\\n
+      \       # If device_id is provided, treat as local execution\\r\\n        if
+      device_id and device_id.lower() not in [\\\"localhost\\\", \\\"local\\\", \\\"127.0.0.1\\\",
+      \\\"edgeserver\\\"]:\\r\\n            logger.info(f\\\"\U0001F4A1 device_id='{device_id}'
+      received ??? executing locally (remote not supported here)\\\")\\r\\n        if
+      kwargs:\\r\\n            logger.debug(f\\\"\U0001F4A1 Received extra params
+      (ignored): {list(kwargs.keys())}\\\")\\r\\n        \\r\\n        logger.info(f\\\"\U0001F4BB
+      Executing command: {command[:100]}...\\\")\\r\\n        \\r\\n        # Security
+      check\\r\\n        is_allowed, reason = self._is_command_allowed(command)\\r\\n
+      \       if not is_allowed:\\r\\n            logger.warning(f\\\"\U0001F6AB Command
+      blocked: {reason}\\\")\\r\\n            self._audit_execution(command, False,
+      \\\"\\\", error=reason)\\r\\n            return AgentResponse(\\r\\n                success=False,\\r\\n
+      \               error=f\\\"Command not allowed: {reason}\\\",\\r\\n                data={\\\"blocked\\\":
+      True, \\\"reason\\\": reason}\\r\\n            )\\r\\n        \\r\\n        #
+      Enforce timeout limits\\r\\n        timeout = min(timeout, 300)  # Max 5 minutes\\r\\n
+      \       \\r\\n        start_time = datetime.now(timezone.utc)\\r\\n        \\r\\n
+      \       try:\\r\\n            # Determine shell based on platform\\r\\n            is_windows
+      = platform.system() == \\\"Windows\\\"\\r\\n            \\r\\n            if
+      is_windows:\\r\\n                # Use PowerShell on Windows\\r\\n                process
+      = await asyncio.create_subprocess_shell(\\r\\n                    command,\\r\\n
+      \                   stdout=asyncio.subprocess.PIPE,\\r\\n                    stderr=asyncio.subprocess.PIPE,\\r\\n
+      \                   cwd=working_dir,\\r\\n                )\\r\\n            else:\\r\\n
+      \               # Use bash on Unix\\r\\n                process = await asyncio.create_subprocess_shell(\\r\\n
+      \                   command,\\r\\n                    stdout=asyncio.subprocess.PIPE,\\r\\n
+      \                   stderr=asyncio.subprocess.PIPE,\\r\\n                    cwd=working_dir,\\r\\n
+      \                   executable=\\\"/bin/bash\\\",\\r\\n                )\\r\\n
+      \           \\r\\n            try:\\r\\n                stdout, stderr = await
+      asyncio.wait_for(\\r\\n                    process.communicate(),\\r\\n                    timeout=timeout\\r\\n
+      \               )\\r\\n            except asyncio.TimeoutError:\\r\\n                process.kill()\\r\\n
+      \               await process.wait()\\r\\n                error_msg = f\\\"Command
+      timed out after {timeout}s\\\"\\r\\n                self._audit_execution(command,
+      False, \\\"\\\", error=error_msg)\\r\\n                return AgentResponse(\\r\\n
+      \                   success=False,\\r\\n                    error=error_msg,\\r\\n
+      \                   data={\\\"timeout\\\": True, \\\"timeout_seconds\\\": timeout}\\r\\n
+      \               )\\r\\n            \\r\\n            end_time = datetime.now(timezone.utc)\\r\\n
+      \           duration_ms = int((end_time - start_time).total_seconds() * 1000)\\r\\n
+      \           \\r\\n            # Decode output\\r\\n            output = stdout.decode(\\\"utf-8\\\",
+      errors=\\\"replace\\\").strip()\\r\\n            error_output = stderr.decode(\\\"utf-8\\\",
+      errors=\\\"replace\\\").strip()\\r\\n            \\r\\n            exit_code
+      = process.returncode\\r\\n            success = exit_code == 0\\r\\n            \\r\\n
+      \           # Audit log\\r\\n            self._audit_execution(\\r\\n                command,
+      \\r\\n                success, \\r\\n                output, \\r\\n                error=error_output
+      if error_output else None,\\r\\n                duration_ms=duration_ms\\r\\n
+      \           )\\r\\n            \\r\\n            result_data = {\\r\\n                \\\"status\\\":
+      \\\"completed\\\",\\r\\n                \\\"exit_code\\\": exit_code,\\r\\n
+      \               \\\"output\\\": output[:10000],  # Limit output size\\r\\n                \\\"stderr\\\":
+      error_output[:2000] if error_output else None,\\r\\n                \\\"duration_ms\\\":
+      duration_ms,\\r\\n                \\\"platform\\\": platform.system(),\\r\\n
+      \           }\\r\\n            \\r\\n            if success:\\r\\n                logger.info(f\\\"???
+      Command completed in {duration_ms}ms\\\")\\r\\n            else:\\r\\n                logger.warning(f\\\"??????
+      Command exited with code {exit_code}\\\")\\r\\n            \\r\\n            return
+      AgentResponse(success=success, data=result_data)\\r\\n            \\r\\n        except
+      Exception as e:\\r\\n            error_msg = str(e)\\r\\n            self._audit_execution(command,
+      False, \\\"\\\", error=error_msg)\\r\\n            logger.error(f\\\"??? Command
+      execution failed: {e}\\\")\\r\\n            return AgentResponse(success=False,
+      error=error_msg)\\r\\n\\r\\n    async def handle_execute_command_remote(\\r\\n
+      \       self, \\r\\n        device_id: str, \\r\\n        command: str, \\r\\n
+      \       timeout: int = 30,\\r\\n        **kwargs  # Accept additional params
+      from orchestration\\r\\n    ) -\\u003e AgentResponse:\\r\\n        \\\"\\\"\\\"\\r\\n
+      \       Execute a command on a remote device.\\r\\n        \\r\\n        NOTE:
+      This is currently simulated. In production, this would:\\r\\n        - Use SSH
+      for Linux devices\\r\\n        - Use WinRM for Windows devices\\r\\n        -
+      Use device-specific protocols\\r\\n        \\\"\\\"\\\"\\r\\n        logger.info(f\\\"\U0001F4E1
+      Remote execution on {device_id}: {command[:50]}...\\\")\\r\\n        \\r\\n
+      \       # Security check\\r\\n        is_allowed, reason = self._is_command_allowed(command)\\r\\n
+      \       if not is_allowed:\\r\\n            return AgentResponse(\\r\\n                success=False,\\r\\n
+      \               error=f\\\"Command not allowed: {reason}\\\",\\r\\n                data={\\\"device_id\\\":
+      device_id, \\\"blocked\\\": True}\\r\\n            )\\r\\n        \\r\\n        #
+      For now, simulate remote execution\\r\\n        # In production, this would
+      use SSH/WinRM/etc.\\r\\n        \\r\\n        # If device_id is \\\"localhost\\\"
+      or \\\"local\\\", execute locally\\r\\n        if device_id.lower() in [\\\"localhost\\\",
+      \\\"local\\\", \\\"127.0.0.1\\\"]:\\r\\n            return await self.handle_execute_command(command,
+      timeout)\\r\\n        \\r\\n        # Simulated remote execution\\r\\n        logger.info(f\\\"\U0001F4E1
+      Simulating remote execution on {device_id}\\\")\\r\\n        \\r\\n        #
+      Simulate some common commands\\r\\n        simulated_outputs = {\\r\\n            \\\"df
+      -h\\\": \\\"Filesystem      Size  Used Avail Use% Mounted on\\\\n/dev/sda1       500G
+      \ 234G  266G  47% /\\\",\\r\\n            \\\"uptime\\\": \\\" 14:32:01 up 45
+      days,  3:21,  2 users,  load average: 0.52, 0.48, 0.45\\\",\\r\\n            \\\"ps
+      aux\\\": \\\"USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME
+      COMMAND\\\\nroot         1  0.0  0.1 225848  9636 ?        Ss   Dec01   0:15
+      /sbin/init\\\",\\r\\n        }\\r\\n        \\r\\n        output = simulated_outputs.get(command,
+      f\\\"Simulated output for: {command}\\\")\\r\\n        \\r\\n        return
+      AgentResponse(\\r\\n            success=True,\\r\\n            data={\\r\\n
+      \               \\\"status\\\": \\\"completed\\\",\\r\\n                \\\"exit_code\\\":
+      0,\\r\\n                \\\"output\\\": output,\\r\\n                \\\"device_id\\\":
+      device_id,\\r\\n                \\\"simulated\\\": True,\\r\\n                \\\"note\\\":
+      \\\"Remote execution is simulated. Configure SSH/WinRM for real execution.\\\",\\r\\n
+      \           }\\r\\n        )\\r\\n\\r\\n    async def handle_get_allowed_commands(self)
+      -\\u003e AgentResponse:\\r\\n        \\\"\\\"\\\"List all allowed commands.\\\"\\\"\\\"\\r\\n
+      \       return AgentResponse(\\r\\n            success=True,\\r\\n            data={\\r\\n
+      \               \\\"safe_mode\\\": not self._unsafe_mode,\\r\\n                \\\"allowed_commands\\\":
+      sorted(self._safe_commands),\\r\\n                \\\"command_count\\\": len(self._safe_commands),\\r\\n
+      \               \\\"note\\\": \\\"Set COMMANDER_EXTRA_COMMANDS env var to add
+      more commands\\\",\\r\\n            }\\r\\n        )\\r\\n\\r\\n    async def
+      handle_get_audit_log(self, limit: int = 50) -\\u003e AgentResponse:\\r\\n        \\\"\\\"\\\"Get
+      command execution audit log.\\\"\\\"\\\"\\r\\n        entries = self._audit_log[-limit:]\\r\\n
+      \       \\r\\n        return AgentResponse(\\r\\n            success=True,\\r\\n
+      \           data={\\r\\n                \\\"entries\\\": entries,\\r\\n                \\\"total_count\\\":
+      len(self._audit_log),\\r\\n                \\\"returned_count\\\": len(entries),\\r\\n
+      \           }\\r\\n        )\\r\\n\\r\\n\\r\\n__all__ = [\\\"RealDesktopCommanderAgent\\\",
+      \\\"DEFAULT_SAFE_COMMANDS\\\"]\\r\\n\",\"real_monitoring_agent.py\":\"\uFEFF\\\"\\\"\\\"\\nRealMonitoringAgent
+      - Real System Metrics Collection.\\n\\\"\\\"\\\"\\n\\nfrom __future__ import
+      annotations\\n\\nimport logging\\nimport platform\\nimport socket\\nfrom datetime
+      import datetime, timezone\\nfrom typing import List\\n\\ntry:\\n    import psutil\\n
+      \   PSUTIL_AVAILABLE = True\\nexcept ImportError:\\n    psutil = None\\n    PSUTIL_AVAILABLE
+      = False\\n\\nfrom twisterlab.agents.core.base import (\\n    TwisterAgent,\\n
+      \   AgentCapability,\\n    AgentResponse,\\n    CapabilityType,\\n)\\n\\nlogger
+      = logging.getLogger(__name__)\\n\\n\\nclass RealMonitoringAgent(TwisterAgent):\\n
+      \   def __init__(self, registry=None) -\\u003e None:\\n        super().__init__(registry)\\n
+      \       if PSUTIL_AVAILABLE:\\n            logger.info(\\\"RealMonitoringAgent
+      initialized with psutil\\\")\\n\\n    @property\\n    def name(self) -\\u003e
+      str:\\n        return \\\"monitoring\\\"\\n\\n    @property\\n    def description(self)
+      -\\u003e str:\\n        return \\\"Collects real system metrics using psutil\\\"\\n\\n
+      \   def get_capabilities(self) -\\u003e List[AgentCapability]:\\n        return
+      [\\n            AgentCapability(\\n                name=\\\"collect_metrics\\\",\\n
+      \               description=\\\"Collect all system metrics\\\",\\n                handler=\\\"handle_collect_metrics\\\",\\n
+      \               capability_type=CapabilityType.QUERY,\\n                params=[],\\n
+      \               tags=[\\\"monitoring\\\"],\\n            ),\\n        ]\\n\\n
+      \   async def handle_collect_metrics(self) -\\u003e AgentResponse:\\n        if
+      not PSUTIL_AVAILABLE:\\n            return AgentResponse(success=True, data={\\\"cpu\\\":
+      45.0, \\\"memory\\\": 60.0, \\\"simulated\\\": True})\\n        \\n        try:\\n
+      \           cpu = psutil.cpu_percent(interval=0.5)\\n            mem = psutil.virtual_memory()\\n
+      \           disk = psutil.disk_usage('/')\\n            \\n            data
+      = {\\n                \\\"timestamp\\\": datetime.now(timezone.utc).isoformat(),\\n
+      \               \\\"hostname\\\": socket.gethostname(),\\n                \\\"platform\\\":
+      platform.system(),\\n                \\\"data_source\\\": \\\"psutil\\\",\\n
+      \               \\\"cpu\\\": {\\n                    \\\"usage_percent\\\":
+      cpu,\\n                    \\\"cores\\\": psutil.cpu_count(),\\n                },\\n
+      \               \\\"memory\\\": {\\n                    \\\"total_gb\\\": round(mem.total
+      / (1024**3), 2),\\n                    \\\"used_gb\\\": round(mem.used / (1024**3),
+      2),\\n                    \\\"percent_used\\\": mem.percent,\\n                },\\n
+      \               \\\"disk\\\": {\\n                    \\\"total_gb\\\": round(disk.total
+      / (1024**3), 2),\\n                    \\\"used_gb\\\": round(disk.used / (1024**3),
+      2),\\n                    \\\"percent_used\\\": disk.percent,\\n                },\\n
+      \           }\\n            return AgentResponse(success=True, data=data)\\n
+      \       except Exception as e:\\n            return AgentResponse(success=False,
+      error=str(e))\\n\\n\\n__all__ = [\\\"RealMonitoringAgent\\\", \\\"PSUTIL_AVAILABLE\\\"]\\n\"},\"kind\":\"ConfigMap\",\"metadata\":{\"annotations\":{},\"name\":\"twisterlab-patches-v1\",\"namespace\":\"twisterlab\"}}\n"
+  creationTimestamp: "2026-02-22T00:25:11Z"
+  name: twisterlab-patches-v1
+  namespace: twisterlab
+  resourceVersion: "2883448"
+  uid: 22915c85-a94a-4eef-9ef4-07718a0c1833

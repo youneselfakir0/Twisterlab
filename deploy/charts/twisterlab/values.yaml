@@ -1,0 +1,87 @@
+# Default values for twisterlab.
+# This is a YAML-formatted file.
+
+replicaCount: 2
+
+image:
+  repository: localhost:5000/twisterlab-api
+  pullPolicy: IfNotPresent
+  tag: "v5.0.3"
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: true
+  className: "traefik"
+  annotations: {} # Removed websecure for compatibility
+  hosts:
+    - host: api.twisterlab.local
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceNameOverride: null
+          servicePortOverride: null
+    - host: centre.twisterlab.local
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceNameOverride: twisterlab-ui-react
+          servicePortOverride: 80
+    - host: grafana.twisterlab.local
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceNameOverride: grafana
+          servicePortOverride: 3000
+    - host: prometheus.twisterlab.local
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceNameOverride: prometheus
+          servicePortOverride: 9090
+    - host: twisterlab.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - twisterlab.local
+        - api.twisterlab.local
+        - grafana.twisterlab.local
+        - prometheus.twisterlab.local
+        - centre.twisterlab.local
+      secretName: twisterlab-tls
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 1024Mi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+persistence:
+  enabled: true
+  existingClaim: twisterlab-archive-pvc
+  mountPath: /app/archives
+
+# Environment variables matching original deployment
+env:
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  POSTGRES_HOST: "postgres"
+  OLLAMA_BASE_URL: "http://192.168.0.30:11434"
+  OLLAMA_MODEL: "llama3.2:1b"
+  MAESTRO_USE_LLM: "true"
+  N8N_URL: "http://192.168.0.30:5678"
+  RATE_LIMIT_PER_MINUTE: "500"
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"

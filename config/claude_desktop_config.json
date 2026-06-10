@@ -1,70 +1,60 @@
 {
   "_comment": "Claude Desktop Configuration for TwisterLab MCP Server",
   "_instructions": "Copy this file to: Windows: %APPDATA%\\Claude\\claude_desktop_config.json, Mac: ~/Library/Application Support/Claude/claude_desktop_config.json",
-  "_updated": "2026-01-19",
+  "_updated": "2026-05-21",
   "_server": "http://192.168.0.30:30080",
-  "_version": "3.2.1",
+  "_version": "3.5.0",
+  "_transport": "HTTP/REST (FastAPI native via mcp-remote)",
+  
   "mcpServers": {
     "twisterlab": {
       "command": "npx",
       "args": [
         "-y",
         "mcp-remote",
-        "http://192.168.0.30:30080/mcp",
+        "http://192.168.0.30:30080/api/v1/mcp/tools",
         "--allow-http"
       ],
       "env": {
-        "MCP_LOG_LEVEL": "INFO"
+        "MCP_LOG_LEVEL": "INFO",
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
       }
     }
   },
   "_tools_available": {
+    "agent_discovery": [
+      "list_autonomous_agents - Discover all 20+ agents and their capabilities",
+      "call_agent_tool - Execute any agent capability with parameters"
+    ],
+    
     "ticket_management": [
-      "real-classifier_classify_ticket - Classify a ticket based on its text",
-      "real-resolver_resolve_ticket - Resolve a support ticket"
+      "real-classifier_classify_ticket - Classify tickets (category, priority)",
+      "real-resolver_resolve_ticket - Mark tickets as resolved with notes"
     ],
-    "monitoring": [
-      "monitoring_collect_metrics - Collect all system metrics (CPU, memory, disk)"
-    ],
-    "backup": [
-      "real-backup_create_backup - Create a backup for a specific service"
-    ],
-    "desktop_commander": [
-      "real-desktop-commander_execute_command - Execute a command on the local system (with security checks)",
-      "real-desktop-commander_execute_command_remote - Execute a command on a remote device",
-      "real-desktop-commander_get_allowed_commands - List all allowed commands in safe mode",
-      "real-desktop-commander_get_audit_log - Get the command execution audit log"
-    ],
-    "browser": [
-      "browser_browse - Browse a URL and return page content (Playwright or httpx fallback)",
-      "browser_status - Get browser agent status and available engines"
-    ],
+    
     "analysis": [
-      "sentiment-analyzer_analyze_sentiment - Determine the sentiment of a given text"
+      "sentiment-analyzer_analyze_sentiment - Analyze text sentiment and tone",
+      "code-review_analyze_code - Static code quality analysis",
+      "code-review_security_scan - Security vulnerability detection"
     ],
-    "code_review": [
-      "code-review_analyze_code - Analyze a snippet of code for basic issues",
-      "code-review_security_scan - Scan code for known security patterns (hardcoded secrets, SQL injection, etc.)"
+    
+    "monitoring": [
+      "monitoring_collect_metrics - CPU, memory, disk, network metrics",
+      "monitoring_system_health - Full system health with details"
     ],
-    "cache_redis": [
-      "cache_cache_get - Get a value from cache",
-      "cache_cache_set - Set a value in cache with optional TTL",
-      "cache_cache_delete - Delete a key from cache",
-      "cache_cache_keys - List cache keys matching a pattern",
-      "cache_cache_stats - Get cache statistics (clients, memory, hit rate)"
+    
+    "operations": [
+      "real-desktop-commander_execute_command - Execute safe system commands",
+      "real-backup_create_backup - Create service/data backups",
+      "browser_browse - Web browsing and content extraction"
     ],
-    "database_postgresql": [
-      "database_execute_query - Execute a SQL query (SELECT only)",
-      "database_list_tables - List all tables in the database",
-      "database_describe_table - Get schema for a specific table",
-      "database_db_health - Check database connection health"
-    ],
-    "maestro_orchestration": [
-      "maestro_orchestrate - Orchestrate a complete task workflow across multiple agents",
-      "maestro_analyze_task - Analyze a task to determine category and priority"
+    
+    "orchestration": [
+      "maestro_orchestrate - Multi-agent workflow coordination",
+      "maestro_analyze_task - Analyze and route tasks intelligently"
     ]
   },
-  "_tools_count": 24,
+  "_tools_count": 20,
   "_network": {
     "edgeserver": "192.168.0.30 (K3s cluster)",
     "cortex": "192.168.0.20 (Ollama LLM server)",

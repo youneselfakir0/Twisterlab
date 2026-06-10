@@ -1,0 +1,15 @@
+[
+  {
+    "op": "replace",
+    "path": "/spec/template/spec/containers/0/env/0",
+    "value": {
+      "name": "DATA_SOURCE_NAME",
+      "valueFrom": {
+        "secretKeyRef": {
+          "name": "postgres-exporter-secret",
+          "key": "DATA_SOURCE_NAME"
+        }
+      }
+    }
+  }
+]

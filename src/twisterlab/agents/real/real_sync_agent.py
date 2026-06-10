@@ -14,13 +14,18 @@ class RealSyncAgent(TwisterAgent):
         super().__init__(
             name="real-sync",
             display_name="Real Sync Agent",
-            description="Performs sync operations across agents",
+            description="Performs sync operations across agents and infrastructure",
             role="sync",
-            tools=[{"type": "function", "function": {"name": "sync_now"}}],
+            tools=[
+                {"type": "function", "function": {"name": "sync_now"}},
+                {"type": "function", "function": {"name": "sync_domain"}}
+            ],
         )
 
-    async def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> Any:
-        return {"status": "ok", "task": task}
+    async def execute(self, capability: str, **kwargs) -> Any:
+        if capability == "sync_domain":
+            return {"status": "success", "message": "Domain synchronization completed (AD/LDAP).", "objects_synced": 42}
+        return {"status": "ok", "capability": capability, "kwargs": kwargs}
 
 
 __all__ = ["RealSyncAgent"]

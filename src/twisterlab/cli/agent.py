@@ -87,8 +87,11 @@ async def execute_agent_task(agent_name: str, capability_name: Optional[str], ar
                     param_name = target_cap.params[0].name
                     params = {param_name: args_json}
                 else:
-                    # Default fallback
-                    params = {"task": args_json, "text": args_json}
+                    # Prefer 'task' if it's orchestrate, otherwise 'text'
+                    if capability_name == "orchestrate":
+                        params = {"task": args_json}
+                    else:
+                        params = {"text": args_json}
             else:
                 params = {"task": args_json}
     else:

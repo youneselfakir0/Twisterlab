@@ -1,0 +1,11 @@
+﻿NAME                                                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                       STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+persistentvolume/pvc-731a8c02-77bb-4201-8627-4439349a2905   5Gi        RWO            Delete           Bound    twisterlab/redis-pvc        local-path     <unset>                          115d
+persistentvolume/pvc-7890ee61-027e-40c6-a3a7-51a890161335   5Gi        RWO            Delete           Bound    twisterlab/grafana-pvc      local-path     <unset>                          115d
+persistentvolume/pvc-891c3043-575a-4d45-bd4a-ef2cf71b31bc   10Gi       RWO            Delete           Bound    twisterlab/postgres-pvc     local-path     <unset>                          115d
+persistentvolume/pvc-aa0585c4-768c-4a30-a7ef-816c85f73014   20Gi       RWO            Delete           Bound    monitoring/prometheus-pvc   local-path     <unset>                          85d
+
+NAMESPACE    NAME                                   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+monitoring   persistentvolumeclaim/prometheus-pvc   Bound    pvc-aa0585c4-768c-4a30-a7ef-816c85f73014   20Gi       RWO            local-path     <unset>                 85d
+twisterlab   persistentvolumeclaim/grafana-pvc      Bound    pvc-7890ee61-027e-40c6-a3a7-51a890161335   5Gi        RWO            local-path     <unset>                 115d
+twisterlab   persistentvolumeclaim/postgres-pvc     Bound    pvc-891c3043-575a-4d45-bd4a-ef2cf71b31bc   10Gi       RWO            local-path     <unset>                 115d
+twisterlab   persistentvolumeclaim/redis-pvc        Bound    pvc-731a8c02-77bb-4201-8627-4439349a2905   5Gi        RWO            local-path     <unset>                 115d

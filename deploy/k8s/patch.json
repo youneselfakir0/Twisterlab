@@ -1,0 +1,50 @@
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "name": "api",
+            "volumeMounts": [
+              {
+                "name": "ui-hotfix-volume",
+                "mountPath": "/app/src/twisterlab/agents/signals/__init__.py",
+                "subPath": "sig_init.py"
+              },
+              {
+                "name": "ui-hotfix-volume",
+                "mountPath": "/app/src/twisterlab/agents/signals/schemas.py",
+                "subPath": "sig_schemas.py"
+              },
+              {
+                "name": "ui-hotfix-volume",
+                "mountPath": "/app/src/twisterlab/agents/signals/base.py",
+                "subPath": "sig_base.py"
+              },
+              {
+                "name": "ui-hotfix-volume",
+                "mountPath": "/app/src/twisterlab/agents/signals/market_agent.py",
+                "subPath": "sig_market.py"
+              },
+              {
+                "name": "ui-hotfix-volume",
+                "mountPath": "/app/src/twisterlab/agents/signals/pattern_agent.py",
+                "subPath": "sig_pattern.py"
+              },
+              {
+                "name": "ui-hotfix-volume",
+                "mountPath": "/app/src/twisterlab/agents/signals/filter_agent.py",
+                "subPath": "sig_filter.py"
+              },
+              {
+                "name": "ui-hotfix-volume",
+                "mountPath": "/app/src/twisterlab/agents/signals/meta_agent.py",
+                "subPath": "sig_meta.py"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

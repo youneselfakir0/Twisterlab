@@ -1,0 +1,77 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-prod","nginx.ingress.kubernetes.io/rewrite-target":"/","nginx.ingress.kubernetes.io/ssl-redirect":"true"},"labels":{"app":"twisterlab"},"name":"twisterlab-ingress","namespace":"twisterlab"},"spec":{"ingressClassName":"nginx","rules":[{"host":"api.twisterlab.local","http":{"paths":[{"backend":{"service":{"name":"twisterlab-api","port":{"number":8000}}},"path":"/","pathType":"Prefix"}]}},{"host":"grafana.twisterlab.local","http":{"paths":[{"backend":{"service":{"name":"grafana","port":{"number":3000}}},"path":"/","pathType":"Prefix"}]}},{"host":"prometheus.twisterlab.local","http":{"paths":[{"backend":{"service":{"name":"prometheus","port":{"number":9090}}},"path":"/","pathType":"Prefix"}]}},{"host":"twisterlab.local","http":{"paths":[{"backend":{"service":{"name":"twisterlab-api","port":{"number":8000}}},"path":"/","pathType":"Prefix"}]}}],"tls":[{"hosts":["twisterlab.local","api.twisterlab.local","grafana.twisterlab.local","prometheus.twisterlab.local"],"secretName":"twisterlab-tls"}]}}
+  creationTimestamp: "2025-11-22T23:01:09Z"
+  generation: 2
+  labels:
+    app: twisterlab
+  name: twisterlab-ingress
+  namespace: twisterlab
+  resourceVersion: "3804828"
+  uid: a236f4cc-0c5b-43fb-a23e-8e63f9092b6d
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: api.twisterlab.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: twisterlab-api
+            port:
+              number: 8000
+        path: /
+        pathType: Prefix
+  - host: grafana.twisterlab.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: grafana
+            port:
+              number: 3000
+        path: /
+        pathType: Prefix
+  - host: prometheus.twisterlab.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: prometheus
+            port:
+              number: 9090
+        path: /
+        pathType: Prefix
+  - host: twisterlab.local
+    http:
+      paths:
+      - backend:
+          service:
+            name: twisterlab-api
+            port:
+              number: 8000
+        path: /
+        pathType: Prefix
+  - http:
+      paths:
+      - backend:
+          service:
+            name: twisterlab-api
+            port:
+              number: 8000
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - twisterlab.local
+    - api.twisterlab.local
+    - grafana.twisterlab.local
+    - prometheus.twisterlab.local
+    secretName: twisterlab-tls
+status:
+  loadBalancer:
+    ingress:
+    - ip: 192.168.0.30

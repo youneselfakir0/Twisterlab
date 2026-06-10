@@ -6,54 +6,43 @@ Configuration files for connecting IDE tools to the TwisterLab MCP Server.
 
 | Property | Value |
 |----------|-------|
-| **K8s Node IP** | `192.168.0.30` |
+| **K8s Node IP** | `192.168.0.30` (Edge Server / K3s) |
 | **MCP Port** | `30080` |
-| **JSON-RPC Endpoint** | `http://192.168.0.30:30080/mcp` |
+| **FastAPI Endpoint** | `http://192.168.0.30:30080` |
+| **MCP Tools API** | `http://192.168.0.30:30080/api/v1/mcp/tools` |
 | **Health Check** | `http://192.168.0.30:30080/health` |
-| **Tools List** | `http://192.168.0.30:30080/tools` |
+| **Readiness Check** | `http://192.168.0.30:30080/ready` |
 
-> ⚠️ **Important**: Le serveur utilise HTTP (pas HTTPS). Il faut ajouter `--allow-http` à mcp-remote.
+> ⚠️ **Important**: Le serveur utilise HTTP (pas HTTPS). Pour Stdio/mcp-remote, ajouter `--allow-http`.
 
-## 🛠️ Available Tools (29 total)
 
-### Monitoring (7 tools)
-- `monitoring_health_check` - Check health of all services
-- `monitoring_get_system_metrics` - Get CPU, memory, disk metrics
-- `monitoring_list_containers` - List Docker containers
-- `monitoring_get_container_logs` - Get container logs
-- `monitoring_get_cache_stats` - Redis cache statistics
-- `monitoring_get_llm_status` - Check LLM server status
-- `monitoring_list_models` - List available LLM models
+## 🛠️ Available Tools (20+ total)
 
-### Maestro/LLM (5 tools)
-- `maestro_chat` - Send message to LLM
-- `maestro_generate` - Generate text completion
-- `maestro_orchestrate` - Orchestrate agent tasks
-- `maestro_list_agents` - List all agents
-- `maestro_analyze` - Analyze data/code with LLM
+### Agent Discovery
+- `list_autonomous_agents` - Get all 20+ agents and capabilities
+- `call_agent_tool` - Execute any agent capability
 
-### Database (4 tools)
-- `database_execute_query` - Execute SQL queries
-- `database_list_tables` - List database tables
-- `database_describe_table` - Get table schema
-- `database_db_health` - Check database health
+### Monitoring (2 tools)
+- `monitoring_collect_metrics` - CPU, RAM, Disk, Network metrics
+- `monitoring_system_health` - Full system health check
 
-### Cache (5 tools)
-- `cache_cache_get` - Get cached value
-- `cache_cache_set` - Set cached value
-- `cache_cache_delete` - Delete cached key
-- `cache_cache_keys` - List cache keys
-- `cache_cache_stats` - Cache statistics
+### Ticket Management (2 tools)
+- `real-classifier_classify_ticket` - Classify tickets by category/priority
+- `real-resolver_resolve_ticket` - Mark tickets as resolved
 
-### Agents (8 tools)
-- `sentiment-analyzer_analyze_sentiment` - Analyze text sentiment
-- `real-classifier_classify_ticket` - Classify support tickets
-- `real-resolver_resolve_ticket` - Mark ticket resolved
-- `real-backup_create_backup` - Create data backup
-- `real-desktop-commander_execute_command` - Execute system commands
-- `browser_browse` - Browse web pages
-- `code-review_analyze_code` - Review code quality
-- `code-review_security_scan` - Security scan code
+### Analysis (3 tools)
+- `sentiment-analyzer_analyze_sentiment` - Text sentiment analysis
+- `code-review_analyze_code` - Code quality analysis
+- `code-review_security_scan` - Security vulnerability scan
+
+### Operations (3 tools)
+- `real-desktop-commander_execute_command` - Execute safe system commands
+- `real-backup_create_backup` - Create backups
+- `browser_browse` - Web browsing and content extraction
+
+### Orchestration (2 tools)
+- `maestro_orchestrate` - Multi-agent workflow coordination
+- `maestro_analyze_task` - Task analysis and routing
 
 ---
 
@@ -62,7 +51,9 @@ Configuration files for connecting IDE tools to the TwisterLab MCP Server.
 ### Option 1: Workspace Settings (Recommended)
 The `.vscode/settings.json` in this workspace is already configured.
 
+
 ### Option 2: User Settings
+
 Add to your VS Code `settings.json`:
 
 ```json
@@ -71,20 +62,21 @@ Add to your VS Code `settings.json`:
         "servers": {
             "twisterlab": {
                 "type": "sse",
-                "url": "http://192.168.0.20:30080/sse"
+                "url": "http://192.168.0.30:30080/api/v1/mcp/tools"
             }
         }
     },
     "github.copilot.chat.mcpServers": {
         "twisterlab": {
             "type": "sse",
-            "url": "http://192.168.0.20:30080/sse"
+            "url": "http://192.168.0.30:30080/api/v1/mcp/tools"
         }
     }
 }
 ```
 
 ### Option 3: MCP Settings File
+
 Create `~/.vscode/mcp.json`:
 
 ```json
@@ -92,7 +84,7 @@ Create `~/.vscode/mcp.json`:
     "servers": {
         "twisterlab": {
             "type": "sse",
-            "url": "http://192.168.0.20:30080/sse"
+            "url": "http://192.168.0.30:30080/api/v1/mcp/tools"
         }
     }
 }
@@ -123,7 +115,7 @@ experimental:
   modelContextProtocolServers:
     - name: "twisterlab"
       transport: "sse"
-      url: "http://192.168.0.20:30080/sse"
+      url: "http://192.168.0.30:30080/api/v1/mcp/tools"
 ```
 
 ---
@@ -156,7 +148,10 @@ Add to your Claude Desktop config:
   "mcpServers": {
     "twisterlab": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "http://192.168.0.20:30080/sse"]
+      "args": ["-y", "mcp-remote", "http://192.168.0.30:30080/api/v1/mcp/tools", "--allow-http"],
+      "env": {
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      }
     }
   }
 }
@@ -167,39 +162,49 @@ Add to your Claude Desktop config:
 ## 🧪 Testing the Connection
 
 ### Quick Test (curl)
+
 ```bash
 # Health check
-curl http://192.168.0.20:30080/health
+curl http://192.168.0.30:30080/health
 
-# List tools
-curl -X POST http://192.168.0.20:30080/mcp \
+# List all agents
+curl -X GET http://192.168.0.30:30080/api/v1/mcp/tools/list_autonomous_agents
+
+# Call a specific agent tool
+curl -X POST http://192.168.0.30:30080/api/v1/mcp/tools/call_agent_tool \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+  -d '{
+    "agent_name": "classifier",
+    "tool_name": "classify_ticket",
+    "input": {"ticket_text": "Database is down"}
+  }'
 ```
 
 ### Python Test
+
 ```python
 import requests
 
+# List agents
+response = requests.get("http://192.168.0.30:30080/api/v1/mcp/tools/list_autonomous_agents")
+print("Available agents:", response.json())
+
 # Call a tool
 response = requests.post(
-    "http://192.168.0.20:30080/mcp",
+    "http://192.168.0.30:30080/api/v1/mcp/tools/call_agent_tool",
     json={
-        "jsonrpc": "2.0",
-        "method": "tools/call",
-        "id": 1,
-        "params": {
-            "name": "monitoring_health_check",
-            "arguments": {}
-        }
+        "agent_name": "classifier",
+        "tool_name": "classify_ticket",
+        "input": {"ticket_text": "The server is down!"}
     }
 )
-print(response.json())
+print("Classification result:", response.json())
 ```
 
 ### Load Test
+
 ```bash
-python tests/load_test_mcp.py --quick
+ab -n 100 -c 10 http://192.168.0.30:30080/health
 ```
 
 ---
@@ -207,34 +212,35 @@ python tests/load_test_mcp.py --quick
 ## 🔧 Troubleshooting
 
 ### Connection Refused
-1. Check if MCP server is running:
-   ```bash
-   kubectl get pods -n twisterlab -l app=mcp-unified
-   ```
-2. Check service port:
-   ```bash
-   kubectl get svc mcp-unified -n twisterlab
-   ```
 
-### SSE Not Working
-Try the stdio transport with npx:
-```json
-{
-  "type": "stdio",
-  "command": "npx",
-  "args": ["-y", "mcp-remote", "http://192.168.0.20:30080/sse"]
-}
+1. Check if MCP server is running:
+
+```bash
+kubectl get pods -n twisterlab -l app=twisterlab-api
 ```
 
+2. Check service port:
+
+```bash
+kubectl get svc twisterlab-api -n twisterlab
+```
+
+### Endpoint Not Found
+
+Verify the correct endpoint path is used:
+- ✅ Correct: `http://192.168.0.30:30080/api/v1/mcp/tools/list_autonomous_agents`
+- ❌ Wrong: `http://192.168.0.30:30080/mcp/list_autonomous_agents`
+
 ### Timeout Errors
-LLM-based tools (maestro_*) can take 30-60 seconds. This is normal.
+
+Some agents (especially Maestro orchestration) can take 30-60 seconds. This is normal.
 
 ---
 
 ## 📁 Configuration Files
 
 | File | Purpose |
-|------|---------|
+| --- | --- |
 | `config/vscode-mcp-config.json` | VS Code MCP settings template |
 | `config/continue-config.yaml` | Continue IDE configuration |
 | `config/claude_desktop_config.json` | Claude Desktop configuration |

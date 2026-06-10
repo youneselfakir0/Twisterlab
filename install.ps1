@@ -93,13 +93,38 @@ if (-not (Test-Path $twisterlabCli)) {
 }
 
 Write-Host "----------------------------------------------------------" -ForegroundColor Gray
-Write-Host "[OK] TwisterLab Setup Complete!" -ForegroundColor Green
+Write-Host "[OK] TwisterLab Onboarding Complete!" -ForegroundColor Green
+
+# Step 5: PATH Registration (Optional)
 Write-Host ""
-Write-Host "Next steps:" -ForegroundColor Cyan
+Write-Host "Step 5: PATH Registration..." -ForegroundColor Yellow
+$scriptsPath = (Get-Item ".venv\Scripts").FullName
+$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+
+if ($userPath -notlike "*$scriptsPath*") {
+    $choice = Read-Host "Would you like to add the TwisterLab executable to your User PATH? (y/N)"
+    if ($choice -eq "y") {
+        $newPath = "$userPath;$scriptsPath"
+        [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+        $env:Path = "$env:Path;$scriptsPath"
+        Write-Host "[OK] Added TwisterLab to User PATH. You may need to restart your terminal." -ForegroundColor Green
+    } else {
+        Write-Host "Skipping PATH registration." -ForegroundColor Gray
+    }
+} else {
+    Write-Host "[OK] TwisterLab is already in your PATH." -ForegroundColor Green
+}
+
+Write-Host ""
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "🚀 TwisterLab v5.2.0 Setup Complete!" -ForegroundColor Cyan
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Next steps (available from any terminal if added to PATH):" -ForegroundColor Gray
 Write-Host "1. Test system connectivity: " -ForegroundColor Gray
-Write-Host "   poetry run twisterlab doctor" -ForegroundColor White
+Write-Host "   twisterlab doctor" -ForegroundColor White
 Write-Host "2. Start the background server: " -ForegroundColor Gray
-Write-Host "   poetry run twisterlab gateway start" -ForegroundColor White
+Write-Host "   twisterlab gateway start" -ForegroundColor White
 Write-Host "3. List registered agents: " -ForegroundColor Gray
-Write-Host "   poetry run twisterlab agent list" -ForegroundColor White
+Write-Host "   twisterlab agent list" -ForegroundColor White
 Write-Host ""

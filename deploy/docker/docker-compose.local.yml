@@ -1,0 +1,129 @@
+# Docker Compose - Local Development
+# Builds images locally instead of pulling from GHCR
+# Use this for Windows or when GHCR images not available
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: twisterlab-postgres-local
+    environment:
+      POSTGRES_USER: twisterlab
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-twisterlab_local}
+      POSTGRES_DB: twisterlab
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data-local:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U twisterlab" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - twisterlab-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: twisterlab-redis-local
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-twisterlab_redis}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data-local:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - twisterlab-network
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.api
+    container_name: twisterlab-api-local
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://twisterlab:${POSTGRES_PASSWORD:-twisterlab_local}@postgres:5432/twisterlab
+      REDIS_URL: redis://:${REDIS_PASSWORD:-twisterlab_redis}@redis:6379/0
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      AGENT_MODE: ${AGENT_MODE:-REAL}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - twisterlab-network
+
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: twisterlab-prometheus-local
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data-local:/prometheus
+    restart: unless-stopped
+    networks:
+      - twisterlab-network
+
+  # Grafana - Monitoring dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: twisterlab-grafana-local
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data-local:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    restart: unless-stopped
+    networks:
+      - twisterlab-network
+
+networks:
+  twisterlab-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
+
+volumes:
+  postgres-data-local:
+    driver: local
+  redis-data-local:
+    driver: local
+  prometheus-data-local:
+    driver: local
+  grafana-data-local:
+    driver: local

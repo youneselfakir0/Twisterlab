@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # Database for persistence
+  postgres:
+    image: postgres:16-alpine
+    container_name: twisterlab-demo-postgres
+    environment:
+      POSTGRES_USER: twisterlab
+      POSTGRES_PASSWORD: demo_password
+      POSTGRES_DB: twisterlab
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U twisterlab" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"
+    networks:
+      - twisterlab-demo
+
+  # Caching and pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: twisterlab-demo-redis
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6380:6379"
+    networks:
+      - twisterlab-demo
+
+  # Main API & Agent Orchestrator
+  api:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.api
+    container_name: twisterlab-demo-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Connection strings
+      DATABASE_URL: postgresql+asyncpg://twisterlab:demo_password@postgres:5432/twisterlab
+      REDIS_URL: redis://redis:6379/0
+
+      # App Config
+      LOG_LEVEL: INFO
+      AGENT_MODE: REAL
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      OLLAMA_HOST: http://host.docker.internal:11434
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/metrics" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - twisterlab-demo
+
+  # MCP Server - Hosts the Agents as Tools
+  mcp:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.mcp-unified
+    container_name: twisterlab-demo-mcp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Use the demo DB/Redis
+      DATABASE_URL: postgresql+asyncpg://twisterlab:demo_password@postgres:5432/twisterlab
+      REDIS_URL: redis://redis:6379/0
+      MCP_LOG_LEVEL: INFO
+      PORT: 8080
+      CORTEX_ENDPOINT: http://host.docker.internal:11434
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - twisterlab-demo
+
+  # Observability
+  prometheus:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.prometheus
+    container_name: twisterlab-demo-prometheus
+    ports:
+      - "9091:9090"
+    networks:
+      - twisterlab-demo
+
+  grafana:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.grafana
+    container_name: twisterlab-demo-grafana
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: demo
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_SERVER_ROOT_URL: http://localhost:3001
+    ports:
+      - "3001:3000"
+    networks:
+      - twisterlab-demo
+
+networks:
+  twisterlab-demo:
+    driver: bridge

@@ -1,0 +1,2030 @@
+{
+  "item_id": 25535,
+  "status": "canceled",
+  "priority": 0,
+  "batch_id": "88751c4d-ea13-436f-9d08-2967171bc9c7",
+  "origin": "generate",
+  "destination": "generate",
+  "session_id": "b6db6547-ef89-4278-8774-df5d8254a3e1",
+  "error_type": null,
+  "error_message": null,
+  "error_traceback": null,
+  "created_at": "2026-01-29 04:37:04.044",
+  "updated_at": "2026-01-29 04:38:21.570",
+  "started_at": "2026-01-29 04:37:05.767",
+  "completed_at": "2026-01-29 04:38:20.091",
+  "queue_id": "default",
+  "field_values": [
+    {
+      "node_path": "seed:X6H2xBdHoF",
+      "field_name": "value",
+      "value": 4038107104
+    },
+    {
+      "node_path": "positive_prompt:A4n1ASsPgm",
+      "field_name": "value",
+      "value": "Editorial fashion photography in the detailed, cinematic style of Helmut Newton, shot in color. A confident mature xbodyaigirl, blonde wearing a delicate black lace lingerie set by fc_triumphlingerie\u2014a matching bra and thong panty featuring sheer mesh fabric, intricate lace patterns, thin straps, and an elegant, minimalist design. The lingerie emphasizes structure, texture, and form rather than overt sexuality.\n\nScene set in a dimly lit penthouse apartment at night, modern and luxurious, with floor-to-ceiling windows revealing a softly glowing city skyline in the background. Architectural lines, polished surfaces, and deep shadows frame the subject. Lighting is dramatic and directional: hard key light combined with controlled shadow falloff, sculpting the body and accentuating lace detail, fabric transparency, and skin texture.\n\nThe subject is posed with poise and authority\u2014upright posture, composed expression, strong eye contact\u2014evoking dominance, confidence, and sophistication. Natural skin texture, subtle highlights, realistic contrast. Rich blacks, warm skin tones, restrained color palette. Shot on medium-format film look, sharp focus, high contrast, slight film grain, editorial realism, timeless luxury fashion photography."
+    }
+  ],
+  "retried_from_item_id": null,
+  "session": {
+    "id": "b6db6547-ef89-4278-8774-df5d8254a3e1",
+    "graph": {
+      "id": "flux_graph:Pwkyl9M5qy",
+      "nodes": {
+        "flux_model_loader:H0g4raKsg0": {
+          "id": "flux_model_loader:H0g4raKsg0",
+          "is_intermediate": true,
+          "use_cache": true,
+          "model": {
+            "key": "66fb0b10-5256-40e7-a5c7-cff20f2028f0",
+            "hash": "blake3:8e532c2cb80971c1fc56074e63adcfcaba7b2e1c7c79afda98a459aafd4f4b87",
+            "name": "FLUX.1 dev (quantized)",
+            "base": "flux",
+            "type": "main",
+            "submodel_type": null
+          },
+          "t5_encoder_model": {
+            "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+            "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+            "name": "t5_bnb_int8_quantized_encoder",
+            "base": "any",
+            "type": "t5_encoder",
+            "submodel_type": null
+          },
+          "clip_embed_model": {
+            "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+            "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+            "name": "clip-vit-large-patch14",
+            "base": "any",
+            "type": "clip_embed",
+            "submodel_type": null
+          },
+          "vae_model": {
+            "key": "ebd162b4-a62f-4638-a3e5-9ca3bd4107d0",
+            "hash": "blake3:ce21cb76364aa6e2421311cf4a4b5eb052a76c4f1cd207b50703d8978198a068",
+            "name": "FLUX.1-schnell_ae",
+            "base": "flux",
+            "type": "vae",
+            "submodel_type": null
+          },
+          "type": "flux_model_loader"
+        },
+        "positive_prompt:A4n1ASsPgm": {
+          "id": "positive_prompt:A4n1ASsPgm",
+          "is_intermediate": true,
+          "use_cache": true,
+          "value": "Editorial fashion photography in the detailed, cinematic style of Helmut Newton, shot in color. A confident mature xbodyaigirl, blonde wearing a delicate black lace lingerie set by fc_triumphlingerie\u2014a matching bra and thong panty featuring sheer mesh fabric, intricate lace patterns, thin straps, and an elegant, minimalist design. The lingerie emphasizes structure, texture, and form rather than overt sexuality.\n\nScene set in a dimly lit penthouse apartment at night, modern and luxurious, with floor-to-ceiling windows revealing a softly glowing city skyline in the background. Architectural lines, polished surfaces, and deep shadows frame the subject. Lighting is dramatic and directional: hard key light combined with controlled shadow falloff, sculpting the body and accentuating lace detail, fabric transparency, and skin texture.\n\nThe subject is posed with poise and authority\u2014upright posture, composed expression, strong eye contact\u2014evoking dominance, confidence, and sophistication. Natural skin texture, subtle highlights, realistic contrast. Rich blacks, warm skin tones, restrained color palette. Shot on medium-format film look, sharp focus, high contrast, slight film grain, editorial realism, timeless luxury fashion photography.",
+          "type": "string"
+        },
+        "flux_text_encoder:r0H9nVDLvN": {
+          "id": "flux_text_encoder:r0H9nVDLvN",
+          "is_intermediate": true,
+          "use_cache": true,
+          "clip": null,
+          "t5_encoder": null,
+          "t5_max_seq_len": null,
+          "prompt": null,
+          "mask": null,
+          "type": "flux_text_encoder"
+        },
+        "pos_cond_collect:kAA1mQQbu3": {
+          "id": "pos_cond_collect:kAA1mQQbu3",
+          "is_intermediate": true,
+          "use_cache": true,
+          "item": null,
+          "collection": [],
+          "type": "collect"
+        },
+        "seed:X6H2xBdHoF": {
+          "id": "seed:X6H2xBdHoF",
+          "is_intermediate": true,
+          "use_cache": true,
+          "value": 4038107104,
+          "type": "integer"
+        },
+        "flux_denoise:EPsSUu9H19": {
+          "id": "flux_denoise:EPsSUu9H19",
+          "is_intermediate": true,
+          "use_cache": true,
+          "latents": null,
+          "denoise_mask": null,
+          "denoising_start": 0.0,
+          "denoising_end": 1.0,
+          "add_noise": true,
+          "transformer": null,
+          "control_lora": null,
+          "positive_text_conditioning": null,
+          "negative_text_conditioning": null,
+          "redux_conditioning": null,
+          "fill_conditioning": null,
+          "cfg_scale": 1.0,
+          "cfg_scale_start_step": 0,
+          "cfg_scale_end_step": -1,
+          "width": 592,
+          "height": 896,
+          "num_steps": 20,
+          "scheduler": "euler",
+          "guidance": 3.5,
+          "seed": 0,
+          "control": null,
+          "controlnet_vae": null,
+          "ip_adapter": null,
+          "kontext_conditioning": null,
+          "type": "flux_denoise"
+        },
+        "lora_collector:30vAodxW19": {
+          "id": "lora_collector:30vAodxW19",
+          "is_intermediate": true,
+          "use_cache": true,
+          "item": null,
+          "collection": [],
+          "type": "collect"
+        },
+        "flux_lora_collection_loader:epNoEKaz7j": {
+          "id": "flux_lora_collection_loader:epNoEKaz7j",
+          "is_intermediate": true,
+          "use_cache": true,
+          "loras": null,
+          "transformer": null,
+          "clip": null,
+          "t5_encoder": null,
+          "type": "flux_lora_collection_loader"
+        },
+        "lora_selector:I4d9cpB1zL": {
+          "id": "lora_selector:I4d9cpB1zL",
+          "is_intermediate": true,
+          "use_cache": true,
+          "lora": {
+            "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+            "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+            "name": "CamelTo3",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 1.0,
+          "type": "lora_selector"
+        },
+        "lora_selector:f0FaxYQgQl": {
+          "id": "lora_selector:f0FaxYQgQl",
+          "is_intermediate": true,
+          "use_cache": true,
+          "lora": {
+            "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+            "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+            "name": "Mervat_Amin",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 0.75,
+          "type": "lora_selector"
+        },
+        "lora_selector:9CZu7Hz1sR": {
+          "id": "lora_selector:9CZu7Hz1sR",
+          "is_intermediate": true,
+          "use_cache": true,
+          "lora": {
+            "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+            "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+            "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 0.75,
+          "type": "lora_selector"
+        },
+        "lora_selector:RhaafyC5gz": {
+          "id": "lora_selector:RhaafyC5gz",
+          "is_intermediate": true,
+          "use_cache": true,
+          "lora": {
+            "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+            "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+            "name": "Muscle woman-FP16",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 0.75,
+          "type": "lora_selector"
+        },
+        "core_metadata:cgCQoNq4rM": {
+          "id": "core_metadata:cgCQoNq4rM",
+          "is_intermediate": true,
+          "use_cache": true,
+          "generation_mode": "flux_txt2img",
+          "positive_prompt": null,
+          "negative_prompt": null,
+          "width": 592,
+          "height": 896,
+          "seed": null,
+          "rand_device": null,
+          "cfg_scale": null,
+          "cfg_rescale_multiplier": null,
+          "steps": 20,
+          "scheduler": "euler",
+          "seamless_x": null,
+          "seamless_y": null,
+          "clip_skip": null,
+          "model": {
+            "key": "66fb0b10-5256-40e7-a5c7-cff20f2028f0",
+            "hash": "blake3:8e532c2cb80971c1fc56074e63adcfcaba7b2e1c7c79afda98a459aafd4f4b87",
+            "name": "FLUX.1 dev (quantized)",
+            "base": "flux",
+            "type": "main",
+            "submodel_type": null
+          },
+          "controlnets": null,
+          "ipAdapters": null,
+          "t2iAdapters": null,
+          "loras": [
+            {
+              "model": {
+                "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                "name": "CamelTo3",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 1.0
+            },
+            {
+              "model": {
+                "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                "name": "Mervat_Amin",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "model": {
+                "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "model": {
+                "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                "name": "Muscle woman-FP16",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            }
+          ],
+          "strength": null,
+          "init_image": null,
+          "vae": {
+            "key": "ebd162b4-a62f-4638-a3e5-9ca3bd4107d0",
+            "hash": "blake3:ce21cb76364aa6e2421311cf4a4b5eb052a76c4f1cd207b50703d8978198a068",
+            "name": "FLUX.1-schnell_ae",
+            "base": "flux",
+            "type": "vae",
+            "submodel_type": null
+          },
+          "qwen3_encoder": null,
+          "hrf_enabled": null,
+          "hrf_method": null,
+          "hrf_strength": null,
+          "positive_style_prompt": null,
+          "negative_style_prompt": null,
+          "refiner_model": null,
+          "refiner_cfg_scale": null,
+          "refiner_steps": null,
+          "refiner_scheduler": null,
+          "refiner_positive_aesthetic_score": null,
+          "refiner_negative_aesthetic_score": null,
+          "refiner_start": null,
+          "type": "core_metadata",
+          "guidance": 3.5,
+          "t5_encoder": {
+            "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+            "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+            "name": "t5_bnb_int8_quantized_encoder",
+            "base": "any",
+            "type": "t5_encoder"
+          },
+          "clip_embed_model": {
+            "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+            "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+            "name": "clip-vit-large-patch14",
+            "base": "any",
+            "type": "clip_embed"
+          },
+          "ref_images": []
+        },
+        "canvas_output:yhemtVoqBr": {
+          "board": {
+            "board_id": "47d823ed-deb3-4a07-9663-f13c6c133d23"
+          },
+          "metadata": null,
+          "id": "canvas_output:yhemtVoqBr",
+          "is_intermediate": false,
+          "use_cache": false,
+          "latents": null,
+          "vae": null,
+          "type": "flux_vae_decode"
+        }
+      },
+      "edges": [
+        {
+          "source": {
+            "node_id": "flux_model_loader:H0g4raKsg0",
+            "field": "vae"
+          },
+          "destination": {
+            "node_id": "flux_denoise:EPsSUu9H19",
+            "field": "controlnet_vae"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_model_loader:H0g4raKsg0",
+            "field": "vae"
+          },
+          "destination": {
+            "node_id": "canvas_output:yhemtVoqBr",
+            "field": "vae"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_model_loader:H0g4raKsg0",
+            "field": "max_seq_len"
+          },
+          "destination": {
+            "node_id": "flux_text_encoder:r0H9nVDLvN",
+            "field": "t5_max_seq_len"
+          }
+        },
+        {
+          "source": {
+            "node_id": "positive_prompt:A4n1ASsPgm",
+            "field": "value"
+          },
+          "destination": {
+            "node_id": "flux_text_encoder:r0H9nVDLvN",
+            "field": "prompt"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_text_encoder:r0H9nVDLvN",
+            "field": "conditioning"
+          },
+          "destination": {
+            "node_id": "pos_cond_collect:kAA1mQQbu3",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "pos_cond_collect:kAA1mQQbu3",
+            "field": "collection"
+          },
+          "destination": {
+            "node_id": "flux_denoise:EPsSUu9H19",
+            "field": "positive_text_conditioning"
+          }
+        },
+        {
+          "source": {
+            "node_id": "seed:X6H2xBdHoF",
+            "field": "value"
+          },
+          "destination": {
+            "node_id": "flux_denoise:EPsSUu9H19",
+            "field": "seed"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_denoise:EPsSUu9H19",
+            "field": "latents"
+          },
+          "destination": {
+            "node_id": "canvas_output:yhemtVoqBr",
+            "field": "latents"
+          }
+        },
+        {
+          "source": {
+            "node_id": "lora_collector:30vAodxW19",
+            "field": "collection"
+          },
+          "destination": {
+            "node_id": "flux_lora_collection_loader:epNoEKaz7j",
+            "field": "loras"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_model_loader:H0g4raKsg0",
+            "field": "transformer"
+          },
+          "destination": {
+            "node_id": "flux_lora_collection_loader:epNoEKaz7j",
+            "field": "transformer"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_model_loader:H0g4raKsg0",
+            "field": "clip"
+          },
+          "destination": {
+            "node_id": "flux_lora_collection_loader:epNoEKaz7j",
+            "field": "clip"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_model_loader:H0g4raKsg0",
+            "field": "t5_encoder"
+          },
+          "destination": {
+            "node_id": "flux_lora_collection_loader:epNoEKaz7j",
+            "field": "t5_encoder"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_lora_collection_loader:epNoEKaz7j",
+            "field": "transformer"
+          },
+          "destination": {
+            "node_id": "flux_denoise:EPsSUu9H19",
+            "field": "transformer"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_lora_collection_loader:epNoEKaz7j",
+            "field": "clip"
+          },
+          "destination": {
+            "node_id": "flux_text_encoder:r0H9nVDLvN",
+            "field": "clip"
+          }
+        },
+        {
+          "source": {
+            "node_id": "flux_lora_collection_loader:epNoEKaz7j",
+            "field": "t5_encoder"
+          },
+          "destination": {
+            "node_id": "flux_text_encoder:r0H9nVDLvN",
+            "field": "t5_encoder"
+          }
+        },
+        {
+          "source": {
+            "node_id": "lora_selector:I4d9cpB1zL",
+            "field": "lora"
+          },
+          "destination": {
+            "node_id": "lora_collector:30vAodxW19",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "lora_selector:f0FaxYQgQl",
+            "field": "lora"
+          },
+          "destination": {
+            "node_id": "lora_collector:30vAodxW19",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "lora_selector:9CZu7Hz1sR",
+            "field": "lora"
+          },
+          "destination": {
+            "node_id": "lora_collector:30vAodxW19",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "lora_selector:RhaafyC5gz",
+            "field": "lora"
+          },
+          "destination": {
+            "node_id": "lora_collector:30vAodxW19",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "seed:X6H2xBdHoF",
+            "field": "value"
+          },
+          "destination": {
+            "node_id": "core_metadata:cgCQoNq4rM",
+            "field": "seed"
+          }
+        },
+        {
+          "source": {
+            "node_id": "positive_prompt:A4n1ASsPgm",
+            "field": "value"
+          },
+          "destination": {
+            "node_id": "core_metadata:cgCQoNq4rM",
+            "field": "positive_prompt"
+          }
+        },
+        {
+          "source": {
+            "node_id": "core_metadata:cgCQoNq4rM",
+            "field": "metadata"
+          },
+          "destination": {
+            "node_id": "canvas_output:yhemtVoqBr",
+            "field": "metadata"
+          }
+        }
+      ]
+    },
+    "execution_graph": {
+      "id": "d3c7b29d-cb89-4bdf-bbb9-e0be91bc09e7",
+      "nodes": {
+        "80cb49e5-304c-4212-b4b2-e3791d89877c": {
+          "id": "80cb49e5-304c-4212-b4b2-e3791d89877c",
+          "is_intermediate": true,
+          "use_cache": true,
+          "model": {
+            "key": "66fb0b10-5256-40e7-a5c7-cff20f2028f0",
+            "hash": "blake3:8e532c2cb80971c1fc56074e63adcfcaba7b2e1c7c79afda98a459aafd4f4b87",
+            "name": "FLUX.1 dev (quantized)",
+            "base": "flux",
+            "type": "main",
+            "submodel_type": null
+          },
+          "t5_encoder_model": {
+            "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+            "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+            "name": "t5_bnb_int8_quantized_encoder",
+            "base": "any",
+            "type": "t5_encoder",
+            "submodel_type": null
+          },
+          "clip_embed_model": {
+            "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+            "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+            "name": "clip-vit-large-patch14",
+            "base": "any",
+            "type": "clip_embed",
+            "submodel_type": null
+          },
+          "vae_model": {
+            "key": "ebd162b4-a62f-4638-a3e5-9ca3bd4107d0",
+            "hash": "blake3:ce21cb76364aa6e2421311cf4a4b5eb052a76c4f1cd207b50703d8978198a068",
+            "name": "FLUX.1-schnell_ae",
+            "base": "flux",
+            "type": "vae",
+            "submodel_type": null
+          },
+          "type": "flux_model_loader"
+        },
+        "536008fa-e57c-494c-83b5-4250937060d7": {
+          "id": "536008fa-e57c-494c-83b5-4250937060d7",
+          "is_intermediate": true,
+          "use_cache": true,
+          "value": "Editorial fashion photography in the detailed, cinematic style of Helmut Newton, shot in color. A confident mature xbodyaigirl, blonde wearing a delicate black lace lingerie set by fc_triumphlingerie\u2014a matching bra and thong panty featuring sheer mesh fabric, intricate lace patterns, thin straps, and an elegant, minimalist design. The lingerie emphasizes structure, texture, and form rather than overt sexuality.\n\nScene set in a dimly lit penthouse apartment at night, modern and luxurious, with floor-to-ceiling windows revealing a softly glowing city skyline in the background. Architectural lines, polished surfaces, and deep shadows frame the subject. Lighting is dramatic and directional: hard key light combined with controlled shadow falloff, sculpting the body and accentuating lace detail, fabric transparency, and skin texture.\n\nThe subject is posed with poise and authority\u2014upright posture, composed expression, strong eye contact\u2014evoking dominance, confidence, and sophistication. Natural skin texture, subtle highlights, realistic contrast. Rich blacks, warm skin tones, restrained color palette. Shot on medium-format film look, sharp focus, high contrast, slight film grain, editorial realism, timeless luxury fashion photography.",
+          "type": "string"
+        },
+        "9a6af066-10da-4fb3-ad89-ac834804b2c7": {
+          "id": "9a6af066-10da-4fb3-ad89-ac834804b2c7",
+          "is_intermediate": true,
+          "use_cache": true,
+          "value": 4038107104,
+          "type": "integer"
+        },
+        "5003b7b3-a778-4b16-8be5-e620af3c9773": {
+          "id": "5003b7b3-a778-4b16-8be5-e620af3c9773",
+          "is_intermediate": true,
+          "use_cache": true,
+          "lora": {
+            "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+            "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+            "name": "CamelTo3",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 1.0,
+          "type": "lora_selector"
+        },
+        "2429f5b4-0e7d-4d60-acdf-3093dc318ff9": {
+          "id": "2429f5b4-0e7d-4d60-acdf-3093dc318ff9",
+          "is_intermediate": true,
+          "use_cache": true,
+          "lora": {
+            "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+            "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+            "name": "Mervat_Amin",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 0.75,
+          "type": "lora_selector"
+        },
+        "79579817-f039-4e0b-b93e-68e890a6e6ec": {
+          "id": "79579817-f039-4e0b-b93e-68e890a6e6ec",
+          "is_intermediate": true,
+          "use_cache": true,
+          "lora": {
+            "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+            "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+            "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 0.75,
+          "type": "lora_selector"
+        },
+        "974335e9-0b15-40da-bba9-54a774dae315": {
+          "id": "974335e9-0b15-40da-bba9-54a774dae315",
+          "is_intermediate": true,
+          "use_cache": true,
+          "lora": {
+            "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+            "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+            "name": "Muscle woman-FP16",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 0.75,
+          "type": "lora_selector"
+        },
+        "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b": {
+          "id": "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b",
+          "is_intermediate": true,
+          "use_cache": true,
+          "generation_mode": "flux_txt2img",
+          "positive_prompt": "Editorial fashion photography in the detailed, cinematic style of Helmut Newton, shot in color. A confident mature xbodyaigirl, blonde wearing a delicate black lace lingerie set by fc_triumphlingerie\u2014a matching bra and thong panty featuring sheer mesh fabric, intricate lace patterns, thin straps, and an elegant, minimalist design. The lingerie emphasizes structure, texture, and form rather than overt sexuality.\n\nScene set in a dimly lit penthouse apartment at night, modern and luxurious, with floor-to-ceiling windows revealing a softly glowing city skyline in the background. Architectural lines, polished surfaces, and deep shadows frame the subject. Lighting is dramatic and directional: hard key light combined with controlled shadow falloff, sculpting the body and accentuating lace detail, fabric transparency, and skin texture.\n\nThe subject is posed with poise and authority\u2014upright posture, composed expression, strong eye contact\u2014evoking dominance, confidence, and sophistication. Natural skin texture, subtle highlights, realistic contrast. Rich blacks, warm skin tones, restrained color palette. Shot on medium-format film look, sharp focus, high contrast, slight film grain, editorial realism, timeless luxury fashion photography.",
+          "negative_prompt": null,
+          "width": 592,
+          "height": 896,
+          "seed": 4038107104,
+          "rand_device": null,
+          "cfg_scale": null,
+          "cfg_rescale_multiplier": null,
+          "steps": 20,
+          "scheduler": "euler",
+          "seamless_x": null,
+          "seamless_y": null,
+          "clip_skip": null,
+          "model": {
+            "key": "66fb0b10-5256-40e7-a5c7-cff20f2028f0",
+            "hash": "blake3:8e532c2cb80971c1fc56074e63adcfcaba7b2e1c7c79afda98a459aafd4f4b87",
+            "name": "FLUX.1 dev (quantized)",
+            "base": "flux",
+            "type": "main",
+            "submodel_type": null
+          },
+          "controlnets": null,
+          "ipAdapters": null,
+          "t2iAdapters": null,
+          "loras": [
+            {
+              "model": {
+                "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                "name": "CamelTo3",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 1.0
+            },
+            {
+              "model": {
+                "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                "name": "Mervat_Amin",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "model": {
+                "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "model": {
+                "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                "name": "Muscle woman-FP16",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            }
+          ],
+          "strength": null,
+          "init_image": null,
+          "vae": {
+            "key": "ebd162b4-a62f-4638-a3e5-9ca3bd4107d0",
+            "hash": "blake3:ce21cb76364aa6e2421311cf4a4b5eb052a76c4f1cd207b50703d8978198a068",
+            "name": "FLUX.1-schnell_ae",
+            "base": "flux",
+            "type": "vae",
+            "submodel_type": null
+          },
+          "qwen3_encoder": null,
+          "hrf_enabled": null,
+          "hrf_method": null,
+          "hrf_strength": null,
+          "positive_style_prompt": null,
+          "negative_style_prompt": null,
+          "refiner_model": null,
+          "refiner_cfg_scale": null,
+          "refiner_steps": null,
+          "refiner_scheduler": null,
+          "refiner_positive_aesthetic_score": null,
+          "refiner_negative_aesthetic_score": null,
+          "refiner_start": null,
+          "type": "core_metadata",
+          "guidance": 3.5,
+          "t5_encoder": {
+            "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+            "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+            "name": "t5_bnb_int8_quantized_encoder",
+            "base": "any",
+            "type": "t5_encoder"
+          },
+          "clip_embed_model": {
+            "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+            "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+            "name": "clip-vit-large-patch14",
+            "base": "any",
+            "type": "clip_embed"
+          },
+          "ref_images": []
+        },
+        "389edabf-433c-435a-a8f7-8a7e4aa0179c": {
+          "id": "389edabf-433c-435a-a8f7-8a7e4aa0179c",
+          "is_intermediate": true,
+          "use_cache": true,
+          "item": null,
+          "collection": [
+            {
+              "lora": {
+                "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                "name": "CamelTo3",
+                "base": "flux",
+                "type": "lora"
+              },
+              "weight": 1.0
+            },
+            {
+              "lora": {
+                "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                "name": "Mervat_Amin",
+                "base": "flux",
+                "type": "lora"
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                "base": "flux",
+                "type": "lora"
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                "name": "Muscle woman-FP16",
+                "base": "flux",
+                "type": "lora"
+              },
+              "weight": 0.75
+            }
+          ],
+          "type": "collect"
+        },
+        "90a9088e-0b9a-45b2-9547-d277b6a80e79": {
+          "id": "90a9088e-0b9a-45b2-9547-d277b6a80e79",
+          "is_intermediate": true,
+          "use_cache": true,
+          "loras": [
+            {
+              "lora": {
+                "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                "name": "CamelTo3",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 1.0
+            },
+            {
+              "lora": {
+                "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                "name": "Mervat_Amin",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                "name": "Muscle woman-FP16",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            }
+          ],
+          "transformer": {
+            "transformer": {
+              "key": "66fb0b10-5256-40e7-a5c7-cff20f2028f0",
+              "hash": "blake3:8e532c2cb80971c1fc56074e63adcfcaba7b2e1c7c79afda98a459aafd4f4b87",
+              "name": "FLUX.1 dev (quantized)",
+              "base": "flux",
+              "type": "main",
+              "submodel_type": "transformer"
+            },
+            "loras": []
+          },
+          "clip": {
+            "tokenizer": {
+              "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+              "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+              "name": "clip-vit-large-patch14",
+              "base": "any",
+              "type": "clip_embed",
+              "submodel_type": "tokenizer"
+            },
+            "text_encoder": {
+              "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+              "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+              "name": "clip-vit-large-patch14",
+              "base": "any",
+              "type": "clip_embed",
+              "submodel_type": "text_encoder"
+            },
+            "skipped_layers": 0,
+            "loras": []
+          },
+          "t5_encoder": {
+            "tokenizer": {
+              "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+              "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+              "name": "t5_bnb_int8_quantized_encoder",
+              "base": "any",
+              "type": "t5_encoder",
+              "submodel_type": "tokenizer_2"
+            },
+            "text_encoder": {
+              "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+              "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+              "name": "t5_bnb_int8_quantized_encoder",
+              "base": "any",
+              "type": "t5_encoder",
+              "submodel_type": "text_encoder_2"
+            },
+            "loras": []
+          },
+          "type": "flux_lora_collection_loader"
+        },
+        "8bb0e699-1ff1-4141-b9c1-38c05b55c891": {
+          "id": "8bb0e699-1ff1-4141-b9c1-38c05b55c891",
+          "is_intermediate": true,
+          "use_cache": true,
+          "clip": {
+            "tokenizer": {
+              "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+              "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+              "name": "clip-vit-large-patch14",
+              "base": "any",
+              "type": "clip_embed",
+              "submodel_type": "tokenizer"
+            },
+            "text_encoder": {
+              "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+              "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+              "name": "clip-vit-large-patch14",
+              "base": "any",
+              "type": "clip_embed",
+              "submodel_type": "text_encoder"
+            },
+            "skipped_layers": 0,
+            "loras": [
+              {
+                "lora": {
+                  "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                  "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                  "name": "CamelTo3",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 1.0
+              },
+              {
+                "lora": {
+                  "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                  "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                  "name": "Mervat_Amin",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 0.75
+              },
+              {
+                "lora": {
+                  "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                  "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                  "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 0.75
+              },
+              {
+                "lora": {
+                  "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                  "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                  "name": "Muscle woman-FP16",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 0.75
+              }
+            ]
+          },
+          "t5_encoder": {
+            "tokenizer": {
+              "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+              "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+              "name": "t5_bnb_int8_quantized_encoder",
+              "base": "any",
+              "type": "t5_encoder",
+              "submodel_type": "tokenizer_2"
+            },
+            "text_encoder": {
+              "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+              "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+              "name": "t5_bnb_int8_quantized_encoder",
+              "base": "any",
+              "type": "t5_encoder",
+              "submodel_type": "text_encoder_2"
+            },
+            "loras": [
+              {
+                "lora": {
+                  "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                  "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                  "name": "CamelTo3",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 1.0
+              },
+              {
+                "lora": {
+                  "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                  "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                  "name": "Mervat_Amin",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 0.75
+              },
+              {
+                "lora": {
+                  "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                  "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                  "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 0.75
+              },
+              {
+                "lora": {
+                  "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                  "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                  "name": "Muscle woman-FP16",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 0.75
+              }
+            ]
+          },
+          "t5_max_seq_len": 512,
+          "prompt": "Editorial fashion photography in the detailed, cinematic style of Helmut Newton, shot in color. A confident mature xbodyaigirl, blonde wearing a delicate black lace lingerie set by fc_triumphlingerie\u2014a matching bra and thong panty featuring sheer mesh fabric, intricate lace patterns, thin straps, and an elegant, minimalist design. The lingerie emphasizes structure, texture, and form rather than overt sexuality.\n\nScene set in a dimly lit penthouse apartment at night, modern and luxurious, with floor-to-ceiling windows revealing a softly glowing city skyline in the background. Architectural lines, polished surfaces, and deep shadows frame the subject. Lighting is dramatic and directional: hard key light combined with controlled shadow falloff, sculpting the body and accentuating lace detail, fabric transparency, and skin texture.\n\nThe subject is posed with poise and authority\u2014upright posture, composed expression, strong eye contact\u2014evoking dominance, confidence, and sophistication. Natural skin texture, subtle highlights, realistic contrast. Rich blacks, warm skin tones, restrained color palette. Shot on medium-format film look, sharp focus, high contrast, slight film grain, editorial realism, timeless luxury fashion photography.",
+          "mask": null,
+          "type": "flux_text_encoder"
+        },
+        "78555731-c35a-43ac-b7c8-c0eae0ca4455": {
+          "id": "78555731-c35a-43ac-b7c8-c0eae0ca4455",
+          "is_intermediate": true,
+          "use_cache": true,
+          "item": null,
+          "collection": [
+            {
+              "conditioning_name": "ConditioningFieldData_9cdf5cca-2ad7-4bb5-82d8-81a8885a457b"
+            }
+          ],
+          "type": "collect"
+        },
+        "44b97484-53e2-4328-bd85-f01595416d28": {
+          "id": "44b97484-53e2-4328-bd85-f01595416d28",
+          "is_intermediate": true,
+          "use_cache": true,
+          "latents": null,
+          "denoise_mask": null,
+          "denoising_start": 0.0,
+          "denoising_end": 1.0,
+          "add_noise": true,
+          "transformer": {
+            "transformer": {
+              "key": "66fb0b10-5256-40e7-a5c7-cff20f2028f0",
+              "hash": "blake3:8e532c2cb80971c1fc56074e63adcfcaba7b2e1c7c79afda98a459aafd4f4b87",
+              "name": "FLUX.1 dev (quantized)",
+              "base": "flux",
+              "type": "main",
+              "submodel_type": "transformer"
+            },
+            "loras": [
+              {
+                "lora": {
+                  "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                  "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                  "name": "CamelTo3",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 1.0
+              },
+              {
+                "lora": {
+                  "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                  "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                  "name": "Mervat_Amin",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 0.75
+              },
+              {
+                "lora": {
+                  "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                  "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                  "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 0.75
+              },
+              {
+                "lora": {
+                  "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                  "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                  "name": "Muscle woman-FP16",
+                  "base": "flux",
+                  "type": "lora",
+                  "submodel_type": null
+                },
+                "weight": 0.75
+              }
+            ]
+          },
+          "control_lora": null,
+          "positive_text_conditioning": [
+            {
+              "conditioning_name": "ConditioningFieldData_9cdf5cca-2ad7-4bb5-82d8-81a8885a457b",
+              "mask": null
+            }
+          ],
+          "negative_text_conditioning": null,
+          "redux_conditioning": null,
+          "fill_conditioning": null,
+          "cfg_scale": 1.0,
+          "cfg_scale_start_step": 0,
+          "cfg_scale_end_step": -1,
+          "width": 592,
+          "height": 896,
+          "num_steps": 20,
+          "scheduler": "euler",
+          "guidance": 3.5,
+          "seed": 4038107104,
+          "control": null,
+          "controlnet_vae": {
+            "vae": {
+              "key": "ebd162b4-a62f-4638-a3e5-9ca3bd4107d0",
+              "hash": "blake3:ce21cb76364aa6e2421311cf4a4b5eb052a76c4f1cd207b50703d8978198a068",
+              "name": "FLUX.1-schnell_ae",
+              "base": "flux",
+              "type": "vae",
+              "submodel_type": "vae"
+            },
+            "seamless_axes": []
+          },
+          "ip_adapter": null,
+          "kontext_conditioning": null,
+          "type": "flux_denoise"
+        },
+        "d4d8a079-b1b8-4d2d-aac8-8c36916f5371": {
+          "board": {
+            "board_id": "47d823ed-deb3-4a07-9663-f13c6c133d23"
+          },
+          "metadata": null,
+          "id": "d4d8a079-b1b8-4d2d-aac8-8c36916f5371",
+          "is_intermediate": false,
+          "use_cache": false,
+          "latents": null,
+          "vae": null,
+          "type": "flux_vae_decode"
+        }
+      },
+      "edges": [
+        {
+          "source": {
+            "node_id": "9a6af066-10da-4fb3-ad89-ac834804b2c7",
+            "field": "value"
+          },
+          "destination": {
+            "node_id": "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b",
+            "field": "seed"
+          }
+        },
+        {
+          "source": {
+            "node_id": "536008fa-e57c-494c-83b5-4250937060d7",
+            "field": "value"
+          },
+          "destination": {
+            "node_id": "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b",
+            "field": "positive_prompt"
+          }
+        },
+        {
+          "source": {
+            "node_id": "5003b7b3-a778-4b16-8be5-e620af3c9773",
+            "field": "lora"
+          },
+          "destination": {
+            "node_id": "389edabf-433c-435a-a8f7-8a7e4aa0179c",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "2429f5b4-0e7d-4d60-acdf-3093dc318ff9",
+            "field": "lora"
+          },
+          "destination": {
+            "node_id": "389edabf-433c-435a-a8f7-8a7e4aa0179c",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "79579817-f039-4e0b-b93e-68e890a6e6ec",
+            "field": "lora"
+          },
+          "destination": {
+            "node_id": "389edabf-433c-435a-a8f7-8a7e4aa0179c",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "974335e9-0b15-40da-bba9-54a774dae315",
+            "field": "lora"
+          },
+          "destination": {
+            "node_id": "389edabf-433c-435a-a8f7-8a7e4aa0179c",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "389edabf-433c-435a-a8f7-8a7e4aa0179c",
+            "field": "collection"
+          },
+          "destination": {
+            "node_id": "90a9088e-0b9a-45b2-9547-d277b6a80e79",
+            "field": "loras"
+          }
+        },
+        {
+          "source": {
+            "node_id": "80cb49e5-304c-4212-b4b2-e3791d89877c",
+            "field": "transformer"
+          },
+          "destination": {
+            "node_id": "90a9088e-0b9a-45b2-9547-d277b6a80e79",
+            "field": "transformer"
+          }
+        },
+        {
+          "source": {
+            "node_id": "80cb49e5-304c-4212-b4b2-e3791d89877c",
+            "field": "clip"
+          },
+          "destination": {
+            "node_id": "90a9088e-0b9a-45b2-9547-d277b6a80e79",
+            "field": "clip"
+          }
+        },
+        {
+          "source": {
+            "node_id": "80cb49e5-304c-4212-b4b2-e3791d89877c",
+            "field": "t5_encoder"
+          },
+          "destination": {
+            "node_id": "90a9088e-0b9a-45b2-9547-d277b6a80e79",
+            "field": "t5_encoder"
+          }
+        },
+        {
+          "source": {
+            "node_id": "80cb49e5-304c-4212-b4b2-e3791d89877c",
+            "field": "max_seq_len"
+          },
+          "destination": {
+            "node_id": "8bb0e699-1ff1-4141-b9c1-38c05b55c891",
+            "field": "t5_max_seq_len"
+          }
+        },
+        {
+          "source": {
+            "node_id": "536008fa-e57c-494c-83b5-4250937060d7",
+            "field": "value"
+          },
+          "destination": {
+            "node_id": "8bb0e699-1ff1-4141-b9c1-38c05b55c891",
+            "field": "prompt"
+          }
+        },
+        {
+          "source": {
+            "node_id": "90a9088e-0b9a-45b2-9547-d277b6a80e79",
+            "field": "clip"
+          },
+          "destination": {
+            "node_id": "8bb0e699-1ff1-4141-b9c1-38c05b55c891",
+            "field": "clip"
+          }
+        },
+        {
+          "source": {
+            "node_id": "90a9088e-0b9a-45b2-9547-d277b6a80e79",
+            "field": "t5_encoder"
+          },
+          "destination": {
+            "node_id": "8bb0e699-1ff1-4141-b9c1-38c05b55c891",
+            "field": "t5_encoder"
+          }
+        },
+        {
+          "source": {
+            "node_id": "8bb0e699-1ff1-4141-b9c1-38c05b55c891",
+            "field": "conditioning"
+          },
+          "destination": {
+            "node_id": "78555731-c35a-43ac-b7c8-c0eae0ca4455",
+            "field": "item"
+          }
+        },
+        {
+          "source": {
+            "node_id": "80cb49e5-304c-4212-b4b2-e3791d89877c",
+            "field": "vae"
+          },
+          "destination": {
+            "node_id": "44b97484-53e2-4328-bd85-f01595416d28",
+            "field": "controlnet_vae"
+          }
+        },
+        {
+          "source": {
+            "node_id": "78555731-c35a-43ac-b7c8-c0eae0ca4455",
+            "field": "collection"
+          },
+          "destination": {
+            "node_id": "44b97484-53e2-4328-bd85-f01595416d28",
+            "field": "positive_text_conditioning"
+          }
+        },
+        {
+          "source": {
+            "node_id": "9a6af066-10da-4fb3-ad89-ac834804b2c7",
+            "field": "value"
+          },
+          "destination": {
+            "node_id": "44b97484-53e2-4328-bd85-f01595416d28",
+            "field": "seed"
+          }
+        },
+        {
+          "source": {
+            "node_id": "90a9088e-0b9a-45b2-9547-d277b6a80e79",
+            "field": "transformer"
+          },
+          "destination": {
+            "node_id": "44b97484-53e2-4328-bd85-f01595416d28",
+            "field": "transformer"
+          }
+        },
+        {
+          "source": {
+            "node_id": "80cb49e5-304c-4212-b4b2-e3791d89877c",
+            "field": "vae"
+          },
+          "destination": {
+            "node_id": "d4d8a079-b1b8-4d2d-aac8-8c36916f5371",
+            "field": "vae"
+          }
+        },
+        {
+          "source": {
+            "node_id": "44b97484-53e2-4328-bd85-f01595416d28",
+            "field": "latents"
+          },
+          "destination": {
+            "node_id": "d4d8a079-b1b8-4d2d-aac8-8c36916f5371",
+            "field": "latents"
+          }
+        },
+        {
+          "source": {
+            "node_id": "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b",
+            "field": "metadata"
+          },
+          "destination": {
+            "node_id": "d4d8a079-b1b8-4d2d-aac8-8c36916f5371",
+            "field": "metadata"
+          }
+        }
+      ]
+    },
+    "executed": [
+      "flux_text_encoder:r0H9nVDLvN",
+      "seed:X6H2xBdHoF",
+      "80cb49e5-304c-4212-b4b2-e3791d89877c",
+      "flux_model_loader:H0g4raKsg0",
+      "5003b7b3-a778-4b16-8be5-e620af3c9773",
+      "79579817-f039-4e0b-b93e-68e890a6e6ec",
+      "78555731-c35a-43ac-b7c8-c0eae0ca4455",
+      "positive_prompt:A4n1ASsPgm",
+      "389edabf-433c-435a-a8f7-8a7e4aa0179c",
+      "2429f5b4-0e7d-4d60-acdf-3093dc318ff9",
+      "pos_cond_collect:kAA1mQQbu3",
+      "lora_selector:9CZu7Hz1sR",
+      "lora_selector:I4d9cpB1zL",
+      "8bb0e699-1ff1-4141-b9c1-38c05b55c891",
+      "lora_selector:f0FaxYQgQl",
+      "536008fa-e57c-494c-83b5-4250937060d7",
+      "lora_selector:RhaafyC5gz",
+      "974335e9-0b15-40da-bba9-54a774dae315",
+      "core_metadata:cgCQoNq4rM",
+      "90a9088e-0b9a-45b2-9547-d277b6a80e79",
+      "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b",
+      "flux_lora_collection_loader:epNoEKaz7j",
+      "lora_collector:30vAodxW19",
+      "9a6af066-10da-4fb3-ad89-ac834804b2c7"
+    ],
+    "executed_history": [
+      "flux_model_loader:H0g4raKsg0",
+      "seed:X6H2xBdHoF",
+      "lora_selector:I4d9cpB1zL",
+      "lora_selector:f0FaxYQgQl",
+      "lora_selector:9CZu7Hz1sR",
+      "lora_selector:RhaafyC5gz",
+      "lora_collector:30vAodxW19",
+      "flux_lora_collection_loader:epNoEKaz7j",
+      "positive_prompt:A4n1ASsPgm",
+      "core_metadata:cgCQoNq4rM",
+      "flux_text_encoder:r0H9nVDLvN",
+      "pos_cond_collect:kAA1mQQbu3"
+    ],
+    "results": {
+      "80cb49e5-304c-4212-b4b2-e3791d89877c": {
+        "output_meta": null,
+        "transformer": {
+          "transformer": {
+            "key": "66fb0b10-5256-40e7-a5c7-cff20f2028f0",
+            "hash": "blake3:8e532c2cb80971c1fc56074e63adcfcaba7b2e1c7c79afda98a459aafd4f4b87",
+            "name": "FLUX.1 dev (quantized)",
+            "base": "flux",
+            "type": "main",
+            "submodel_type": "transformer"
+          },
+          "loras": []
+        },
+        "clip": {
+          "tokenizer": {
+            "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+            "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+            "name": "clip-vit-large-patch14",
+            "base": "any",
+            "type": "clip_embed",
+            "submodel_type": "tokenizer"
+          },
+          "text_encoder": {
+            "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+            "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+            "name": "clip-vit-large-patch14",
+            "base": "any",
+            "type": "clip_embed",
+            "submodel_type": "text_encoder"
+          },
+          "skipped_layers": 0,
+          "loras": []
+        },
+        "t5_encoder": {
+          "tokenizer": {
+            "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+            "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+            "name": "t5_bnb_int8_quantized_encoder",
+            "base": "any",
+            "type": "t5_encoder",
+            "submodel_type": "tokenizer_2"
+          },
+          "text_encoder": {
+            "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+            "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+            "name": "t5_bnb_int8_quantized_encoder",
+            "base": "any",
+            "type": "t5_encoder",
+            "submodel_type": "text_encoder_2"
+          },
+          "loras": []
+        },
+        "vae": {
+          "vae": {
+            "key": "ebd162b4-a62f-4638-a3e5-9ca3bd4107d0",
+            "hash": "blake3:ce21cb76364aa6e2421311cf4a4b5eb052a76c4f1cd207b50703d8978198a068",
+            "name": "FLUX.1-schnell_ae",
+            "base": "flux",
+            "type": "vae",
+            "submodel_type": "vae"
+          },
+          "seamless_axes": []
+        },
+        "max_seq_len": 512,
+        "type": "flux_model_loader_output"
+      },
+      "9a6af066-10da-4fb3-ad89-ac834804b2c7": {
+        "output_meta": null,
+        "value": 4038107104,
+        "type": "integer_output"
+      },
+      "5003b7b3-a778-4b16-8be5-e620af3c9773": {
+        "output_meta": null,
+        "lora": {
+          "lora": {
+            "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+            "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+            "name": "CamelTo3",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 1.0
+        },
+        "type": "lora_selector_output"
+      },
+      "2429f5b4-0e7d-4d60-acdf-3093dc318ff9": {
+        "output_meta": null,
+        "lora": {
+          "lora": {
+            "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+            "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+            "name": "Mervat_Amin",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 0.75
+        },
+        "type": "lora_selector_output"
+      },
+      "79579817-f039-4e0b-b93e-68e890a6e6ec": {
+        "output_meta": null,
+        "lora": {
+          "lora": {
+            "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+            "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+            "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 0.75
+        },
+        "type": "lora_selector_output"
+      },
+      "974335e9-0b15-40da-bba9-54a774dae315": {
+        "output_meta": null,
+        "lora": {
+          "lora": {
+            "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+            "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+            "name": "Muscle woman-FP16",
+            "base": "flux",
+            "type": "lora",
+            "submodel_type": null
+          },
+          "weight": 0.75
+        },
+        "type": "lora_selector_output"
+      },
+      "389edabf-433c-435a-a8f7-8a7e4aa0179c": {
+        "output_meta": null,
+        "collection": [
+          {
+            "lora": {
+              "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+              "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+              "name": "CamelTo3",
+              "base": "flux",
+              "type": "lora"
+            },
+            "weight": 1.0
+          },
+          {
+            "lora": {
+              "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+              "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+              "name": "Mervat_Amin",
+              "base": "flux",
+              "type": "lora"
+            },
+            "weight": 0.75
+          },
+          {
+            "lora": {
+              "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+              "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+              "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+              "base": "flux",
+              "type": "lora"
+            },
+            "weight": 0.75
+          },
+          {
+            "lora": {
+              "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+              "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+              "name": "Muscle woman-FP16",
+              "base": "flux",
+              "type": "lora"
+            },
+            "weight": 0.75
+          }
+        ],
+        "type": "collect_output"
+      },
+      "90a9088e-0b9a-45b2-9547-d277b6a80e79": {
+        "output_meta": null,
+        "transformer": {
+          "transformer": {
+            "key": "66fb0b10-5256-40e7-a5c7-cff20f2028f0",
+            "hash": "blake3:8e532c2cb80971c1fc56074e63adcfcaba7b2e1c7c79afda98a459aafd4f4b87",
+            "name": "FLUX.1 dev (quantized)",
+            "base": "flux",
+            "type": "main",
+            "submodel_type": "transformer"
+          },
+          "loras": [
+            {
+              "lora": {
+                "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                "name": "CamelTo3",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 1.0
+            },
+            {
+              "lora": {
+                "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                "name": "Mervat_Amin",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                "name": "Muscle woman-FP16",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            }
+          ]
+        },
+        "clip": {
+          "tokenizer": {
+            "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+            "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+            "name": "clip-vit-large-patch14",
+            "base": "any",
+            "type": "clip_embed",
+            "submodel_type": "tokenizer"
+          },
+          "text_encoder": {
+            "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+            "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+            "name": "clip-vit-large-patch14",
+            "base": "any",
+            "type": "clip_embed",
+            "submodel_type": "text_encoder"
+          },
+          "skipped_layers": 0,
+          "loras": [
+            {
+              "lora": {
+                "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                "name": "CamelTo3",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 1.0
+            },
+            {
+              "lora": {
+                "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                "name": "Mervat_Amin",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                "name": "Muscle woman-FP16",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            }
+          ]
+        },
+        "t5_encoder": {
+          "tokenizer": {
+            "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+            "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+            "name": "t5_bnb_int8_quantized_encoder",
+            "base": "any",
+            "type": "t5_encoder",
+            "submodel_type": "tokenizer_2"
+          },
+          "text_encoder": {
+            "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+            "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+            "name": "t5_bnb_int8_quantized_encoder",
+            "base": "any",
+            "type": "t5_encoder",
+            "submodel_type": "text_encoder_2"
+          },
+          "loras": [
+            {
+              "lora": {
+                "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                "name": "CamelTo3",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 1.0
+            },
+            {
+              "lora": {
+                "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                "name": "Mervat_Amin",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            },
+            {
+              "lora": {
+                "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                "name": "Muscle woman-FP16",
+                "base": "flux",
+                "type": "lora",
+                "submodel_type": null
+              },
+              "weight": 0.75
+            }
+          ]
+        },
+        "type": "flux_lora_loader_output"
+      },
+      "536008fa-e57c-494c-83b5-4250937060d7": {
+        "output_meta": null,
+        "value": "Editorial fashion photography in the detailed, cinematic style of Helmut Newton, shot in color. A confident mature xbodyaigirl, blonde wearing a delicate black lace lingerie set by fc_triumphlingerie\u2014a matching bra and thong panty featuring sheer mesh fabric, intricate lace patterns, thin straps, and an elegant, minimalist design. The lingerie emphasizes structure, texture, and form rather than overt sexuality.\n\nScene set in a dimly lit penthouse apartment at night, modern and luxurious, with floor-to-ceiling windows revealing a softly glowing city skyline in the background. Architectural lines, polished surfaces, and deep shadows frame the subject. Lighting is dramatic and directional: hard key light combined with controlled shadow falloff, sculpting the body and accentuating lace detail, fabric transparency, and skin texture.\n\nThe subject is posed with poise and authority\u2014upright posture, composed expression, strong eye contact\u2014evoking dominance, confidence, and sophistication. Natural skin texture, subtle highlights, realistic contrast. Rich blacks, warm skin tones, restrained color palette. Shot on medium-format film look, sharp focus, high contrast, slight film grain, editorial realism, timeless luxury fashion photography.",
+        "type": "string_output"
+      },
+      "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b": {
+        "output_meta": null,
+        "metadata": {
+          "generation_mode": "flux_txt2img",
+          "positive_prompt": "Editorial fashion photography in the detailed, cinematic style of Helmut Newton, shot in color. A confident mature xbodyaigirl, blonde wearing a delicate black lace lingerie set by fc_triumphlingerie\u2014a matching bra and thong panty featuring sheer mesh fabric, intricate lace patterns, thin straps, and an elegant, minimalist design. The lingerie emphasizes structure, texture, and form rather than overt sexuality.\n\nScene set in a dimly lit penthouse apartment at night, modern and luxurious, with floor-to-ceiling windows revealing a softly glowing city skyline in the background. Architectural lines, polished surfaces, and deep shadows frame the subject. Lighting is dramatic and directional: hard key light combined with controlled shadow falloff, sculpting the body and accentuating lace detail, fabric transparency, and skin texture.\n\nThe subject is posed with poise and authority\u2014upright posture, composed expression, strong eye contact\u2014evoking dominance, confidence, and sophistication. Natural skin texture, subtle highlights, realistic contrast. Rich blacks, warm skin tones, restrained color palette. Shot on medium-format film look, sharp focus, high contrast, slight film grain, editorial realism, timeless luxury fashion photography.",
+          "width": 592,
+          "height": 896,
+          "seed": 4038107104,
+          "steps": 20,
+          "scheduler": "euler",
+          "model": {
+            "key": "66fb0b10-5256-40e7-a5c7-cff20f2028f0",
+            "hash": "blake3:8e532c2cb80971c1fc56074e63adcfcaba7b2e1c7c79afda98a459aafd4f4b87",
+            "name": "FLUX.1 dev (quantized)",
+            "base": "flux",
+            "type": "main"
+          },
+          "loras": [
+            {
+              "model": {
+                "key": "18974233-8417-418c-b2d5-19f64ac9e21b",
+                "hash": "blake3:d6fb860851299493a2669292a011e67f6f1dbaa4bf40818819ccd0bf121de545",
+                "name": "CamelTo3",
+                "base": "flux",
+                "type": "lora"
+              },
+              "weight": 1.0
+            },
+            {
+              "model": {
+                "key": "b0754ecb-c1a3-4493-bfdb-3c702f11032d",
+                "hash": "blake3:5d00d23e318231bb12353282f2d404cb03a8438f2b37c1a3b8832d8690e835e0",
+                "name": "Mervat_Amin",
+                "base": "flux",
+                "type": "lora"
+              },
+              "weight": 0.75
+            },
+            {
+              "model": {
+                "key": "837a091f-77d2-4aa9-8c51-2bf8388e7029",
+                "hash": "blake3:3a83382c4a024785a35bb9f3893257ce221f2fe756783b3a264aa504d6cba3ef",
+                "name": "Huge_hips_and_buttocks_for_FLUX-000027",
+                "base": "flux",
+                "type": "lora"
+              },
+              "weight": 0.75
+            },
+            {
+              "model": {
+                "key": "b67fc88d-0fbe-48ab-badc-f87cc3f41266",
+                "hash": "blake3:eead8970d1b8980f37b87163bc821be25e60334cc878aff875817ac4828c5640",
+                "name": "Muscle woman-FP16",
+                "base": "flux",
+                "type": "lora"
+              },
+              "weight": 0.75
+            }
+          ],
+          "vae": {
+            "key": "ebd162b4-a62f-4638-a3e5-9ca3bd4107d0",
+            "hash": "blake3:ce21cb76364aa6e2421311cf4a4b5eb052a76c4f1cd207b50703d8978198a068",
+            "name": "FLUX.1-schnell_ae",
+            "base": "flux",
+            "type": "vae"
+          },
+          "guidance": 3.5,
+          "t5_encoder": {
+            "key": "1337d7a7-278d-4804-b8bf-679d3a362f88",
+            "hash": "blake3:38aafa42899cf4fe8b1055d17de6e7fe15af104d193da4a320e34ca24db32754",
+            "name": "t5_bnb_int8_quantized_encoder",
+            "base": "any",
+            "type": "t5_encoder"
+          },
+          "clip_embed_model": {
+            "key": "eb5ad106-30c0-4782-bf15-fb8948cb2360",
+            "hash": "blake3:17c19f0ef941c3b7609a9c94a659ca5364de0be364a91d4179f0e39ba17c3b70",
+            "name": "clip-vit-large-patch14",
+            "base": "any",
+            "type": "clip_embed"
+          },
+          "ref_images": [],
+          "app_version": "6.10.0"
+        },
+        "type": "metadata_output"
+      },
+      "8bb0e699-1ff1-4141-b9c1-38c05b55c891": {
+        "output_meta": null,
+        "conditioning": {
+          "conditioning_name": "ConditioningFieldData_9cdf5cca-2ad7-4bb5-82d8-81a8885a457b",
+          "mask": null
+        },
+        "type": "flux_conditioning_output"
+      },
+      "78555731-c35a-43ac-b7c8-c0eae0ca4455": {
+        "output_meta": null,
+        "collection": [
+          {
+            "conditioning_name": "ConditioningFieldData_9cdf5cca-2ad7-4bb5-82d8-81a8885a457b"
+          }
+        ],
+        "type": "collect_output"
+      }
+    },
+    "errors": {},
+    "prepared_source_mapping": {
+      "80cb49e5-304c-4212-b4b2-e3791d89877c": "flux_model_loader:H0g4raKsg0",
+      "536008fa-e57c-494c-83b5-4250937060d7": "positive_prompt:A4n1ASsPgm",
+      "9a6af066-10da-4fb3-ad89-ac834804b2c7": "seed:X6H2xBdHoF",
+      "5003b7b3-a778-4b16-8be5-e620af3c9773": "lora_selector:I4d9cpB1zL",
+      "2429f5b4-0e7d-4d60-acdf-3093dc318ff9": "lora_selector:f0FaxYQgQl",
+      "79579817-f039-4e0b-b93e-68e890a6e6ec": "lora_selector:9CZu7Hz1sR",
+      "974335e9-0b15-40da-bba9-54a774dae315": "lora_selector:RhaafyC5gz",
+      "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b": "core_metadata:cgCQoNq4rM",
+      "389edabf-433c-435a-a8f7-8a7e4aa0179c": "lora_collector:30vAodxW19",
+      "90a9088e-0b9a-45b2-9547-d277b6a80e79": "flux_lora_collection_loader:epNoEKaz7j",
+      "8bb0e699-1ff1-4141-b9c1-38c05b55c891": "flux_text_encoder:r0H9nVDLvN",
+      "78555731-c35a-43ac-b7c8-c0eae0ca4455": "pos_cond_collect:kAA1mQQbu3",
+      "44b97484-53e2-4328-bd85-f01595416d28": "flux_denoise:EPsSUu9H19",
+      "d4d8a079-b1b8-4d2d-aac8-8c36916f5371": "canvas_output:yhemtVoqBr"
+    },
+    "source_prepared_mapping": {
+      "flux_model_loader:H0g4raKsg0": [
+        "80cb49e5-304c-4212-b4b2-e3791d89877c"
+      ],
+      "positive_prompt:A4n1ASsPgm": [
+        "536008fa-e57c-494c-83b5-4250937060d7"
+      ],
+      "seed:X6H2xBdHoF": [
+        "9a6af066-10da-4fb3-ad89-ac834804b2c7"
+      ],
+      "lora_selector:I4d9cpB1zL": [
+        "5003b7b3-a778-4b16-8be5-e620af3c9773"
+      ],
+      "lora_selector:f0FaxYQgQl": [
+        "2429f5b4-0e7d-4d60-acdf-3093dc318ff9"
+      ],
+      "lora_selector:9CZu7Hz1sR": [
+        "79579817-f039-4e0b-b93e-68e890a6e6ec"
+      ],
+      "lora_selector:RhaafyC5gz": [
+        "974335e9-0b15-40da-bba9-54a774dae315"
+      ],
+      "core_metadata:cgCQoNq4rM": [
+        "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b"
+      ],
+      "lora_collector:30vAodxW19": [
+        "389edabf-433c-435a-a8f7-8a7e4aa0179c"
+      ],
+      "flux_lora_collection_loader:epNoEKaz7j": [
+        "90a9088e-0b9a-45b2-9547-d277b6a80e79"
+      ],
+      "flux_text_encoder:r0H9nVDLvN": [
+        "8bb0e699-1ff1-4141-b9c1-38c05b55c891"
+      ],
+      "pos_cond_collect:kAA1mQQbu3": [
+        "78555731-c35a-43ac-b7c8-c0eae0ca4455"
+      ],
+      "flux_denoise:EPsSUu9H19": [
+        "44b97484-53e2-4328-bd85-f01595416d28"
+      ],
+      "canvas_output:yhemtVoqBr": [
+        "d4d8a079-b1b8-4d2d-aac8-8c36916f5371"
+      ]
+    },
+    "ready_order": [],
+    "indegree": {
+      "80cb49e5-304c-4212-b4b2-e3791d89877c": 0,
+      "536008fa-e57c-494c-83b5-4250937060d7": 0,
+      "9a6af066-10da-4fb3-ad89-ac834804b2c7": 0,
+      "5003b7b3-a778-4b16-8be5-e620af3c9773": 0,
+      "2429f5b4-0e7d-4d60-acdf-3093dc318ff9": 0,
+      "79579817-f039-4e0b-b93e-68e890a6e6ec": 0,
+      "974335e9-0b15-40da-bba9-54a774dae315": 0,
+      "392d9cc4-ad13-4ae5-bb16-7dd6e16ee56b": 0,
+      "389edabf-433c-435a-a8f7-8a7e4aa0179c": 0,
+      "90a9088e-0b9a-45b2-9547-d277b6a80e79": 0,
+      "8bb0e699-1ff1-4141-b9c1-38c05b55c891": 0,
+      "78555731-c35a-43ac-b7c8-c0eae0ca4455": 0,
+      "44b97484-53e2-4328-bd85-f01595416d28": 0,
+      "d4d8a079-b1b8-4d2d-aac8-8c36916f5371": 1
+    }
+  },
+  "workflow": null
+}

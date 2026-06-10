@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌀 TwisterLab v3.5.0
+# 🌀 TwisterLab v4.0.0
 
 [![CI Pipeline](https://github.com/youneselfakir0/twisterlab/actions/workflows/ci.yml/badge.svg)](https://github.com/youneselfakir0/twisterlab/actions/workflows/ci.yml)
 [![CD Pipeline](https://github.com/youneselfakir0/twisterlab/actions/workflows/cd.yml/badge.svg)](https://github.com/youneselfakir0/twisterlab/actions/workflows/cd.yml)
@@ -8,11 +8,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](pyproject.toml)
 [![K8s](https://img.shields.io/badge/kubernetes-ready-326ce5.svg)](deploy/k8s/)
-[![Tests](https://img.shields.io/badge/tests-89%20passing-brightgreen.svg)](#-testing)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](#-testing)
 
-### **Universal MCP Platform for Autonomous AI Agents**
+### **Autonomous IT Automation & MCP Platform**
 
-TwisterLab acts as a bridge between LLMs (**Claude**, **Ollama**) and your infrastructure. It exposes specialized Agents (Browser, Monitoring, Code Review) via the standardized **Model Context Protocol (MCP)**.
+TwisterLab is a specialized multi-agent platform designed for advanced IT operations, infrastructure monitoring, and autonomous incident resolution. It leverages the **Model Context Protocol (MCP)** to expose secure system capabilities to LLMs.
 
 [🚀 Quick Start](#-quick-start) • [📚 Documentation](docs/) • [🤝 Contributing](#-contributing) • [📊 Demo](#-demo)
 

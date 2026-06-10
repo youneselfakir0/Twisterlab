@@ -64,7 +64,6 @@ RUN pip install --no-cache-dir \\
     "passlib[bcrypt]" \\
     websockets \\
     notion-client \\
-    ccxt \\
     pandas \\
     numpy
 
@@ -215,9 +214,6 @@ def step5_cleanup_configmaps():
         "api-hotfix-v1",
         "api-hotfix-v3",
         "db-hotfix-v1",
-        "hotfix-services-trading",
-        "hotfix-utils-trading",
-        "trading-hotfix-v2",
         "utils-hotfix-v2",
     ]
     for cm in stale_cms:

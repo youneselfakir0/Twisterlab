@@ -342,18 +342,36 @@ class MCPServerContinue:
         arguments = params.get("arguments", {})
         logger.info(f"Tool: {tool_name} | Args: {arguments} | Mode: {self.mode}")
 
-        if self.mode == "REAL" and self.api_available:
-            try:
-                result = self._call_api(tool_name, arguments)
-            except Exception:
-                result = self._get_hybrid_response(tool_name, arguments)
+        result = None
+        error_msg = None
+
+        if self.mode == "REAL":
+            if not self.api_available:
+                self.api_available = self._test_api_connectivity()
+            
+            if self.api_available:
+                try:
+                    result = self._call_api(tool_name, arguments)
+                except Exception as e:
+                    error_msg = f"API call failed: {e}"
+            else:
+                error_msg = f"TwisterLab API unavailable at {self.api_url}. Cannot execute {tool_name} in REAL mode."
+        
         elif self.mode == "HYBRID":
             try:
                 result = self._call_api(tool_name, arguments)
             except Exception:
                 result = self._get_hybrid_response(tool_name, arguments)
+        
         else:
-            result = self._get_mock_response(tool_name, arguments)
+            error_msg = f"Unknown mode '{self.mode}' or mocks disabled by user preference. Cannot execute {tool_name}."
+
+        if error_msg:
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {"content": [{"type": "text", "text": f"Error: {error_msg}"}]},
+            }
 
         return {
             "jsonrpc": "2.0",

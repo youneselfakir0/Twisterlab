@@ -1,0 +1,266 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-twisterlab-alerts
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: alerting-rules
+data:
+  twisterlab-alerts.yml: |
+    groups:
+      - name: twisterlab_agents
+        interval: 30s
+        rules:
+          # Critical: Agent Fleet Dropout
+          - alert: CriticalAgentDropout
+            expr: twisterlab_registry_agents_online < 3
+            for: 2m
+            labels:
+              severity: critical
+              component: agent-registry
+              team: platform
+            annotations:
+              summary: "Critical agent fleet size below threshold"
+              description: "Only {{ $value }} agents online (threshold: 3). Agent fleet compromised."
+              dashboard: "https://grafana.twisterlab.local/d/master/twisterlab-master-control"
+              runbook: "https://docs.twisterlab.local/runbooks/agent-dropout"
+
+          # Warning: Low Agent Count
+          - alert: LowAgentCount
+            expr: twisterlab_registry_agents_online < 5
+            for: 5m
+            labels:
+              severity: warning
+              component: agent-registry
+              team: platform
+            annotations:
+              summary: "Agent fleet size degraded"
+              description: "{{ $value }} agents online (recommended: 5+). Consider scaling up."
+
+          # Critical: High Agent Error Rate
+          - alert: HighAgentErrorRate
+            expr: |
+              (
+                sum(rate(twisterlab_agent_errors_total[5m])) 
+                / 
+                sum(rate(twisterlab_agent_resolution_total[5m])) > 0
+              ) * 100 > 10
+            for: 3m
+            labels:
+              severity: critical
+              component: agent-execution
+              team: platform
+            annotations:
+              summary: "Agent error rate critically high"
+              description: "Agent error rate at {{ $value | humanizePercentage }} (threshold: 10%). Investigate immediately."
+              query: "sum(rate(twisterlab_agent_errors_total[5m]))"
+
+          # Warning: Elevated Agent Error Rate
+          - alert: ElevatedAgentErrorRate
+            expr: |
+              (
+                sum(rate(twisterlab_agent_errors_total[5m])) 
+                / 
+                sum(rate(twisterlab_agent_resolution_total[5m])) > 0
+              ) * 100 > 5
+            for: 5m
+            labels:
+              severity: warning
+              component: agent-execution
+              team: platform
+            annotations:
+              summary: "Agent error rate elevated"
+              description: "Agent error rate at {{ $value | humanizePercentage }} (threshold: 5%)."
+
+          # Critical: High Agent Latency
+          - alert: HighAgentLatency
+            expr: |
+              (
+                histogram_quantile(0.95, 
+                  sum by (le) (rate(twisterlab_agent_call_duration_seconds_bucket[5m]))
+                ) * 1000
+              ) > 5000
+            for: 3m
+            labels:
+              severity: critical
+              component: agent-performance
+              team: platform
+            annotations:
+              summary: "Agent p95 latency critically high"
+              description: "Agent p95 latency at {{ $value | humanize }}ms (threshold: 5000ms). Performance severely degraded."
+
+          # Warning: Moderate Agent Latency
+          - alert: ModerateAgentLatency
+            expr: |
+              (
+                histogram_quantile(0.95, 
+                  sum by (le) (rate(twisterlab_agent_call_duration_seconds_bucket[5m]))
+                ) * 1000
+              ) > 2000
+            for: 5m
+            labels:
+              severity: warning
+              component: agent-performance
+              team: platform
+            annotations:
+              summary: "Agent p95 latency elevated"
+              description: "Agent p95 latency at {{ $value | humanize }}ms (threshold: 2000ms)."
+
+          # Critical: No Agent Activity
+          - alert: NoAgentActivity
+            expr: sum(rate(twisterlab_agent_resolution_total[5m])) == 0
+            for: 10m
+            labels:
+              severity: critical
+              component: agent-execution
+              team: platform
+            annotations:
+              summary: "Zero agent activity detected"
+              description: "No agent calls recorded in the last 10 minutes. System may be down."
+
+      - name: twisterlab_infrastructure
+        interval: 30s
+        rules:
+          # Critical: API Down
+          - alert: TwisterlabAPIDown
+            expr: up{job="twisterlab-api"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              component: api
+              team: platform
+            annotations:
+              summary: "TwisterLab API is down"
+              description: "API endpoint unreachable for 1+ minutes."
+
+          # Critical: Redis Down
+          - alert: TwisterlabRedisDown
+            expr: up{job="redis"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              component: redis
+              team: platform
+            annotations:
+              summary: "Redis is down"
+              description: "Redis unreachable. Agent state and caching offline."
+
+          # Critical: PostgreSQL Down
+          - alert: TwisterlabPostgresDown
+            expr: up{job="postgres"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              component: postgres
+              team: platform
+            annotations:
+              summary: "PostgreSQL is down"
+              description: "Database unreachable. Persistent storage offline."
+
+          # Warning: High API Response Time
+          - alert: HighAPIResponseTime
+            expr: |
+              histogram_quantile(0.95,
+                sum by (le) (rate(http_request_duration_seconds_bucket{job="twisterlab-api"}[5m]))
+              ) > 2
+            for: 5m
+            labels:
+              severity: warning
+              component: api
+              team: platform
+            annotations:
+              summary: "API response time elevated"
+              description: "API p95 response time {{ $value }}s (threshold: 2s)."
+
+      - name: twisterlab_gpu
+        interval: 30s
+        rules:
+          # Critical: GPU Utilization Critically Low (potential failure)
+          - alert: GPUUtilizationCriticallyLow
+            expr: nvidia_gpu_duty_cycle < 5
+            for: 10m
+            labels:
+              severity: warning
+              component: gpu
+              team: infrastructure
+            annotations:
+              summary: "GPU utilization critically low"
+              description: "GPU utilization at {{ $value }}% for 10+ minutes. May indicate GPU failure or misconfiguration."
+
+          # Critical: GPU Temperature High
+          - alert: GPUTemperatureHigh
+            expr: nvidia_gpu_temperature_celsius > 85
+            for: 3m
+            labels:
+              severity: critical
+              component: gpu
+              team: infrastructure
+            annotations:
+              summary: "GPU temperature critically high"
+              description: "GPU temperature at {{ $value }}°C (threshold: 85°C). Risk of thermal throttling."
+
+          # Warning: GPU Memory High
+          - alert: GPUMemoryHigh
+            expr: |
+              (nvidia_gpu_memory_used_bytes / nvidia_gpu_memory_total_bytes) * 100 > 90
+            for: 5m
+            labels:
+              severity: warning
+              component: gpu
+              team: infrastructure
+            annotations:
+              summary: "GPU memory utilization high"
+              description: "GPU memory at {{ $value | humanizePercentage }} (threshold: 90%)."
+
+      - name: twisterlab_resilience
+        interval: 30s
+        rules:
+          # ALERTE CRITIQUE : Échec de l'idempotence (Incohérence DB/Exchange)
+          - alert: TradingIdempotencyRisk
+            expr: rate(twisterlab_trading_execution_errors_total{type="idempotency_conflict"}[1m]) > 0
+            for: 0m
+            labels:
+              severity: critical
+              component: trading-execution
+              team: platform
+            annotations:
+              summary: "RISQUE DE DOUBLE-FILL DETECTÉ"
+              description: "L'idempotence a échoué à réconcilier un ordre. Vérifiez immédiatement les positions sur l'exchange."
+
+          # ALERTE WARNING : Escalade de la quarantaine
+          - alert: CapabilityQuarantineSpike
+            expr: sum(twisterlab_circuit_breaker_status{status="quarantined"}) > 3
+            for: 5m
+            labels:
+              severity: warning
+              component: self-healing
+              team: platform
+            annotations:
+              summary: "Instabilité de la flotte d'agents"
+              description: "Plus de 3 capacités sont en quarantaine simultanément. Le système fonctionne en mode dégradé."
+
+          # ALERTE WARNING : Retry Storm / Double Buy
+          - alert: MaestroHighIdempotencyCollisions
+            expr: rate(trading_order_idempotency_collisions_total[5m]) > 2
+            for: 2m
+            labels:
+              severity: warning
+              component: trading-execution
+              team: platform
+            annotations:
+              summary: "Collision d'idempotence élevée"
+              description: "Plus de 2 tentatives de double-achat bloquées par minute. Vérifiez la stabilité réseau entre Maestro et l'Exchange."
+
+          # ALERTE CRITIQUE : Échec de Guérison (Self-Healing Failure)
+          - alert: MaestroHealingIneffective
+            expr: rate(maestro_healing_events_total{status="failed"}[10m]) > 0.5
+            for: 5m
+            labels:
+              severity: critical
+              component: self-healing
+              team: platform
+            annotations:
+              summary: "L'auto-guérison Maestro échoue"
+              description: "Le taux d'échec des actions correctives est trop élevé. Intervention humaine requise pour vérifier l'infrastructure."
+

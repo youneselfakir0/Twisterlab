@@ -1,0 +1,76 @@
+{
+    "name": "Social Art Bot (Discord)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "discord-art",
+                "options": {}
+            },
+            "name": "Webhook Action",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                200,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.body.image_url }}",
+                "responseFormat": "file",
+                "options": {}
+            },
+            "name": "Download Image",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4,
+            "position": [
+                420,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "authentication": "webhook",
+                "webhookUri": "https://discord.com/api/webhooks/1478246238074962004/B5Dscrqa1QRRCcsTIYzBqTJ6h9_V3JQIPnL88ADZy2dGPSlBgSY3wwgVYD6FVlmSQbal",
+                "content": "={{ $('Webhook Action').item.json.body.caption }}",
+                "sendBinaryData": true,
+                "binaryPropertyName": "data",
+                "options": {}
+            },
+            "name": "Discord",
+            "type": "n8n-nodes-base.discord",
+            "typeVersion": 2,
+            "position": [
+                640,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Action": {
+            "main": [
+                [
+                    {
+                        "node": "Download Image",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Download Image": {
+            "main": [
+                [
+                    {
+                        "node": "Discord",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {}
+}

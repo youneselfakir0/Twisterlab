@@ -55,6 +55,11 @@ def main():
     agent_run.add_argument("capability_name", nargs="?", default=None, help="Name of the capability to invoke (optional)")
     agent_run.add_argument("args_json", nargs="?", default=None, help="JSON arguments or string task for the agent (optional)")
 
+    # Command: domain
+    domain_parser = subparsers.add_parser("domain", help="Manage TwisterLab Active Directory integration")
+    domain_sub = domain_parser.add_subparsers(dest="action")
+    domain_sub.add_parser("sync", help="Synchronize AI agents as domain users in twisterlab.local")
+
     # Print logo if no arguments or help requested
     if len(sys.argv) == 1:
         print_logo()
@@ -93,6 +98,13 @@ def main():
             run_agent(args.agent_name, args.capability_name, args.args_json)
         else:
             agent_parser.print_help()
+            
+    elif args.command == "domain":
+        from twisterlab.cli.domain import run_ad_sync
+        if args.action == "sync":
+            run_ad_sync()
+        else:
+            domain_parser.print_help()
     else:
         parser.print_help()
 
