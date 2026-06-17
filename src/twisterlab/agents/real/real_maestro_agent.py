@@ -413,11 +413,12 @@ class RealMaestroAgent(CoreAgent):
             return AgentResponse(success=False, error="Agent registry not available")
         
         agents = []
-        for name, agent in self.agent_registry._agents.items():
+        fleet = self.agent_registry.list_agents()
+        for name, meta in fleet.items():
             agents.append({
                 "name": name,
-                "description": getattr(agent, 'description', 'No description'),
-                "capabilities": [c.name for c in agent.get_capabilities()] if hasattr(agent, 'get_capabilities') else []
+                "description": meta.get('description', 'No description'),
+                "capabilities": meta.get('capabilities', [])
             })
         
         return AgentResponse(success=True, data={"agents": agents, "count": len(agents)})

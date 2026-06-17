@@ -74,6 +74,7 @@ TOOL_PERMISSIONS: Dict[str, List[str]] = {
     "monitoring": config.rbac_monitoring_roles,
     "browser": config.rbac_browser_roles,
     "real-desktop-commander": config.rbac_commander_roles,
+    "real-odysseus": ["Admin", "Support", "Operator"],
 }
 
 # =============================================================================

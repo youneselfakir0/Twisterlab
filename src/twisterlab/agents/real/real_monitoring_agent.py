@@ -51,6 +51,14 @@ class RealMonitoringAgent(TwisterAgent):
                 params=[],
                 tags=["monitoring"],
             ),
+            AgentCapability(
+                name="monitor_system_health",
+                description="Check global system health and service status",
+                handler="handle_collect_metrics",
+                capability_type=CapabilityType.QUERY,
+                params=[],
+                tags=["monitoring"],
+            ),
         ]
 
     async def handle_collect_metrics(self, detailed: bool = False) -> AgentResponse:

@@ -247,6 +247,31 @@ class MCPServerContinue:
                 "description": "Get database statistics and connection info",
                 "inputSchema": {"type": "object", "properties": {}},
             },
+            # Bio-Design & Gene Optimization (Odysseus)
+            {
+                "name": "optimize_gene",
+                "description": "Optimizes a protein sequence for a specific host organism using Odysseus.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "protein_sequence": {
+                            "type": "string",
+                            "description": "The protein sequence to optimize."
+                        },
+                        "host_organism": {
+                            "type": "string",
+                            "description": "Target host organism (e.g., 'e.coli', 's.cerevisiae').",
+                            "default": "e.coli"
+                        },
+                        "num_sequences": {
+                            "type": "integer",
+                            "description": "Number of optimized sequences to generate.",
+                            "default": 1
+                        }
+                    },
+                    "required": ["protein_sequence"]
+                }
+            },
             # Cache Operations
             {
                 "name": "get_cache_stats",

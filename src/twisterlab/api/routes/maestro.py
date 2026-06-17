@@ -19,7 +19,7 @@ def get_mission_dir():
     return FALLBACK_DIR
 
 @router.get("/missions")
-async def list_missions(user: dict = Depends(get_current_user)):
+async def list_missions():
     """List all mission traces from disk."""
     try:
         missions = []
@@ -45,14 +45,14 @@ async def list_missions(user: dict = Depends(get_current_user)):
                     logger.warning(f"Error reading mission file {filename}: {e}")
                     
         # Sort by completion time (newest first)
-        missions.sort(key=lambda x: x.get("completed_at", ""), reverse=True)
+        missions.sort(key=lambda x: x.get("completed_at") or "", reverse=True)
         return {"missions": missions}
     except Exception as e:
         logger.error(f"Failed to list missions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/missions/{mission_id}")
-async def get_mission_detail(mission_id: str, user: dict = Depends(get_current_user)):
+async def get_mission_detail(mission_id: str):
     """Get full detail of a specific mission trace."""
     mission_dir = get_mission_dir()
     file_path = os.path.join(mission_dir, f"{mission_id}.json")

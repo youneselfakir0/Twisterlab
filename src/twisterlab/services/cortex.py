@@ -18,6 +18,10 @@ class CortexClient:
         self._model = settings.infra.ollama_model
         logger.info(f"CortexClient initialized at {self._endpoint} (Model: {self._model})")
 
+    @property
+    def name(self) -> str:
+        return "cortex"
+
     async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
         """Call the AI generation endpoint."""
         url = f"{self._endpoint}/api/generate"

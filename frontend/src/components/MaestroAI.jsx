@@ -115,8 +115,24 @@ const MaestroAI = () => {
 
       if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
       const envelope = await r.json();
+      
+      if (envelope.isError) {
+        const errorText = envelope.content?.[0]?.text || 'Unknown orchestration error';
+        throw new Error(errorText);
+      }
+
       const rawText = envelope.content?.[0]?.text || '{}';
-      const responseData = JSON.parse(rawText);
+      let responseData;
+      try {
+        responseData = JSON.parse(rawText);
+      } catch (e) {
+        // Fallback if the response is not JSON
+        responseData = { 
+          mode: 'chat', 
+          response: rawText, 
+          thought: 'The orchestrator returned a non-JSON response.' 
+        };
+      }
 
       if (responseData.mode === 'chat') {
         addLog(responseData.response, 'maestro');
@@ -204,31 +220,61 @@ const MaestroAI = () => {
             )}
 
             {activeView === 'library' && (
-              <div className="space-y-4">
-                <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Mission Archives</div>
-                {missionHistory.length === 0 ? (
-                  <div className="text-center py-20 opacity-30">
-                    <Book size={48} className="mx-auto mb-4" />
-                    <p className="text-[10px] uppercase tracking-widest font-black">Archive Empty</p>
+              <div className="space-y-8">
+                {/* Unit Capabilities (New) */}
+                <div>
+                  <div className="text-[10px] font-black text-cyan uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <Brain size={12} /> Unit Capabilities Discovery
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {missionHistory.map((m) => (
-                      <div 
-                        key={m.id} 
-                        onClick={() => loadMissionDetail(m.id)}
-                        className="p-4 bg-white/5 border border-white/5 rounded-xl hover:border-cyan/40 cursor-pointer transition-all group"
-                      >
+                  <div className="grid grid-cols-2 gap-3">
+                    {fleet.map((agent) => (
+                      <div key={agent.id} className="p-3 bg-white/5 border border-white/5 rounded-lg hover:border-cyan/20 transition-all">
                         <div className="flex justify-between items-start mb-2">
-                          <span className="text-[9px] font-mono text-cyan/60">{m.id}</span>
-                          <span className="text-[9px] font-mono text-gray-600">{new Date(m.completed_at).toLocaleString()}</span>
+                          <span className="text-[10px] font-bold text-gray-200 uppercase">{agent.name}</span>
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded ${agent.status === 'online' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                            {agent.status}
+                          </span>
                         </div>
-                        <h4 className="text-xs font-bold text-white uppercase truncate group-hover:text-cyan transition-colors">{m.task}</h4>
-                        <p className="text-[10px] text-gray-500 mt-2 line-clamp-1">{m.summary}</p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {(agent.capabilities || []).map(cap => (
+                            <span key={cap} className="text-[8px] font-mono bg-black/40 text-cyan/70 px-1.5 py-0.5 rounded border border-white/5">
+                              {cap}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
-                )}
+                </div>
+
+                {/* Mission Archives */}
+                <div>
+                  <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <Book size={12} /> Mission Archives
+                  </div>
+                  {missionHistory.length === 0 ? (
+                    <div className="text-center py-10 opacity-30 bg-black/20 rounded-xl border border-dashed border-white/10">
+                      <p className="text-[10px] uppercase tracking-widest font-black">Archive Empty</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {missionHistory.map((m) => (
+                        <div 
+                          key={m.id} 
+                          onClick={() => loadMissionDetail(m.id)}
+                          className="p-4 bg-white/5 border border-white/5 rounded-xl hover:border-cyan/40 cursor-pointer transition-all group"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="text-[9px] font-mono text-cyan/60">{m.id}</span>
+                            <span className="text-[9px] font-mono text-gray-600">{m.completed_at ? new Date(m.completed_at).toLocaleString() : 'PENDING'}</span>
+                          </div>
+                          <h4 className="text-xs font-bold text-white uppercase truncate group-hover:text-cyan transition-colors">{m.task}</h4>
+                          <p className="text-[10px] text-gray-500 mt-2 line-clamp-1">{m.summary}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -255,7 +301,16 @@ const MaestroAI = () => {
                         </div>
                         <span className="text-[9px] font-mono text-cyan/70">{step.capability}</span>
                       </div>
-                      <p className="text-[11px] text-gray-400">{step.purpose}</p>
+                      <p className="text-[11px] text-gray-400 mb-3">{step.purpose}</p>
+                      
+                      {step.params && Object.keys(step.params).length > 0 && (
+                        <div className="bg-black/60 rounded-lg p-2 border border-white/5">
+                          <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Parameters</div>
+                          <pre className="text-[9px] text-cyan/60 font-mono overflow-x-auto">
+                            {JSON.stringify(step.params, null, 2)}
+                          </pre>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -266,7 +321,9 @@ const MaestroAI = () => {
               <div className="space-y-6">
                 <div className="glass-panel p-6 border-cyan/20 bg-cyan/5">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full border-2 border-cyan flex items-center justify-center text-lg font-black text-white">
+                    <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-lg font-black text-white
+                      ${(missionResult.synthesis?.success_rate || 0) >= 1 ? 'border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'border-amber-500'}
+                    `}>
                       {((missionResult.synthesis?.success_rate ?? 1) * 100).toFixed(0)}%
                     </div>
                     <div>
@@ -277,6 +334,25 @@ const MaestroAI = () => {
                   <p className="text-xs text-gray-300 leading-relaxed font-mono bg-black/40 p-4 rounded-lg border border-white/5 mb-6">
                     {missionResult.synthesis?.summary}
                   </p>
+
+                  <div className="space-y-3 mb-6">
+                    <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Execution Trace</span>
+                    {executionSteps.map((step, i) => (
+                      <div key={i} className="p-3 bg-black/20 border border-white/5 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-1.5 h-1.5 rounded-full ${step.status === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                          <span className="text-[10px] text-gray-300 font-bold uppercase">{step.agent}</span>
+                          <span className="text-[9px] text-gray-500 font-mono">{step.capability}</span>
+                        </div>
+                        {step.error && (
+                          <span className="text-[8px] text-red-400 font-mono truncate max-w-[150px]">{step.error}</span>
+                        )}
+                        {!step.error && step.data && (
+                          <CheckCircle2 size={12} className="text-emerald-500/50" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
 
                   {missionResult.notion_url && (
                     <a 

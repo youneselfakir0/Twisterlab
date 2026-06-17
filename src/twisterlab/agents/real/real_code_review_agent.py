@@ -51,11 +51,11 @@ class RealCodeReviewAgent(TwisterAgent):
             )
         ]
 
-    async def handle_analyze(self, code: str, language: str = "python") -> AgentResponse:
+    async def handle_analyze(self, code: str, language: str = "python", **kwargs) -> AgentResponse:
         """Fallback to orchestrator for basic analysis."""
-        return await self.handle_deep_audit(code)
+        return await self.handle_deep_audit(code, **kwargs)
 
-    async def handle_deep_audit(self, code: str, filename: str = "snippet.py") -> AgentResponse:
+    async def handle_deep_audit(self, code: str, filename: str = "snippet.py", **kwargs) -> AgentResponse:
         """Coordinated multi-agent analysis."""
         try:
             report = await self.orchestrator.full_review(code, filename)
@@ -64,7 +64,7 @@ class RealCodeReviewAgent(TwisterAgent):
             logger.error(f"CodeReview: Audit failed: {e}")
             return AgentResponse(success=False, error=str(e))
 
-    async def handle_security_scan(self, code: str) -> AgentResponse:
+    async def handle_security_scan(self, code: str, **kwargs) -> AgentResponse:
         """Dedicated security scan."""
         try:
             findings = await self.orchestrator.security_advisor.analyze(code)

@@ -83,7 +83,8 @@ class AgentRegistry:
             ("invoke-ai", "twisterlab.agents.real.invoke_ai_agent", "InvokeAIAgent", "AI Image generation bridge.", ["generate_image"], 10),
             ("notion", "twisterlab.agents.real.real_notion_agent", "RealNotionAgent", "Notion workspace synchronization.", ["create_page", "list_pages", "sync_notion"], 10),
             ("database", "twisterlab.agents.core.db_agent", "DatabaseAgent", "Low-level SQL database interface.", ["db_health", "execute_query"], 10),
-            ("instruction", "twisterlab.agents.real.real_instruction_agent", "RealInstructionAgent", "Processes and analyzes project instructions and documentation.", ["parse_instructions"], 10)
+            ("instruction", "twisterlab.agents.real.real_instruction_agent", "RealInstructionAgent", "Processes and analyzes project instructions and documentation.", ["parse_instructions"], 10),
+            ("odysseus", "twisterlab.agents.real.real_odysseus_agent", "RealOdysseusAgent", "Gene design and codon optimization agent.", ["optimize_gene"], 10)
         ]
 
         for key, path, cls, desc, caps, prio in registry_data:

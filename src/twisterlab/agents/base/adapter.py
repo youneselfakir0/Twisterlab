@@ -93,31 +93,92 @@ class AgentAdapter:
                 handler = getattr(self.agent, handler_name)
 
         if handler:
-            sig = inspect.signature(handler)
-            has_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
-            cleaned_kwargs = kwargs.copy()
-            if "request_id" in cleaned_kwargs and "request_id" not in sig.parameters and not has_kwargs:
-                cleaned_kwargs.pop("request_id", None)
-            return await handler(**cleaned_kwargs)
+            try:
+                sig = inspect.signature(handler)
+                params = sig.parameters
+                has_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+                
+                if has_kwargs:
+                    return await handler(**kwargs)
+                else:
+                    # Filter and Map kwargs
+                    allowed_params = list(params.keys())
+                    final_kwargs = {}
+                    used_keys = set()
+                    
+                    # 1. Direct match
+                    for k in allowed_params:
+                        if k in kwargs:
+                            final_kwargs[k] = kwargs[k]
+                            used_keys.add(k)
+                    
+                    # 2. Smart mapping for missing required params
+                    for k, p in params.items():
+                        if k not in final_kwargs and p.default is p.empty and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY):
+                            # Try to find a fuzzy match in remaining kwargs
+                            # common synonyms for text/content
+                            synonyms = ['text', 'content', 'ticket_text', 'task', 'message', 'msg', 'input', 'text_content', 'query', 'query_string']
+                            if k in synonyms:
+                                for sk in synonyms:
+                                    if sk in kwargs and sk not in used_keys:
+                                        final_kwargs[k] = kwargs[sk]
+                                        used_keys.add(sk)
+                                        break
+                    
+                    # 3. Fallback: if still missing but we have some unused kwargs
+                    for k, p in params.items():
+                        if k not in final_kwargs and p.default is p.empty:
+                            remaining_keys = [sk for sk in kwargs.keys() if sk not in used_keys]
+                            if remaining_keys:
+                                # Prioritize keys that look like 'text', 'code', 'query', 'task'
+                                best_key = remaining_keys[0]
+                                for rk in remaining_keys:
+                                    if any(s in rk.lower() for s in ['text', 'task', 'query', 'content', 'message', 'code']):
+                                        best_key = rk
+                                        break
+                                
+                                final_kwargs[k] = kwargs[best_key]
+                                used_keys.add(best_key)
+                                logger.info(f"Fuzzy-mapped {best_key} to {k} for {self.name}.{tool_name}")
+
+                    # 4. Final check: if still empty but we have ANY kwarg, and handler has 1 param
+                    if not final_kwargs and len(params) == 1 and kwargs:
+                        first_param = list(params.keys())[0]
+                        first_val = list(kwargs.values())[0]
+                        final_kwargs[first_param] = first_val
+                        logger.warning(f"Brute-force mapped first arg to {first_param} for {self.name}.{tool_name}")
+
+                    return await handler(**final_kwargs)
+            except Exception as e:
+                logger.error(f"Dispatch failure for {self.name}.{tool_name}: {e}. Input: {list(kwargs.keys())}")
+                raise e
 
         # Style B: execute("tool", **kwargs) - Modern CoreAgent
         if hasattr(self.agent, "execute"):
             sig = inspect.signature(self.agent.execute)
             has_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
-            cleaned_kwargs = kwargs.copy()
             
             try:
                 # If target has single arg task/context signature (e.g., execute(task))
                 if len(sig.parameters) == 1 and not has_kwargs:
                     logger.warning(f"DEPRECATION: Agent {self.name} uses legacy execute signature.")
-                    return await self.agent.execute(cleaned_kwargs)
+                    return await self.agent.execute(kwargs)
                 
-                if "request_id" in cleaned_kwargs and "request_id" not in sig.parameters and not has_kwargs:
-                    cleaned_kwargs.pop("request_id", None)
-                return await self.agent.execute(tool_name, **cleaned_kwargs)
+                if has_kwargs:
+                    return await self.agent.execute(tool_name, **kwargs)
+                else:
+                    # Filter kwargs, but keep tool_name as positional if it's the first param
+                    params_to_pass = list(sig.parameters.keys())
+                    if params_to_pass and params_to_pass[0] in ('tool_name', 'capability', 'name', 'task'):
+                        # It probably expects tool_name as first arg
+                        filtered_kwargs = {k: v for k, v in kwargs.items() if k in params_to_pass[1:]}
+                        return await self.agent.execute(tool_name, **filtered_kwargs)
+                    else:
+                        filtered_kwargs = {k: v for k, v in kwargs.items() if k in params_to_pass}
+                        return await self.agent.execute(**filtered_kwargs)
             except TypeError:
                 logger.warning(f"DEPRECATION: Fallback for Agent {self.name} legacy execute signature.")
-                return await self.agent.execute(cleaned_kwargs)
+                return await self.agent.execute(kwargs)
 
         raise AttributeError(f"No handler found for tool '{tool_name}' on agent '{self.name}'")
 
