@@ -80,6 +80,8 @@ class AgentRegistry:
             ("commander", "twisterlab.agents.real.real_desktop_commander_agent", "RealDesktopCommanderAgent", "Local system command execution.", ["execute_command"], 10),
             ("browser", "twisterlab.agents.real.browser_agent", "RealBrowserAgent", "Web browsing and automation.", ["browse"], 10),
             ("n8n-navigator", "twisterlab.agents.real.n8n_navigator_agent", "N8nNavigatorAgent", "Orchestrates n8n workflows.", ["n8n_trigger_webhook"], 10),
+            ("stock-manager", "twisterlab.agents.real.real_stock_manager_agent", "RealStockManagerAgent", "Manages inventory and stock levels via N8n.", ["check_inventory", "update_stock"], 10),
+            ("order-processor", "twisterlab.agents.real.real_order_processor_agent", "RealOrderProcessorAgent", "Processes and tracks customer orders via N8n.", ["create_order", "track_order"], 10),
             ("invoke-ai", "twisterlab.agents.real.invoke_ai_agent", "InvokeAIAgent", "AI Image generation bridge.", ["generate_image"], 10),
             ("notion", "twisterlab.agents.real.real_notion_agent", "RealNotionAgent", "Notion workspace synchronization.", ["create_page", "list_pages", "sync_notion"], 10),
             ("database", "twisterlab.agents.core.db_agent", "DatabaseAgent", "Low-level SQL database interface.", ["db_health", "execute_query"], 10),

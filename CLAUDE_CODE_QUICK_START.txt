@@ -1,0 +1,39 @@
+CLAUDE CODE + TWISTERLAB - EN 30 SECONDES
+
+═════════════════════════════════════════════════════════
+
+ÉTAPE 1 : S'assurer qu'Ollama tourne
+─────────────────────────────────────
+Terminal séparé:
+  ollama serve
+
+
+ÉTAPE 2 : Lancer Claude Code pour TwisterLab
+─────────────────────────────────────────────
+cd C:\Users\Administrator\Documents\twisterlab
+.\claude-code-twisterlab.bat
+
+
+ÉTAPE 3 : Utiliser Claude Code
+───────────────────────────────
+Tu vois le prompt:
+  > _
+
+Tape tes commandes:
+  > Explore src/twisterlab structure
+  > What does the API do?
+  > Fix the audit logger
+  > Run tests
+  > etc.
+
+
+ÉTAPE 4 : Quitter
+────────────────
+  > exit
+
+
+═════════════════════════════════════════════════════════
+
+C'est tout. Claude Code gère TwisterLab directement.
+
+═════════════════════════════════════════════════════════

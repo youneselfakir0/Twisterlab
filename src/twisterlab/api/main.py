@@ -39,7 +39,7 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
-        logger.info(f"New WebSocket connection. Total active: {len(self.active_connections)}")
+        logger.info(f"WebSocket connected. Client: {websocket.client}. Total active: {len(self.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
@@ -50,8 +50,10 @@ class ConnectionManager:
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
-            except Exception as e:
-                logger.debug(f"Failed to send message to a connection: {e}")
+            except Exception:
+                # Silent cleanup of broken connections during broadcast
+                if connection in self.active_connections:
+                    self.active_connections.remove(connection)
 
 manager = ConnectionManager()
 
@@ -159,9 +161,13 @@ async def root_health():
 async def telemetry_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
+        from twisterlab.utils.validation import validate_environment
         while True:
             registry = get_agent_registry()
             status = registry.get_registry_status()
+            
+            # Health & Environment Validation
+            is_valid = validate_environment()
             
             # Real-time System Stats
             cpu_usage = psutil.cpu_percent()
@@ -177,7 +183,8 @@ async def telemetry_endpoint(websocket: WebSocket):
                 "ram": ram_usage,
                 "agents": status["total"],
                 "active_agents": status["initialized"],
-                "status": "ONLINE" if status["initialized"] > 0 else "DEGRADED",
+                "status": "ONLINE" if status["initialized"] > 0 and is_valid else "DEGRADED",
+                "config_ok": is_valid,
                 "metrics": metrics,
                 "logs": log_buffer.buffer # Add buffered logs
             }

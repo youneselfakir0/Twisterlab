@@ -140,3 +140,6 @@ deploy/k8s/**/secrets.yaml
 src/twisterlab/ui/insta_debug.png
 src/twisterlab/ui/out.html
 src/twisterlab/ui/ig_body.html
+.aider*
+.env
+.env

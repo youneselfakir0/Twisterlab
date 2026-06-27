@@ -1,0 +1,28 @@
+🚀 DÉMARRAGE EN 30 SECONDES
+=====================================
+
+**Terminal 1** (laisse ouvert):
+```
+ollama serve
+```
+
+**Terminal 2** (nouvel onglet/fenêtre):
+```
+cd C:\Users\Administrator\Documents\twisterlab
+.\start-claude-code-local.bat
+```
+
+Attends le message "Claude Code is ready" ✓
+
+**Puis tape:**
+```
+> Explore TwisterLab and explain Maestro
+```
+
+Claude utilise les 33 outils MCP pour explorer ton code et répondre.
+
+=====================================
+
+Questions? Lis LOCLAUDE_SETUP_GUIDE.md ou CLAUDE_CODE_LOCAL_README.md
+
+Enjoy! 🎉

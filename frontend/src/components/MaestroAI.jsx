@@ -203,19 +203,29 @@ const MaestroAI = () => {
         <div className="flex-1 flex flex-col glass-panel overflow-hidden relative">
           <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
             {activeView === 'console' && (
-              <div className="space-y-3 font-mono text-[11px]">
-                {consoleLogs.map((log, i) => (
-                  <div key={i} className="flex gap-3 p-1 hover:bg-white/5 transition-colors">
-                    <span className="text-gray-700">[{log.timestamp}]</span>
-                    <span className={`font-bold ${
-                      log.type === 'operator' ? 'text-amber-500' : 
-                      log.type === 'maestro' ? 'text-cyan' : 
-                      log.type === 'error' ? 'text-red-500' : 'text-purple-400'
-                    }`}>{log.type.toUpperCase()}:</span>
-                    <span className="text-gray-300">{log.text}</span>
-                  </div>
-                ))}
-                <div ref={consoleEndRef} />
+              <div className="flex-1 flex flex-col min-h-0 relative">
+                <div className="flex-1 overflow-y-auto space-y-6 font-mono scrollbar-hide pb-4">
+                  {consoleLogs.map((log, idx) => (
+                    <div key={idx} className="animate-in fade-in slide-in-from-left-2 duration-500">
+                      <div className="flex gap-4 items-start">
+                        <span className="text-[10px] text-gray-700 font-bold shrink-0 mt-1">[{log.timestamp}]</span>
+                        <div className="flex flex-col gap-1.5 flex-1">
+                          <span className={`text-[10px] font-black uppercase tracking-widest
+                            ${log.type === 'operator' ? 'text-purple-400' : log.type === 'error' ? 'text-red-500' : 'text-cyan/60'}`}>
+                            {log.type === 'operator' ? '>> OPERATOR_CMD' : log.type === 'maestro' ? '<< MAESTRO_CORE' : '|| SYS_INF'}
+                          </span>
+                          <div className={`p-4 rounded-xl text-[12px] leading-relaxed
+                            ${log.type === 'operator' ? 'bg-purple/5 border border-purple/20 text-purple-100 shadow-[0_0_15px_rgba(139,92,246,0.05)]' : 
+                              log.type === 'error' ? 'bg-red-500/5 border border-red-500/20 text-red-200' : 
+                              'bg-cyan/5 border border-cyan/10 text-cyan-50 shadow-[0_0_15px_rgba(0,242,255,0.05)]'}`}>
+                            {log.text}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={consoleEndRef} />
+                </div>
               </div>
             )}
 
@@ -371,34 +381,40 @@ const MaestroAI = () => {
           </div>
 
           {/* Input Area */}
-          <form onSubmit={(e) => handleAction(e, 'execute')} className="p-4 bg-black/40 border-t border-white/5">
-            <div className="flex gap-3">
-              <div className="flex-1 relative">
+          <form onSubmit={(e) => handleAction(e, 'execute')} className="p-6 bg-black/40 border-t border-white/5 relative z-10 backdrop-blur-md">
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan/20 to-purple/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-1000" />
+              <div className="relative flex items-center bg-[#020409] border border-white/10 rounded-xl overflow-hidden focus-within:border-cyan/50 transition-all shadow-inner">
+                <div className="pl-5 text-cyan/30">
+                  <Terminal size={18} />
+                </div>
                 <input 
                   type="text"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   disabled={isProcessing}
                   placeholder="Dispatch tactical command..."
-                  className="w-full bg-white/5 border border-white/5 rounded-lg px-4 py-3 text-xs text-white focus:outline-none focus:border-cyan/40 transition-all font-mono"
+                  className="flex-1 bg-transparent border-none py-4 px-4 text-sm text-cyan placeholder-gray-700 outline-none font-mono"
                 />
-                <Terminal className="absolute right-4 top-3.5 text-gray-700" size={14} />
+                <div className="flex items-center gap-2 pr-3">
+                  <button 
+                    type="button"
+                    onClick={(e) => handleAction(e, 'dry_run')}
+                    disabled={isProcessing || !prompt.trim()}
+                    className="p-2.5 text-gray-500 hover:text-cyan hover:bg-cyan/10 rounded-lg transition-all"
+                    title="Simulate Tactical Plan"
+                  >
+                    <Sparkles size={20} />
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isProcessing || !prompt.trim()}
+                    className="bg-cyan p-2.5 rounded-lg text-black hover:bg-cyan-glow transition-all shadow-[0_0_15px_rgba(0,242,255,0.2)]"
+                  >
+                    {isProcessing ? <RefreshCw className="animate-spin" size={20} /> : <Send size={20} />}
+                  </button>
+                </div>
               </div>
-              <button 
-                type="button"
-                onClick={(e) => handleAction(e, 'dry_run')}
-                disabled={isProcessing || !prompt.trim()}
-                className="px-6 py-3 border border-cyan/30 text-cyan text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-cyan/10 transition-all"
-              >
-                Plan
-              </button>
-              <button 
-                type="submit"
-                disabled={isProcessing || !prompt.trim()}
-                className="px-6 py-3 bg-cyan text-black text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-cyan/80 transition-all shadow-[0_0_15px_rgba(0,242,255,0.3)]"
-              >
-                Execute
-              </button>
             </div>
           </form>
         </div>

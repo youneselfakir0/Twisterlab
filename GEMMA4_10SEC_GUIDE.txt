@@ -1,0 +1,50 @@
+🚀 CLAUDE CODE + GEMMA4 — LANCER EN 10 SECONDES
+
+═══════════════════════════════════════════════════════════════
+
+ÉTAPE 1 (Terminal 1) : Lance Ollama
+───────────────────────────────────
+ollama serve
+
+ATTENDS que tu vois:
+  [1m> [0m
+
+═══════════════════════════════════════════════════════════════
+
+ÉTAPE 2 (Terminal 2) : Lance Claude Code
+────────────────────────────────────────
+cd C:\Users\Administrator\Documents\twisterlab
+.\start-claude-code-local.bat
+
+ATTENDS que tu vois:
+  ✓ gemma4:latest is available
+  ✓ Ollama is running
+  Starting loclaude with Claude Code...
+
+═══════════════════════════════════════════════════════════════
+
+ÉTAPE 3 : Utilise Claude Code
+──────────────────────────────
+Tape des commandes :
+  "Explore TwisterLab/src"
+  "Explain the architecture"
+  "Create a test file"
+  etc.
+
+═══════════════════════════════════════════════════════════════
+
+❓ Si erreur à ÉTAPE 1:
+  → `ollama list` doit montrer gemma4:latest ✓
+  → Si absent: `ollama pull gemma4:latest`
+
+❓ Si erreur à ÉTAPE 2:
+  → loclaude installé? `loclaude --version`
+  → Si absent: `npm install -g loclaude`
+
+❓ Si erreur à ÉTAPE 3:
+  → Normal, première réponse = lente (3-5s)
+  → Ensuite rapide (1-3s)
+
+═══════════════════════════════════════════════════════════════
+
+✅ C'est tout. Tu as Claude Code + Gemma4 actif.

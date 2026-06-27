@@ -27,17 +27,17 @@ const MatrixTerminal = ({ logs = [] }) => {
           <div className="text-gray-600 animate-pulse italic">Waiting for MCP transport handshake...</div>
         ) : (
           logs.map((log, i) => (
-            <div key={i} className="flex gap-3 group">
-              <span className="text-gray-700 shrink-0">[{log.timestamp}]</span>
-              <span className={`
+            <div key={`${log.timestamp}-${log.type}-${i}`} className="flex gap-3 group animate-in fade-in duration-300">
+              <span className="text-gray-700 shrink-0 font-bold">[{log.timestamp}]</span>
+              <div className={`break-all
                 ${log.type === 'tool' ? 'text-cyan' : ''}
                 ${log.type === 'result' ? 'text-purple' : ''}
-                ${log.type === 'error' ? 'text-red-400' : ''}
+                ${log.type === 'error' ? 'text-red-400 font-bold' : ''}
                 ${log.type === 'info' ? 'text-gray-400' : ''}
               `}>
-                <span className="font-bold mr-2 uppercase text-[9px] opacity-70">{log.type}:</span>
+                <span className="font-black mr-2 uppercase text-[8px] opacity-60 px-1 border border-current rounded-sm">{log.type}</span>
                 {log.text}
-              </span>
+              </div>
             </div>
           ))
         )}

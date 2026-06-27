@@ -1,0 +1,23 @@
+CLAUDE CODE + GEMMA4 - LANCER EN 2 COMMANDES
+
+=================================================
+
+COMMAND 1 - Start Ollama (separate terminal)
+─────────────────────────────────────────────
+ollama serve
+
+
+COMMAND 2 - Launch Claude Code
+──────────────────────────────
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\Administrator\Documents\twisterlab\start-claude-code-local.ps1
+
+OR (simpler):
+cd C:\Users\Administrator\Documents\twisterlab
+.\claude-code.bat
+
+
+=================================================
+
+DONE. Claude Code + Gemma4 is now running.
+
+=================================================

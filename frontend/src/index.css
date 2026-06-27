@@ -3,8 +3,20 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Odysseus Core Palette */
+    --bg: #020409;
+    --fg: #9cdef2;
+    --panel: rgba(8, 12, 24, 0.85);
+    --border: rgba(53, 90, 102, 0.4);
+    --cyan: #00f2ff;
+    --purple: #8b5cf6;
+    --cyan-glow: rgba(0, 242, 255, 0.3);
+    --purple-glow: rgba(139, 92, 246, 0.3);
+  }
+
   body {
-    @apply bg-bg text-gray-200 font-sans overflow-hidden;
+    @apply bg-[#020409] text-gray-200 font-sans overflow-hidden selection:bg-cyan/30;
     background-image: 
       linear-gradient(rgba(0, 242, 255, 0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(0, 242, 255, 0.03) 1px, transparent 1px),
@@ -16,21 +28,32 @@
 
 @layer components {
   .glass-panel {
-    @apply bg-panel backdrop-blur-md border border-white/10 shadow-2xl;
+    @apply bg-[#080c18]/85 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)];
   }
   
   .neon-border-cyan {
-    @apply border border-cyan/30 shadow-[0_0_10px_rgba(0,242,255,0.15)];
+    @apply border border-cyan/30 shadow-[0_0_15px_rgba(0,242,255,0.15)];
   }
 
   .neon-border-purple {
-    @apply border border-purple/30 shadow-[0_0_10px_rgba(139,92,246,0.15)];
+    @apply border border-purple/30 shadow-[0_0_15px_rgba(139,92,246,0.15)];
   }
 
   .scanline {
-    @apply absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03];
+    @apply absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03] z-[100];
     background: linear-gradient(to bottom, transparent, #00f2ff, transparent);
     background-size: 100% 100px;
     animation: scan 8s linear infinite;
+  }
+
+  @keyframes scan {
+    from { transform: translateY(-100px); }
+    to { transform: translateY(100vh); }
+  }
+
+  .cyber-grid {
+    @apply absolute inset-0 pointer-events-none opacity-[0.05];
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 100px 100px;
   }
 }
